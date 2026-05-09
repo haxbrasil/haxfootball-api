@@ -35,7 +35,7 @@ async function setupTestDatabase() {
 async function getApp() {
   await setupTestDatabase();
 
-  const { app } = await import("../../src/app");
+  const { app } = await import("@/app");
 
   return app;
 }

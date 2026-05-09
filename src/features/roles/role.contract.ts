@@ -1,5 +1,5 @@
 import { type Static, t } from "elysia";
-import { defaultRoleName, type Role } from "./role.db";
+import { defaultRoleName, type Role } from "@/features/roles/role.db";
 
 export const roleNameSchema = t.String({
   minLength: 1,

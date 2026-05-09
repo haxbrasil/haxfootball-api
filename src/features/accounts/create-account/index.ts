@@ -1,15 +1,15 @@
 import { password } from "bun";
 import { type Static, t } from "elysia";
-import { db } from "../../../db/client";
-import { getDefaultRole } from "../../roles/get-default-role";
+import { db } from "@/db/client";
+import { getDefaultRole } from "@/features/roles/get-default-role";
 import {
   type AccountResponse,
   accountExternalIdSchema,
   accountNameSchema,
   accountPasswordSchema,
   toAccountResponse
-} from "../account.contract";
-import { accounts } from "../account.db";
+} from "@/features/accounts/account.contract";
+import { accounts } from "@/features/accounts/account.db";
 
 export const createAccountBodySchema = t.Object({
   name: accountNameSchema,

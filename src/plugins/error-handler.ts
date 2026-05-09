@@ -4,7 +4,7 @@ import {
   errorResponse,
   internalServerError,
   validationError
-} from "../shared/http/errors";
+} from "@/shared/http/errors";
 
 export const errorHandler = () =>
   new Elysia({ name: "error-handler" }).onError(({ code, error, set }) => {

@@ -1,13 +1,13 @@
 import { eq } from "drizzle-orm";
 import { type Static, t } from "elysia";
-import { db } from "../../../db/client";
-import { badRequest } from "../../../shared/http/errors";
+import { db } from "@/db/client";
+import { badRequest } from "@/shared/http/errors";
 import {
   type RoleResponse,
   roleNameSchema,
   toRoleResponse
-} from "../role.contract";
-import { roles } from "../role.db";
+} from "@/features/roles/role.contract";
+import { roles } from "@/features/roles/role.db";
 
 export const createRoleBodySchema = t.Object({
   name: roleNameSchema

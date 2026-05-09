@@ -1,9 +1,9 @@
 import { Elysia } from "elysia";
-import { jwtPlugin } from "../plugins/jwt";
+import { jwtPlugin } from "@/plugins/jwt";
 import {
   unauthorized,
   unauthorizedErrorResponseSchema
-} from "../shared/http/errors";
+} from "@/shared/http/errors";
 
 const bearerPrefix = "Bearer ";
 

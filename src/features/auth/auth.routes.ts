@@ -3,9 +3,9 @@ import {
   createToken,
   createTokenBodySchema,
   createTokenResponseSchema
-} from "./create-token";
-import { jwtPlugin } from "../../plugins/jwt";
-import { unauthorizedErrorResponseSchema } from "../../shared/http/errors";
+} from "@/features/auth/create-token";
+import { jwtPlugin } from "@/plugins/jwt";
+import { unauthorizedErrorResponseSchema } from "@/shared/http/errors";
 
 export const authRoutes = new Elysia({ name: "auth-routes" })
   .use(jwtPlugin())

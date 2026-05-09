@@ -1,9 +1,12 @@
 import { eq } from "drizzle-orm";
-import { db } from "../../../db/client";
-import { notFound } from "../../../shared/http/errors";
-import { type AccountResponse, toAccountResponse } from "../account.contract";
-import { accounts } from "../account.db";
-import { roles } from "../../roles/role.db";
+import { db } from "@/db/client";
+import { notFound } from "@/shared/http/errors";
+import {
+  type AccountResponse,
+  toAccountResponse
+} from "@/features/accounts/account.contract";
+import { accounts } from "@/features/accounts/account.db";
+import { roles } from "@/features/roles/role.db";
 
 export async function getAccount(uuid: string): Promise<AccountResponse> {
   const [row] = await db

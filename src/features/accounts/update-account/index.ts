@@ -1,17 +1,17 @@
 import { password } from "bun";
 import { eq } from "drizzle-orm";
 import { type Static, t } from "elysia";
-import { db } from "../../../db/client";
-import { notFound } from "../../../shared/http/errors";
-import { roles } from "../../roles/role.db";
+import { db } from "@/db/client";
+import { notFound } from "@/shared/http/errors";
+import { roles } from "@/features/roles/role.db";
 import {
   type AccountResponse,
   accountExternalIdSchema,
   accountNameSchema,
   accountPasswordSchema,
   toAccountResponse
-} from "../account.contract";
-import { accounts } from "../account.db";
+} from "@/features/accounts/account.contract";
+import { accounts } from "@/features/accounts/account.db";
 
 export const updateAccountBodySchema = t.Partial(
   t.Object({

@@ -1,12 +1,12 @@
 import { password } from "bun";
 import { eq } from "drizzle-orm";
 import { type Static, t } from "elysia";
-import { db } from "../../../db/client";
+import { db } from "@/db/client";
 import {
   accountNameSchema,
   accountPasswordSchema
-} from "../account.contract";
-import { accounts } from "../account.db";
+} from "@/features/accounts/account.contract";
+import { accounts } from "@/features/accounts/account.db";
 
 export const confirmBodySchema = t.Object({
   name: accountNameSchema,

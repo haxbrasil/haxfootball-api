@@ -1,6 +1,11 @@
 import { eq } from "drizzle-orm";
-import { db } from "../../../db/client";
-import { type Role, defaultRoleId, defaultRoleName, roles } from "../role.db";
+import { db } from "@/db/client";
+import {
+  type Role,
+  defaultRoleId,
+  defaultRoleName,
+  roles
+} from "@/features/roles/role.db";
 
 export async function getDefaultRole(): Promise<Role> {
   const [existingRole] = await db

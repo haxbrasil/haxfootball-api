@@ -6,6 +6,11 @@
     "strict": true,
     "skipLibCheck": true,
     "types": ["bun"],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@/test/*": ["test/*"]
+    },
     "allowImportingTsExtensions": true,
     "noEmit": true
   },

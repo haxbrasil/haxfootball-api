@@ -1,10 +1,16 @@
 import { Elysia } from "elysia";
-import { createRole, createRoleBodySchema } from "./create-role";
-import { getRole } from "./get-role";
-import { listRoles, listRolesResponseSchema } from "./list-roles";
-import { removeRole, removeRoleResponseSchema } from "./remove-role";
-import { roleResponseSchema, roleUuidParamsSchema } from "./role.contract";
-import { notFoundErrorResponseSchema } from "../../shared/http/errors";
+import { createRole, createRoleBodySchema } from "@/features/roles/create-role";
+import { getRole } from "@/features/roles/get-role";
+import { listRoles, listRolesResponseSchema } from "@/features/roles/list-roles";
+import {
+  removeRole,
+  removeRoleResponseSchema
+} from "@/features/roles/remove-role";
+import {
+  roleResponseSchema,
+  roleUuidParamsSchema
+} from "@/features/roles/role.contract";
+import { notFoundErrorResponseSchema } from "@/shared/http/errors";
 
 export const roleRoutes = new Elysia({
   name: "role-routes",

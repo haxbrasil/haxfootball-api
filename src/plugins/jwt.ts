@@ -1,6 +1,6 @@
 import { jwt } from "@elysiajs/jwt";
 import { type Static, t } from "elysia";
-import { env } from "../config/env";
+import { env } from "@/config/env";
 
 export const jwtPayloadSchema = t.Object({
   sub: t.Literal("app"),

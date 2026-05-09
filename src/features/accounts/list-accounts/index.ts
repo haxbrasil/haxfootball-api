@@ -1,13 +1,13 @@
 import { eq } from "drizzle-orm";
 import { t } from "elysia";
-import { db } from "../../../db/client";
+import { db } from "@/db/client";
 import {
   type AccountResponse,
   accountResponseSchema,
   toAccountResponse
-} from "../account.contract";
-import { accounts } from "../account.db";
-import { roles } from "../../roles/role.db";
+} from "@/features/accounts/account.contract";
+import { accounts } from "@/features/accounts/account.db";
+import { roles } from "@/features/roles/role.db";
 
 export const listAccountsResponseSchema = t.Array(accountResponseSchema);
 

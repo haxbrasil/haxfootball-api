@@ -3,16 +3,25 @@ import {
   confirm,
   confirmBodySchema,
   confirmResponseSchema
-} from "./confirm";
-import { createAccount, createAccountBodySchema } from "./create-account";
-import { getAccount } from "./get-account";
-import { listAccounts, listAccountsResponseSchema } from "./list-accounts";
+} from "@/features/accounts/confirm";
+import {
+  createAccount,
+  createAccountBodySchema
+} from "@/features/accounts/create-account";
+import { getAccount } from "@/features/accounts/get-account";
+import {
+  listAccounts,
+  listAccountsResponseSchema
+} from "@/features/accounts/list-accounts";
 import {
   accountResponseSchema,
   accountUuidParamsSchema
-} from "./account.contract";
-import { updateAccount, updateAccountBodySchema } from "./update-account";
-import { notFoundErrorResponseSchema } from "../../shared/http/errors";
+} from "@/features/accounts/account.contract";
+import {
+  updateAccount,
+  updateAccountBodySchema
+} from "@/features/accounts/update-account";
+import { notFoundErrorResponseSchema } from "@/shared/http/errors";
 
 export const accountRoutes = new Elysia({
   name: "account-routes",
