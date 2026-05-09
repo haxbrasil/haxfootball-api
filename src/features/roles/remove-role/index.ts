@@ -4,7 +4,7 @@ import { db } from "../../../db/client";
 import { accounts } from "../../accounts/account.db";
 import { badRequest, notFound } from "../../../shared/http/errors";
 import { getDefaultRole } from "../get-default-role";
-import { roles } from "../role.db";
+import { defaultRoleName, roles } from "../role.db";
 
 export const removeRoleResponseSchema = t.Object({
   deleted: t.Boolean()
@@ -19,7 +19,7 @@ export async function removeRole(uuid: string): Promise<RemoveRoleResult> {
     throw notFound("Role not found");
   }
 
-  if (role.isDefault) {
+  if (role.name === defaultRoleName) {
     throw badRequest("Default role cannot be removed");
   }
 

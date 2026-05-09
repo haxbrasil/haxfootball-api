@@ -170,4 +170,21 @@ describe("roles", () => {
       }
     });
   });
+
+  it("does not create another default role", async () => {
+    const response = await request("/api/roles", {
+      method: "POST",
+      body: {
+        name: "default"
+      }
+    });
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({
+      error: {
+        code: "BAD_REQUEST",
+        message: "Role name already exists"
+      }
+    });
+  });
 });

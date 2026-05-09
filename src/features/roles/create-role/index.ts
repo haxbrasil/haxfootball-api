@@ -1,5 +1,7 @@
+import { eq } from "drizzle-orm";
 import { type Static, t } from "elysia";
 import { db } from "../../../db/client";
+import { badRequest } from "../../../shared/http/errors";
 import {
   type RoleResponse,
   roleNameSchema,
@@ -14,6 +16,15 @@ export const createRoleBodySchema = t.Object({
 export type CreateRoleInput = Static<typeof createRoleBodySchema>;
 
 export async function createRole(input: CreateRoleInput): Promise<RoleResponse> {
+  const [existingRole] = await db
+    .select()
+    .from(roles)
+    .where(eq(roles.name, input.name));
+
+  if (existingRole) {
+    throw badRequest("Role name already exists");
+  }
+
   const [role] = await db
     .insert(roles)
     .values({

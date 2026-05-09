@@ -1,5 +1,5 @@
 import { type Static, t } from "elysia";
-import { type Role } from "./role.db";
+import { defaultRoleName, type Role } from "./role.db";
 
 export const roleNameSchema = t.String({
   minLength: 1,
@@ -21,7 +21,7 @@ export function toRoleResponse(role: Role): RoleResponse {
   return {
     uuid: role.uuid,
     name: role.name,
-    isDefault: role.isDefault,
+    isDefault: role.name === defaultRoleName,
     createdAt: role.createdAt,
     updatedAt: role.updatedAt
   };

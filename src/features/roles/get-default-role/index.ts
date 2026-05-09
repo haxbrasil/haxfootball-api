@@ -1,18 +1,12 @@
 import { eq } from "drizzle-orm";
 import { db } from "../../../db/client";
-import {
-  type Role,
-  defaultRoleId,
-  defaultRoleName,
-  defaultRoleUuid,
-  roles
-} from "../role.db";
+import { type Role, defaultRoleId, defaultRoleName, roles } from "../role.db";
 
 export async function getDefaultRole(): Promise<Role> {
   const [existingRole] = await db
     .select()
     .from(roles)
-    .where(eq(roles.isDefault, true));
+    .where(eq(roles.name, defaultRoleName));
 
   if (existingRole) {
     return existingRole;
@@ -22,9 +16,7 @@ export async function getDefaultRole(): Promise<Role> {
     .insert(roles)
     .values({
       id: defaultRoleId,
-      uuid: defaultRoleUuid,
-      name: defaultRoleName,
-      isDefault: true
+      name: defaultRoleName
     })
     .returning();
 
