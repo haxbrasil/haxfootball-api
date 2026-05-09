@@ -1,6 +1,7 @@
 import { password } from "bun";
 import { type Static, t } from "elysia";
 import { db } from "../../../db/client";
+import { getDefaultRole } from "../../roles/get-default-role";
 import {
   type AccountResponse,
   accountExternalIdSchema,
@@ -21,14 +22,16 @@ export type CreateAccountInput = Static<typeof createAccountBodySchema>;
 export async function createAccount(
   input: CreateAccountInput
 ): Promise<AccountResponse> {
+  const role = await getDefaultRole();
   const [account] = await db
     .insert(accounts)
     .values({
       name: input.name,
       passwordHash: await password.hash(input.password),
-      externalId: input.externalId
+      externalId: input.externalId,
+      roleId: role.id
     })
     .returning();
 
-  return toAccountResponse(account);
+  return toAccountResponse({ account, role });
 }

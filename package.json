@@ -3,21 +3,22 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "packageManager": "bun@1.3.13",
   "scripts": {
-    "dev": "bun --watch src/index.ts",
-    "start": "bun src/index.ts",
+    "dev": "$npm_execpath --watch src/index.ts",
+    "start": "$npm_execpath src/index.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "test": "bun test test/e2e",
-    "test:e2e": "bun test test/e2e",
+    "test": "$npm_execpath test test/e2e",
+    "test:e2e": "$npm_execpath test test/e2e",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@elysiajs/jwt": "^1.3.3",
-    "@elysiajs/swagger": "~1.3.1",
+    "@elysiajs/jwt": "^1.4.2",
+    "@elysiajs/swagger": "^1.3.1",
     "@sinclair/typebox": "^0.34.49",
     "drizzle-orm": "~0.44.5",
-    "elysia": "~1.3.21"
+    "elysia": "^1.4.28"
   },
   "devDependencies": {
     "@types/bun": "^1.2.0",

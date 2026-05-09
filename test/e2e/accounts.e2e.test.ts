@@ -20,6 +20,10 @@ describe("accounts", () => {
       uuid: expect.any(String),
       name: "Player1",
       externalId: "123456789012345678",
+      role: {
+        name: "default",
+        isDefault: true
+      },
       createdAt: expect.any(String),
       updatedAt: expect.any(String)
     });
@@ -99,6 +103,43 @@ describe("accounts", () => {
     expect(updated.id).toBeUndefined();
     expect(updated.password).toBeUndefined();
     expect(updated.passwordHash).toBeUndefined();
+  });
+
+  it("changes an account role", async () => {
+    const roleResponse = await request("/api/roles", {
+      method: "POST",
+      body: {
+        name: "Captain"
+      }
+    });
+
+    expect(roleResponse.status).toBe(201);
+
+    const role = await roleResponse.json();
+    const createResponse = await request("/api/accounts", {
+      method: "POST",
+      body: {
+        name: "Player7",
+        password: "pass1234",
+        externalId: "723456789012345678"
+      }
+    });
+
+    expect(createResponse.status).toBe(201);
+
+    const account = await createResponse.json();
+    const updateResponse = await request(`/api/accounts/${account.uuid}`, {
+      method: "PATCH",
+      body: {
+        roleUuid: role.uuid
+      }
+    });
+
+    expect(updateResponse.status).toBe(200);
+    expect(await updateResponse.json()).toMatchObject({
+      uuid: account.uuid,
+      role
+    });
   });
 
   it("confirms a valid login", async () => {

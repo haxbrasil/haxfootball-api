@@ -25,4 +25,4 @@ export const errorHandler = () =>
     set.status = httpError.status;
 
     return errorResponse(httpError);
-  });
+  }).as("global");

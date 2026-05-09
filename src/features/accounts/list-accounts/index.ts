@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import { t } from "elysia";
 import { db } from "../../../db/client";
 import {
@@ -6,11 +7,19 @@ import {
   toAccountResponse
 } from "../account.contract";
 import { accounts } from "../account.db";
+import { roles } from "../../roles/role.db";
 
 export const listAccountsResponseSchema = t.Array(accountResponseSchema);
 
 export async function listAccounts(): Promise<AccountResponse[]> {
-  const rows = await db.select().from(accounts).orderBy(accounts.id);
+  const rows = await db
+    .select({
+      account: accounts,
+      role: roles
+    })
+    .from(accounts)
+    .innerJoin(roles, eq(accounts.roleId, roles.id))
+    .orderBy(accounts.id);
 
   return rows.map(toAccountResponse);
 }

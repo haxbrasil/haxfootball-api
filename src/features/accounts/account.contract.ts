@@ -1,4 +1,6 @@
 import { type Static, t } from "elysia";
+import { type Role } from "../roles/role.db";
+import { roleResponseSchema, toRoleResponse } from "../roles/role.contract";
 import { type Account } from "./account.db";
 
 export const accountNameSchema = t.String({
@@ -20,17 +22,27 @@ export const accountResponseSchema = t.Object({
   uuid: t.String({ format: "uuid" }),
   name: t.String(),
   externalId: t.String(),
+  role: roleResponseSchema,
   createdAt: t.String(),
   updatedAt: t.String()
 });
 
 export type AccountResponse = Static<typeof accountResponseSchema>;
 
-export function toAccountResponse(account: Account): AccountResponse {
+export type AccountWithRole = {
+  account: Account;
+  role: Role;
+};
+
+export function toAccountResponse({
+  account,
+  role
+}: AccountWithRole): AccountResponse {
   return {
     uuid: account.uuid,
     name: account.name,
     externalId: account.externalId,
+    role: toRoleResponse(role),
     createdAt: account.createdAt,
     updatedAt: account.updatedAt
   };

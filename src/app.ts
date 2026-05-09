@@ -2,6 +2,7 @@ import { swagger } from "@elysiajs/swagger";
 import { Elysia } from "elysia";
 import { authRoutes } from "./features/auth/auth.routes";
 import { accountRoutes } from "./features/accounts/account.routes";
+import { roleRoutes } from "./features/roles/role.routes";
 import { withJwtGuard } from "./guards/jwt.guard";
 import { withCommonErrorResponses } from "./plugins/common-error-responses";
 import { errorHandler } from "./plugins/error-handler";
@@ -42,5 +43,5 @@ export const app = new Elysia()
   .use(withCommonErrorResponses)
   .use(authRoutes)
   .group("/api", (api) =>
-    api.use(withJwtGuard).use(accountRoutes)
+    api.use(withJwtGuard).use(accountRoutes).use(roleRoutes)
   );

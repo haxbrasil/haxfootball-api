@@ -3,6 +3,7 @@ import { t } from "elysia";
 export type ErrorCode =
   | "UNAUTHORIZED"
   | "NOT_FOUND"
+  | "BAD_REQUEST"
   | "VALIDATION_ERROR"
   | "INTERNAL_SERVER_ERROR";
 
@@ -23,6 +24,9 @@ export const unauthorized = (message = "Unauthorized") =>
 export const notFound = (message = "Resource not found") =>
   new HttpError(404, "NOT_FOUND", message);
 
+export const badRequest = (message: string) =>
+  new HttpError(400, "BAD_REQUEST", message);
+
 export const validationError = (message: string) =>
   new HttpError(400, "VALIDATION_ERROR", message);
 
@@ -42,8 +46,15 @@ export const unauthorizedErrorResponseSchema =
 
 export const notFoundErrorResponseSchema = errorResponseSchema("NOT_FOUND");
 
+export const badRequestErrorResponseSchema = errorResponseSchema("BAD_REQUEST");
+
 export const validationErrorResponseSchema =
   errorResponseSchema("VALIDATION_ERROR");
+
+export const badRequestOrValidationErrorResponseSchema = t.Union([
+  badRequestErrorResponseSchema,
+  validationErrorResponseSchema
+]);
 
 export const internalServerErrorResponseSchema = errorResponseSchema(
   "INTERNAL_SERVER_ERROR"
@@ -52,6 +63,7 @@ export const internalServerErrorResponseSchema = errorResponseSchema(
 export const errorResponseSchemas = {
   unauthorized: unauthorizedErrorResponseSchema,
   notFound: notFoundErrorResponseSchema,
+  badRequest: badRequestErrorResponseSchema,
   validation: validationErrorResponseSchema,
   internalServer: internalServerErrorResponseSchema
 };

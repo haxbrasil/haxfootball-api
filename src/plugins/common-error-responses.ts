@@ -1,13 +1,13 @@
 import { Elysia } from "elysia";
 import {
+  badRequestOrValidationErrorResponseSchema,
   internalServerErrorResponseSchema,
-  validationErrorResponseSchema
 } from "../shared/http/errors";
 
 export const withCommonErrorResponses = (app: Elysia) =>
   app.guard({
     response: {
-      400: validationErrorResponseSchema,
+      400: badRequestOrValidationErrorResponseSchema,
       500: internalServerErrorResponseSchema
     }
   });

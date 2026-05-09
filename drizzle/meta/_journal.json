@@ -15,6 +15,13 @@
       "when": 1778355168122,
       "tag": "0001_careless_iron_lad",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1778355873040,
+      "tag": "0002_ordinary_jasper_sitwell",
+      "breakpoints": true
     }
   ]
 }
