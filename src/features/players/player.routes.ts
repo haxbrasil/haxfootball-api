@@ -36,8 +36,8 @@ export const playerRoutes = new Elysia({
     }
   )
   .get(
-    "/:id",
-    ({ params }) => getPlayer(params.id),
+    "/:externalId",
+    ({ params }) => getPlayer(params.externalId),
     {
       params: playerIdParamsSchema,
       response: {
@@ -69,8 +69,8 @@ export const playerRoutes = new Elysia({
     }
   )
   .patch(
-    "/:id/account",
-    ({ body, params }) => associatePlayerAccount(params.id, body),
+    "/:externalId/account",
+    ({ body, params }) => associatePlayerAccount(params.externalId, body),
     {
       body: associatePlayerAccountBodySchema,
       params: playerIdParamsSchema,

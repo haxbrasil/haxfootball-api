@@ -26,8 +26,7 @@ export const playerAccountResponseSchema = t.Object({
 });
 
 export const playerResponseSchema = t.Object({
-  id: t.Number(),
-  externalId: t.String(),
+  id: t.String(),
   name: t.String(),
   country: t.Nullable(t.String()),
   account: t.Nullable(playerAccountResponseSchema),
@@ -47,8 +46,7 @@ export function toPlayerResponse({
   account
 }: PlayerWithAccount): PlayerResponse {
   return {
-    id: player.id,
-    externalId: player.externalId,
+    id: player.externalId,
     name: player.name,
     country: player.country,
     account: account
@@ -64,5 +62,5 @@ export function toPlayerResponse({
 }
 
 export const playerIdParamsSchema = t.Object({
-  id: t.Numeric({ minimum: 1 })
+  externalId: t.String({ minLength: 1, maxLength: 64 })
 });

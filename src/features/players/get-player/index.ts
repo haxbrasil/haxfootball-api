@@ -8,7 +8,7 @@ import {
 import { players } from "@/features/players/player.db";
 import { notFound } from "@/shared/http/errors";
 
-export async function getPlayer(id: number): Promise<PlayerResponse> {
+export async function getPlayer(externalId: string): Promise<PlayerResponse> {
   const [row] = await db
     .select({
       player: players,
@@ -16,7 +16,7 @@ export async function getPlayer(id: number): Promise<PlayerResponse> {
     })
     .from(players)
     .leftJoin(accounts, eq(players.accountId, accounts.id))
-    .where(eq(players.id, id));
+    .where(eq(players.externalId, externalId));
 
   if (!row) {
     throw notFound("Player not found");

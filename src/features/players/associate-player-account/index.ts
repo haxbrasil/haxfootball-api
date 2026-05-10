@@ -18,10 +18,10 @@ export type AssociatePlayerAccountInput = Static<
 >;
 
 export async function associatePlayerAccount(
-  id: number,
+  externalId: string,
   input: AssociatePlayerAccountInput
 ): Promise<PlayerResponse> {
-  const [player] = await db.select().from(players).where(eq(players.id, id));
+  const [player] = await db.select().from(players).where(eq(players.externalId, externalId));
 
   if (!player) {
     throw notFound("Player not found");
@@ -46,7 +46,7 @@ export async function associatePlayerAccount(
       accountId: account.id,
       updatedAt: new Date().toISOString()
     })
-    .where(eq(players.id, id))
+    .where(eq(players.externalId, externalId))
     .returning();
 
   return toPlayerResponse({ player: updatedPlayer, account });

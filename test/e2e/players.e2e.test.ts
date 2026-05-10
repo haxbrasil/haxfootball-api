@@ -19,8 +19,7 @@ describe("players", () => {
     const player: PlayerResponse = await response.json();
 
     expect(player).toMatchObject({
-      id: expect.any(Number),
-      externalId: "player-1",
+      id: "player-1",
       name: "Striker",
       country: "br",
       account: null,
@@ -117,8 +116,8 @@ describe("players", () => {
 
     expect(associateResponse.status).toBe(200);
     expect(await associateResponse.json()).toMatchObject({
-      id: player.id,
-      externalId: "player-4",
+      id: "player-4",
+      name: "Defender",
       account: {
         uuid: account.uuid,
         name: account.name,
