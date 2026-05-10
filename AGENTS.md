@@ -31,12 +31,18 @@ src/features/<feature>/
 
 Avoid adding generic service/repository classes unless there is real behavior or an abstraction boundary that justifies them. Operation modules should contain the use-case logic and operation-specific schemas.
 
+Do not invent vague file categories such as `store`, `service`, `manager`, or generic helper layers. If logic is shared inside a feature, extract it only when the responsibility is concrete and the name describes that responsibility. Acceptable examples are narrow feature-local modules such as `<feature>.persistence.ts` for shared database persistence, `<feature>.invariants.ts` for feature invariants, or `*.util.ts` for pure utilities.
+
+Prefer equational-style code for non-trivial transformations: name intermediate values, keep each step explicit, and use `map`, `filter`, `find`, and `reduce` where they make the data flow clearer than imperative loops. Avoid complex `reduce` by default, but keep it when it is still the clearest expression of the transformation. Use spacing to separate conceptual phases, especially between derived constants, transformations, selections, effects, and returns.
+
 ## Boundaries
 
 - Database definitions belong in `<feature>.db.ts`.
 - Shared HTTP contracts belong in `<feature>.contract.ts`.
 - Operation-specific request or response schemas belong in that operation folder.
 - Routes belong in `<feature>.routes.ts` and should mainly compose operations.
+- `*.util.ts` modules should be pure. They should not import database clients, Drizzle tables, environment config, or HTTP errors. Inject dependencies instead.
+- Feature-local persistence modules may use Drizzle and database tables, but should not own unrelated business rules or pure derivation logic. Keep invariants and pure transformations in separately named modules when extraction is justified.
 - `src/db/schema.ts` should only export Drizzle database schemas.
 - Do not use database-derived insert/select types as HTTP operation input/output contracts. Use schema-derived DTO types and map database rows to response DTOs.
 - Do not add defensive runtime type guards just to appease lint or TypeScript. Prefer precise types at the boundary and simple annotations where needed. Add runtime validation only when the input is genuinely untrusted or validation is the behavior being implemented.

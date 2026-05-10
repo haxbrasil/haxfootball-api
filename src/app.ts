@@ -2,6 +2,7 @@ import { swagger } from "@elysiajs/swagger";
 import { Elysia } from "elysia";
 import { authRoutes } from "@/features/auth/auth.routes";
 import { accountRoutes } from "@/features/accounts/account.routes";
+import { matchRoutes } from "@/features/matches/match.routes";
 import { playerRoutes } from "@/features/players/player.routes";
 import { recordingRoutes } from "@/features/recordings/recording.routes";
 import { roleRoutes } from "@/features/roles/role.routes";
@@ -50,5 +51,6 @@ export const app = new Elysia()
         .use(accountRoutes)
         .use(roleRoutes)
         .use(playerRoutes)
+        .use(matchRoutes)
         .use(recordingRoutes)
     );

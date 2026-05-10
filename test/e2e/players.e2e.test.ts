@@ -82,6 +82,18 @@ describe("players", () => {
     expect(await getResponse.json()).toEqual(player);
   });
 
+  it("returns 404 when a player does not exist", async () => {
+    const response = await request("/api/players/missing-player");
+
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({
+      error: {
+        code: "NOT_FOUND",
+        message: "Player not found"
+      }
+    });
+  });
+
   it("associates a player with an account", async () => {
     const createAccountResponse = await request("/api/accounts", {
       method: "POST",
@@ -124,6 +136,23 @@ describe("players", () => {
         externalId: account.externalId
       }
     });
+  });
+
+  it("does not expose internal player fields", async () => {
+    const response = await request("/api/players", {
+      method: "POST",
+      body: {
+        externalId: "player-no-internals",
+        name: "Private"
+      }
+    });
+
+    expect(response.status).toBe(201);
+
+    const player = await response.json();
+
+    expect(player.id).toBe("player-no-internals");
+    expect(player.accountId).toBeUndefined();
   });
 
   it("does not replace an existing account association", async () => {
@@ -191,6 +220,79 @@ describe("players", () => {
     });
   });
 
+  it("returns 404 when associating a missing player or account", async () => {
+    const missingPlayerResponse = await request("/api/players/missing/account", {
+      method: "PATCH",
+      body: {
+        accountUuid: "00000000-0000-4000-8000-000000000000"
+      }
+    });
+
+    expect(missingPlayerResponse.status).toBe(404);
+    expect(await missingPlayerResponse.json()).toEqual({
+      error: {
+        code: "NOT_FOUND",
+        message: "Player not found"
+      }
+    });
+
+    const createPlayerResponse = await request("/api/players", {
+      method: "POST",
+      body: {
+        externalId: "player-missing-account",
+        name: "Unowned"
+      }
+    });
+
+    expect(createPlayerResponse.status).toBe(201);
+
+    const player: PlayerResponse = await createPlayerResponse.json();
+    const missingAccountResponse = await request(
+      `/api/players/${player.id}/account`,
+      {
+        method: "PATCH",
+        body: {
+          accountUuid: "00000000-0000-4000-8000-000000000000"
+        }
+      }
+    );
+
+    expect(missingAccountResponse.status).toBe(404);
+    expect(await missingAccountResponse.json()).toEqual({
+      error: {
+        code: "NOT_FOUND",
+        message: "Account not found"
+      }
+    });
+  });
+
+  it("rejects invalid account association UUIDs", async () => {
+    const createPlayerResponse = await request("/api/players", {
+      method: "POST",
+      body: {
+        externalId: "player-invalid-account-uuid",
+        name: "InvalidUuid"
+      }
+    });
+
+    expect(createPlayerResponse.status).toBe(201);
+
+    const player: PlayerResponse = await createPlayerResponse.json();
+    const response = await request(`/api/players/${player.id}/account`, {
+      method: "PATCH",
+      body: {
+        accountUuid: "not-a-uuid"
+      }
+    });
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({
+      error: {
+        code: "VALIDATION_ERROR"
+      }
+    });
+  });
+
   it("rejects duplicate player external IDs", async () => {
     const firstResponse = await request("/api/players", {
       method: "POST",
@@ -231,6 +333,36 @@ describe("players", () => {
 
     expect(response.status).toBe(400);
     expect(await response.json()).toMatchObject({
+      error: {
+        code: "VALIDATION_ERROR"
+      }
+    });
+  });
+
+  it("rejects invalid player names and external IDs", async () => {
+    const invalidNameResponse = await request("/api/players", {
+      method: "POST",
+      body: {
+        externalId: "player-invalid-name",
+        name: "!!!"
+      }
+    });
+    const invalidExternalIdResponse = await request("/api/players", {
+      method: "POST",
+      body: {
+        externalId: "",
+        name: "ValidName"
+      }
+    });
+
+    expect(invalidNameResponse.status).toBe(400);
+    expect(invalidExternalIdResponse.status).toBe(400);
+    expect(await invalidNameResponse.json()).toMatchObject({
+      error: {
+        code: "VALIDATION_ERROR"
+      }
+    });
+    expect(await invalidExternalIdResponse.json()).toMatchObject({
       error: {
         code: "VALIDATION_ERROR"
       }

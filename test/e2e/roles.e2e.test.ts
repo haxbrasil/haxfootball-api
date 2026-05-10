@@ -73,6 +73,20 @@ describe("roles", () => {
     expect(await response.json()).toEqual(role);
   });
 
+  it("returns 404 when a role does not exist", async () => {
+    const response = await request(
+      "/api/roles/00000000-0000-4000-8000-000000000000"
+    );
+
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({
+      error: {
+        code: "NOT_FOUND",
+        message: "Role not found"
+      }
+    });
+  });
+
   it("removes a role", async () => {
     const createResponse = await request("/api/roles", {
       method: "POST",
@@ -95,6 +109,23 @@ describe("roles", () => {
     const getResponse = await request(`/api/roles/${role.uuid}`);
 
     expect(getResponse.status).toBe(404);
+  });
+
+  it("returns 404 when removing a missing role", async () => {
+    const response = await request(
+      "/api/roles/00000000-0000-4000-8000-000000000000",
+      {
+        method: "DELETE"
+      }
+    );
+
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({
+      error: {
+        code: "NOT_FOUND",
+        message: "Role not found"
+      }
+    });
   });
 
   it("moves assigned accounts to the default role when a role is removed", async () => {
@@ -191,6 +222,67 @@ describe("roles", () => {
       error: {
         code: "BAD_REQUEST",
         message: "Role name already exists"
+      }
+    });
+  });
+
+  it("does not create duplicate non-default role names", async () => {
+    const firstResponse = await request("/api/roles", {
+      method: "POST",
+      body: {
+        name: "duplicate-role",
+        title: "Duplicate Role"
+      }
+    });
+
+    expect(firstResponse.status).toBe(201);
+
+    const secondResponse = await request("/api/roles", {
+      method: "POST",
+      body: {
+        name: "duplicate-role",
+        title: "Duplicate Role Again"
+      }
+    });
+
+    expect(secondResponse.status).toBe(400);
+    expect(await secondResponse.json()).toEqual({
+      error: {
+        code: "BAD_REQUEST",
+        message: "Role name already exists"
+      }
+    });
+  });
+
+  it("rejects invalid role input and UUID params", async () => {
+    const invalidBodyResponse = await request("/api/roles", {
+      method: "POST",
+      body: {
+        name: "Invalid Role",
+        title: ""
+      }
+    });
+    const invalidGetResponse = await request("/api/roles/not-a-uuid");
+    const invalidDeleteResponse = await request("/api/roles/not-a-uuid", {
+      method: "DELETE"
+    });
+
+    expect(invalidBodyResponse.status).toBe(400);
+    expect(invalidGetResponse.status).toBe(400);
+    expect(invalidDeleteResponse.status).toBe(400);
+    expect(await invalidBodyResponse.json()).toMatchObject({
+      error: {
+        code: "VALIDATION_ERROR"
+      }
+    });
+    expect(await invalidGetResponse.json()).toMatchObject({
+      error: {
+        code: "VALIDATION_ERROR"
+      }
+    });
+    expect(await invalidDeleteResponse.json()).toMatchObject({
+      error: {
+        code: "VALIDATION_ERROR"
       }
     });
   });
