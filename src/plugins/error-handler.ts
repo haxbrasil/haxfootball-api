@@ -3,6 +3,7 @@ import {
   HttpError,
   errorResponse,
   internalServerError,
+  notFound,
   validationError
 } from "@/shared/http/errors";
 
@@ -16,6 +17,13 @@ export const errorHandler = () =>
 
     if (code === "VALIDATION") {
       const httpError = validationError(error.message);
+      set.status = httpError.status;
+
+      return errorResponse(httpError);
+    }
+
+    if (code === "NOT_FOUND") {
+      const httpError = notFound(error.message);
       set.status = httpError.status;
 
       return errorResponse(httpError);
