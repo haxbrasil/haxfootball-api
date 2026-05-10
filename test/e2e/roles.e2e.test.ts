@@ -7,7 +7,8 @@ describe("roles", () => {
     const response = await request("/api/roles", {
       method: "POST",
       body: {
-        name: "Coach"
+        name: "coach",
+        title: "Coach"
       }
     });
 
@@ -17,7 +18,8 @@ describe("roles", () => {
 
     expect(role).toMatchObject({
       uuid: expect.any(String),
-      name: "Coach",
+      name: "coach",
+      title: "Coach",
       isDefault: false,
       createdAt: expect.any(String),
       updatedAt: expect.any(String)
@@ -29,7 +31,8 @@ describe("roles", () => {
     const createResponse = await request("/api/roles", {
       method: "POST",
       body: {
-        name: "Manager"
+        name: "manager",
+        title: "Manager"
       }
     });
 
@@ -46,6 +49,7 @@ describe("roles", () => {
     expect(roles).toContainEqual(
       expect.objectContaining({
         name: "default",
+        title: "Default",
         isDefault: true
       })
     );
@@ -55,7 +59,8 @@ describe("roles", () => {
     const createResponse = await request("/api/roles", {
       method: "POST",
       body: {
-        name: "Analyst"
+        name: "analyst",
+        title: "Analyst"
       }
     });
 
@@ -72,7 +77,8 @@ describe("roles", () => {
     const createResponse = await request("/api/roles", {
       method: "POST",
       body: {
-        name: "Retired"
+        name: "retired",
+        title: "Retired"
       }
     });
 
@@ -95,7 +101,8 @@ describe("roles", () => {
     const roleResponse = await request("/api/roles", {
       method: "POST",
       body: {
-        name: "Temporary"
+        name: "temporary",
+        title: "Temporary"
       }
     });
 
@@ -139,6 +146,7 @@ describe("roles", () => {
       uuid: account.uuid,
       role: {
         name: "default",
+        title: "Default",
         isDefault: true
       }
     });
@@ -173,7 +181,8 @@ describe("roles", () => {
     const response = await request("/api/roles", {
       method: "POST",
       body: {
-        name: "default"
+        name: "default",
+        title: "Default"
       }
     });
 

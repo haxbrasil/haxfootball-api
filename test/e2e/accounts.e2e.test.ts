@@ -22,6 +22,7 @@ describe("accounts", () => {
       externalId: "123456789012345678",
       role: {
         name: "default",
+        title: "Default",
         isDefault: true
       },
       createdAt: expect.any(String),
@@ -109,7 +110,8 @@ describe("accounts", () => {
     const roleResponse = await request("/api/roles", {
       method: "POST",
       body: {
-        name: "Captain"
+        name: "captain",
+        title: "Captain"
       }
     });
 

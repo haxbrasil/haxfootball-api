@@ -5,12 +5,14 @@ import { badRequest } from "@/shared/http/errors";
 import {
   type RoleResponse,
   roleNameSchema,
+  roleTitleSchema,
   toRoleResponse
 } from "@/features/roles/role.contract";
 import { roles } from "@/features/roles/role.db";
 
 export const createRoleBodySchema = t.Object({
-  name: roleNameSchema
+  name: roleNameSchema,
+  title: roleTitleSchema
 });
 
 export type CreateRoleInput = Static<typeof createRoleBodySchema>;
@@ -28,7 +30,8 @@ export async function createRole(input: CreateRoleInput): Promise<RoleResponse> 
   const [role] = await db
     .insert(roles)
     .values({
-      name: input.name
+      name: input.name,
+      title: input.title
     })
     .returning();
 

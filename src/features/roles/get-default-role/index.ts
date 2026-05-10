@@ -4,6 +4,7 @@ import {
   type Role,
   defaultRoleId,
   defaultRoleName,
+  defaultRoleTitle,
   roles
 } from "@/features/roles/role.db";
 
@@ -21,7 +22,8 @@ export async function getDefaultRole(): Promise<Role> {
     .insert(roles)
     .values({
       id: defaultRoleId,
-      name: defaultRoleName
+      name: defaultRoleName,
+      title: defaultRoleTitle
     })
     .returning();
 
