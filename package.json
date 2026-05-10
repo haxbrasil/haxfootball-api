@@ -1,12 +1,12 @@
 {
-  "name": "backend-api",
+  "name": "haxfootball-api",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "packageManager": "bun@1.3.13",
   "scripts": {
-    "dev": "$npm_execpath --watch src/index.ts",
-    "start": "$npm_execpath src/index.ts",
+    "dev": "bun --watch src/index.ts",
+    "start": "bun src/index.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "lint": "eslint .",
