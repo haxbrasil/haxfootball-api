@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { request } from "@/test/e2e/helpers";
+import { request } from "@/test/e2e/helpers/helpers";
 
 describe("accounts", () => {
   it("creates an account", async () => {

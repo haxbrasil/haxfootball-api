@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import type { AccountResponse } from "@/features/accounts/account.contract";
 import type { PlayerResponse } from "@/features/players/player.contract";
-import { request } from "@/test/e2e/helpers";
+import { request } from "@/test/e2e/helpers/helpers";
 
 describe("players", () => {
   it("adds a player", async () => {

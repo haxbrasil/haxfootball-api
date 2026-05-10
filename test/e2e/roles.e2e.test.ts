@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import type { RoleResponse } from "@/features/roles/role.contract";
-import { request } from "@/test/e2e/helpers";
+import { request } from "@/test/e2e/helpers/helpers";
 
 describe("roles", () => {
   it("creates a role", async () => {
