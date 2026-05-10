@@ -11,7 +11,7 @@ export const authRoutes = new Elysia({ name: "auth-routes" })
   .use(jwtPlugin())
   .post(
     "/auth",
-    ({ body, jwt }) => createToken(body, jwt.sign),
+    ({ body, jwt }) => createToken(body, (payload) => jwt.sign(payload)),
     {
       body: createTokenBodySchema,
       response: {

@@ -1,4 +1,4 @@
-import { Elysia } from "elysia";
+import type { Elysia } from "elysia";
 import { jwtPlugin } from "@/plugins/jwt";
 import {
   unauthorized,

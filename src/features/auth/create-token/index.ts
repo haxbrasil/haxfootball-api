@@ -1,6 +1,6 @@
 import { type Static, t } from "elysia";
 import { env } from "@/config/env";
-import { type SignJwt } from "@/plugins/jwt";
+import type { SignJwt } from "@/plugins/jwt";
 import { unauthorized } from "@/shared/http/errors";
 
 export const createTokenBodySchema = t.Object({

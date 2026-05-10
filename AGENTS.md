@@ -43,6 +43,10 @@ use-case logic and operation-specific schemas.
 - `src/db/schema.ts` should only export Drizzle database schemas.
 - Do not use database-derived insert/select types as HTTP operation input/output
   contracts. Use schema-derived DTO types and map database rows to response DTOs.
+- Do not add defensive runtime type guards just to appease lint or TypeScript.
+  Prefer precise types at the boundary and simple annotations where needed. Add
+  runtime validation only when the input is genuinely untrusted or validation is
+  the behavior being implemented.
 
 ## Elysia
 
@@ -90,6 +94,10 @@ inside that test with unique input values.
 
 Tests should read like request/response examples. Assert status codes and the
 response body shape that matters for the behavior under test.
+
+If a response shape is needed for a local assertion, prefer a small explicit
+type annotation or an existing contract type and keep the test focused on
+behavior.
 
 ## Verification
 

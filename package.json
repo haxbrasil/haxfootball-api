@@ -9,6 +9,7 @@
     "start": "$npm_execpath src/index.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "lint": "eslint .",
     "test": "$npm_execpath test test/e2e",
     "test:e2e": "$npm_execpath test test/e2e",
     "typecheck": "tsc --noEmit"
@@ -21,8 +22,11 @@
     "elysia": "^1.4.28"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/bun": "^1.2.0",
     "drizzle-kit": "~0.31.4",
-    "typescript": "^5.8.0"
+    "eslint": "^10.3.0",
+    "typescript": "^5.8.0",
+    "typescript-eslint": "^8.59.2"
   }
 }

@@ -1,4 +1,4 @@
-import { Elysia } from "elysia";
+import type { Elysia } from "elysia";
 import {
   badRequestOrValidationErrorResponseSchema,
   internalServerErrorResponseSchema,

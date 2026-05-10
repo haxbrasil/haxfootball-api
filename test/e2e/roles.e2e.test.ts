@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+import type { RoleResponse } from "@/features/roles/role.contract";
 import { request } from "@/test/e2e/helpers";
 
 describe("roles", () => {
@@ -148,10 +149,7 @@ describe("roles", () => {
 
     expect(listResponse.status).toBe(200);
 
-    const roles = (await listResponse.json()) as Array<{
-      uuid: string;
-      isDefault: boolean;
-    }>;
+    const roles: RoleResponse[] = await listResponse.json();
     const defaultRole = roles.find((role) => role.isDefault);
 
     if (!defaultRole) {

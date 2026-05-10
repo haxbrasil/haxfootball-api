@@ -15,7 +15,7 @@ Bun.env.DATABASE_FILE ??= `/tmp/haxfootball-api-e2e-${crypto.randomUUID()}.sqlit
 
 let databaseReady = false;
 
-async function setupTestDatabase() {
+function setupTestDatabase() {
   if (databaseReady) {
     return;
   }
@@ -25,6 +25,8 @@ async function setupTestDatabase() {
   for (const migrationFile of readdirSync("drizzle").filter((file) =>
     file.endsWith(".sql")
   ).sort()) {
+    // Migration files contain multiple statements; Database.run only accepts one.
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     database.exec(readFileSync(join("drizzle", migrationFile), "utf8"));
   }
 
@@ -33,7 +35,7 @@ async function setupTestDatabase() {
 }
 
 async function getApp() {
-  await setupTestDatabase();
+  setupTestDatabase();
 
   const { app } = await import("@/app");
 
@@ -58,7 +60,11 @@ export async function createAuthToken() {
 
   const body = await response.json();
 
-  return body.token as string;
+  if (typeof body.token !== "string") {
+    throw new Error("Expected auth response to include a token");
+  }
+
+  return body.token;
 }
 
 let authToken: string | undefined;
@@ -72,27 +78,27 @@ async function getAuthToken() {
 export async function request(path: string, init: TestRequestInit = {}) {
   const token = await getAuthToken();
   const { body, ...requestInit } = init;
+  const headers = new Headers(requestInit.headers);
+
+  headers.set("authorization", `Bearer ${token}`);
+  headers.set("content-type", "application/json");
 
   return rawRequest(path, {
     ...requestInit,
     body: body === undefined ? undefined : JSON.stringify(body),
-    headers: {
-      authorization: `Bearer ${token}`,
-      "content-type": "application/json",
-      ...requestInit.headers
-    }
+    headers
   });
 }
 
 export async function publicRequest(path: string, init: TestRequestInit = {}) {
   const { body, ...requestInit } = init;
+  const headers = new Headers(requestInit.headers);
+
+  headers.set("content-type", "application/json");
 
   return rawRequest(path, {
     ...requestInit,
     body: body === undefined ? undefined : JSON.stringify(body),
-    headers: {
-      ...requestInit.headers,
-      "content-type": "application/json"
-    }
+    headers
   });
 }
