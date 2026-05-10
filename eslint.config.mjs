@@ -42,7 +42,18 @@ export default tseslint.config(
         "error",
         { allowNumber: true }
       ],
-      "@typescript-eslint/switch-exhaustiveness-check": "error"
+      "@typescript-eslint/switch-exhaustiveness-check": "error",
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["./*", "../*"],
+              message: "Use configured path aliases instead of relative imports."
+            }
+          ]
+        }
+      ]
     }
   },
   {

@@ -16,8 +16,10 @@ import {
   getRecordingForAssociation,
   persistMatchEvents,
   persistMatchScore,
+  resolveMatchStatEventSchemaVersionId,
   recomputeMatchStints
 } from "@/features/matches/match.persistence";
+import { statEventSchemaReferenceSchema } from "@/features/stat-event-schemas/stat-event-schema.contract";
 import { assertCompletedMatchFields } from "@/features/matches/match.invariants";
 import { badRequest } from "@/shared/http/errors";
 
@@ -27,6 +29,7 @@ export const createMatchBodySchema = t.Object({
   endedAt: t.Optional(t.String({ minLength: 1 })),
   score: t.Optional(matchScoreSchema),
   recordingId: t.Optional(t.String({ minLength: 1 })),
+  statEventSchema: t.Optional(statEventSchemaReferenceSchema),
   events: t.Optional(t.Array(matchPlayerEventInputSchema))
 });
 
@@ -42,11 +45,15 @@ export async function createMatch(input: CreateMatchInput): Promise<MatchRespons
     ? await getRecordingForAssociation(input.recordingId)
     : null;
   const recordingId = recording?.id;
+  const statEventSchemaVersionId = await resolveMatchStatEventSchemaVersionId(
+    input.statEventSchema
+  );
   const initialEvents = input.events ?? [];
   const matchValues = {
     publicId,
     status: input.status,
     recordingId,
+    statEventSchemaVersionId,
     initiatedAt: input.initiatedAt,
     endedAt: input.endedAt
   };

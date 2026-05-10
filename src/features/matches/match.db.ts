@@ -3,27 +3,40 @@ import {
   real,
   sqliteTable,
   text,
-  uniqueIndex
+  uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 import { players } from "@/features/players/player.db";
 import { recordings } from "@/features/recordings/recording.db";
+import { statEventSchemaVersions } from "@/features/stat-event-schemas/stat-event-schema.db";
 
-export const matches = sqliteTable("matches", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  publicId: text("public_id").notNull().unique(),
-  status: text("status", { enum: ["ongoing", "completed"] }).notNull(),
-  recordingId: integer("recording_id")
-    .references(() => recordings.id)
-    .unique(),
-  initiatedAt: text("initiated_at"),
-  endedAt: text("ended_at"),
-  createdAt: text("created_at")
-    .notNull()
-    .$defaultFn(() => new Date().toISOString()),
-  updatedAt: text("updated_at")
-    .notNull()
-    .$defaultFn(() => new Date().toISOString())
-});
+export const matches = sqliteTable(
+  "matches",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    publicId: text("public_id").notNull().unique(),
+    status: text("status", { enum: ["ongoing", "completed"] }).notNull(),
+    recordingId: integer("recording_id")
+      .references(() => recordings.id)
+      .unique(),
+    statEventSchemaVersionId: integer("stat_event_schema_version_id").references(
+      () => statEventSchemaVersions.id
+    ),
+    initiatedAt: text("initiated_at"),
+    endedAt: text("ended_at"),
+    createdAt: text("created_at")
+      .notNull()
+      .$defaultFn(() => new Date().toISOString()),
+    updatedAt: text("updated_at")
+      .notNull()
+      .$defaultFn(() => new Date().toISOString())
+  },
+  (table) => [
+    uniqueIndex("matches_id_stat_event_schema_version_id_unique").on(
+      table.id,
+      table.statEventSchemaVersionId
+    )
+  ]
+);
 
 export const matchTeamMetadata = sqliteTable(
   "match_team_metadata",

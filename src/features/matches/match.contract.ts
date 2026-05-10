@@ -15,6 +15,14 @@ import {
   toRecordingResponse
 } from "@/features/recordings/recording.contract";
 import type { Recording } from "@/features/recordings/recording.db";
+import {
+  statEventSchemaReferenceSchema,
+  type StatEventSchemaReference
+} from "@/features/stat-event-schemas/stat-event-schema.contract";
+import type {
+  StatEventSchemaFamily,
+  StatEventSchemaVersion
+} from "@/features/stat-event-schemas/stat-event-schema.db";
 
 export const matchStatusSchema = t.Union([
   t.Literal("ongoing"),
@@ -85,6 +93,7 @@ export const matchSummaryResponseSchema = t.Object({
   endedAt: t.Nullable(t.String()),
   score: t.Nullable(matchScoreSchema),
   recording: t.Nullable(recordingResponseSchema),
+  statEventSchema: t.Nullable(statEventSchemaReferenceSchema),
   createdAt: t.String(),
   updatedAt: t.String()
 });
@@ -119,6 +128,8 @@ type PlayerRow = {
 export type MatchSummaryRow = {
   match: Match;
   recording: Recording | null;
+  statEventSchemaFamily: StatEventSchemaFamily | null;
+  statEventSchemaVersion: StatEventSchemaVersion | null;
   metadata: MatchTeamMetadata[];
 };
 
@@ -130,6 +141,8 @@ export type MatchDetailRow = MatchSummaryRow & {
 export function toMatchSummaryResponse({
   match,
   recording,
+  statEventSchemaFamily,
+  statEventSchemaVersion,
   metadata
 }: MatchSummaryRow): MatchSummaryResponse {
   return {
@@ -139,6 +152,10 @@ export function toMatchSummaryResponse({
     endedAt: match.endedAt,
     score: toMatchScore(metadata),
     recording: recording ? toRecordingResponse(recording) : null,
+    statEventSchema: toMatchStatEventSchemaReference({
+      family: statEventSchemaFamily,
+      version: statEventSchemaVersion
+    }),
     createdAt: match.createdAt,
     updatedAt: match.updatedAt
   };
@@ -179,5 +196,19 @@ function toMatchScore(metadata: MatchTeamMetadata[]): MatchScore | null {
   return {
     red: red.score,
     blue: blue.score
+  };
+}
+
+function toMatchStatEventSchemaReference(input: {
+  family: StatEventSchemaFamily | null;
+  version: StatEventSchemaVersion | null;
+}): StatEventSchemaReference | null {
+  if (!input.family || !input.version) {
+    return null;
+  }
+
+  return {
+    id: input.family.uuid,
+    version: input.version.version
   };
 }

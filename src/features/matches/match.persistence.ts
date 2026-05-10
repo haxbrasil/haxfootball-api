@@ -1,6 +1,7 @@
-import { asc, desc, eq, inArray } from "drizzle-orm";
+import { asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db/client";
-import { deriveMatchStints } from "@/features/matches/match-stints.util";
+import { matchStatEvents } from "@/features/match-stat-events/match-stat-event.db";
+import { deriveMatchStints } from "@/features/matches/match-stints.service";
 import type {
   MatchDetailRow,
   MatchPlayerEventInput,
@@ -16,6 +17,13 @@ import {
 import { validateMatchEvents } from "@/features/matches/match.invariants";
 import { players, type Player } from "@/features/players/player.db";
 import { recordings } from "@/features/recordings/recording.db";
+import {
+  statEventSchemaFamilies,
+  statEventSchemaVersions
+} from "@/features/stat-event-schemas/stat-event-schema.db";
+import {
+  resolveStatEventSchemaVersion
+} from "@/features/stat-event-schemas/stat-event-schema.persistence";
 import { badRequest, notFound } from "@/shared/http/errors";
 
 export type PersistedMatchEvent = MatchPlayerEventInput & {
@@ -27,10 +35,20 @@ export async function listMatchSummaries(): Promise<MatchSummaryRow[]> {
   const rows = await db
     .select({
       match: matches,
-      recording: recordings
+      recording: recordings,
+      statEventSchemaFamily: statEventSchemaFamilies,
+      statEventSchemaVersion: statEventSchemaVersions
     })
     .from(matches)
     .leftJoin(recordings, eq(matches.recordingId, recordings.id))
+    .leftJoin(
+      statEventSchemaVersions,
+      eq(matches.statEventSchemaVersionId, statEventSchemaVersions.id)
+    )
+    .leftJoin(
+      statEventSchemaFamilies,
+      eq(statEventSchemaVersions.familyId, statEventSchemaFamilies.id)
+    )
     .orderBy(desc(matches.createdAt));
 
   return Promise.all(
@@ -45,10 +63,20 @@ export async function getMatchSummary(publicId: string): Promise<MatchSummaryRow
   const [row] = await db
     .select({
       match: matches,
-      recording: recordings
+      recording: recordings,
+      statEventSchemaFamily: statEventSchemaFamilies,
+      statEventSchemaVersion: statEventSchemaVersions
     })
     .from(matches)
     .leftJoin(recordings, eq(matches.recordingId, recordings.id))
+    .leftJoin(
+      statEventSchemaVersions,
+      eq(matches.statEventSchemaVersionId, statEventSchemaVersions.id)
+    )
+    .leftJoin(
+      statEventSchemaFamilies,
+      eq(statEventSchemaVersions.familyId, statEventSchemaFamilies.id)
+    )
     .where(eq(matches.publicId, publicId));
 
   if (!row) {
@@ -59,6 +87,39 @@ export async function getMatchSummary(publicId: string): Promise<MatchSummaryRow
     ...row,
     metadata: await listMatchMetadata(row.match.id)
   };
+}
+
+export async function resolveMatchStatEventSchemaVersionId(input:
+  | { id: string; version: number }
+  | null
+  | undefined
+): Promise<number | null | undefined> {
+  if (input === undefined) {
+    return undefined;
+  }
+
+  if (input === null) {
+    return null;
+  }
+
+  const version = await resolveStatEventSchemaVersion(input.id, input.version);
+
+  return version.id;
+}
+
+export async function assertMatchStatEventSchemaCanChange(
+  matchId: number
+): Promise<void> {
+  const [{ count }] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(matchStatEvents)
+    .where(eq(matchStatEvents.matchId, matchId));
+
+  if (count > 0) {
+    throw badRequest(
+      "Match stat event schema cannot be changed after stat events exist"
+    );
+  }
 }
 
 export async function getMatchDetail(publicId: string): Promise<MatchDetailRow> {

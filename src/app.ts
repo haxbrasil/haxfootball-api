@@ -6,6 +6,7 @@ import { matchRoutes } from "@/features/matches/match.routes";
 import { playerRoutes } from "@/features/players/player.routes";
 import { recordingRoutes } from "@/features/recordings/recording.routes";
 import { roleRoutes } from "@/features/roles/role.routes";
+import { statEventSchemaRoutes } from "@/features/stat-event-schemas/stat-event-schema.routes";
 import { withJwtGuard } from "@/guards/jwt.guard";
 import { withCommonErrorResponses } from "@/plugins/common-error-responses";
 import { errorHandler } from "@/plugins/error-handler";
@@ -53,4 +54,5 @@ export const app = new Elysia()
         .use(playerRoutes)
         .use(matchRoutes)
         .use(recordingRoutes)
+        .use(statEventSchemaRoutes)
     );

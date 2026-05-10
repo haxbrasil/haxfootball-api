@@ -14,9 +14,12 @@ import {
   getMatchDetail,
   getMatchSummary,
   persistMatchScore,
+  assertMatchStatEventSchemaCanChange,
+  resolveMatchStatEventSchemaVersionId,
   recomputeMatchStints,
   replaceMatchEvents
 } from "@/features/matches/match.persistence";
+import { statEventSchemaReferenceSchema } from "@/features/stat-event-schemas/stat-event-schema.contract";
 import {
   assertCompletedMatchFields,
   assertMatchIsEditable
@@ -28,6 +31,7 @@ export const updateMatchBodySchema = t.Partial(
     initiatedAt: t.String({ minLength: 1 }),
     endedAt: t.String({ minLength: 1 }),
     score: matchScoreSchema,
+    statEventSchema: statEventSchemaReferenceSchema,
     events: t.Array(matchPlayerEventInputSchema)
   })
 );
@@ -45,12 +49,21 @@ export async function updateMatch(
   const nextStatus = input.status ?? current.match.status;
   const nextEndedAt = input.endedAt ?? current.match.endedAt;
   const nextScore = input.score ?? scoreFromMetadata(current.metadata);
+  const nextStatEventSchemaVersionId =
+    await resolveMatchStatEventSchemaVersionId(input.statEventSchema);
 
   assertCompletedMatchFields({
     status: nextStatus,
     endedAt: nextEndedAt,
     score: nextScore
   });
+
+  if (
+    nextStatEventSchemaVersionId !== undefined &&
+    nextStatEventSchemaVersionId !== current.match.statEventSchemaVersionId
+  ) {
+    await assertMatchStatEventSchemaCanChange(current.match.id);
+  }
 
   await db
     .update(matches)
@@ -60,6 +73,9 @@ export async function updateMatch(
         ? { initiatedAt: input.initiatedAt }
         : {}),
       ...(input.endedAt !== undefined ? { endedAt: input.endedAt } : {}),
+      ...(nextStatEventSchemaVersionId !== undefined
+        ? { statEventSchemaVersionId: nextStatEventSchemaVersionId }
+        : {}),
       updatedAt: new Date().toISOString()
     })
     .where(eq(matches.id, current.match.id));

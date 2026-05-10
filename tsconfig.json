@@ -7,11 +7,13 @@
     "skipLibCheck": true,
     "types": ["bun"],
     "paths": {
+      "@lib": ["./lib/index.ts"],
+      "@lib/*": ["./lib/*"],
       "@/test/*": ["./test/*"],
       "@/*": ["./src/*"]
     },
     "allowImportingTsExtensions": true,
     "noEmit": true
   },
-  "include": ["src/**/*.ts", "test/**/*.ts", "drizzle.config.ts"]
+  "include": ["src/**/*.ts", "lib/**/*.ts", "test/**/*.ts", "drizzle.config.ts"]
 }

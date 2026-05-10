@@ -22,6 +22,7 @@ src/features/<feature>/
   <feature>.db.ts
   <feature>.contract.ts
   <feature>.routes.ts
+  <feature>.service.ts
   create-<entity>/index.ts
   list-<entity>/index.ts
   get-<entity>/index.ts
@@ -31,9 +32,18 @@ src/features/<feature>/
 
 Avoid adding generic service/repository classes unless there is real behavior or an abstraction boundary that justifies them. Operation modules should contain the use-case logic and operation-specific schemas.
 
-Do not invent vague file categories such as `store`, `service`, `manager`, or generic helper layers. If logic is shared inside a feature, extract it only when the responsibility is concrete and the name describes that responsibility. Acceptable examples are narrow feature-local modules such as `<feature>.persistence.ts` for shared database persistence, `<feature>.invariants.ts` for feature invariants, or `*.util.ts` for pure utilities.
+Do not invent vague file categories such as `store`, `manager`, or generic helper layers. If logic is shared inside a feature, extract it only when the responsibility is concrete and the name describes that responsibility. Acceptable examples are narrow feature-local modules such as `<feature>.persistence.ts` for shared database persistence, `<feature>.invariants.ts` for feature invariants, `<feature>.service.ts` for feature behavior such as derivation/evaluation/versioning rules, or `*.util.ts` for pure utility helpers.
 
 Prefer equational-style code for non-trivial transformations: name intermediate values, keep each step explicit, and use `map`, `filter`, `find`, and `reduce` where they make the data flow clearer than imperative loops. Avoid complex `reduce` by default, but keep it when it is still the clearest expression of the transformation. Use spacing to separate conceptual phases, especially between derived constants, transformations, selections, effects, and returns.
+
+## Imports and internal libraries
+
+- Do not use relative imports such as `./foo` or `../foo`. Use configured path aliases instead.
+- Use `@/*` for application code under `src`.
+- Use `@/test/*` for test helpers under `test`.
+- Use `@lib` for generic internal libraries from the top-level `lib` folder. Use `@lib/<library>` only inside `lib` internals or when importing a specific library directly.
+- Put generic, cross-feature libraries in top-level `lib/<library>/index.ts`, and re-export them from `lib/index.ts`.
+- Keep `lib` generic. Do not move feature-specific business rules, persistence, HTTP errors, route composition, or DTO mapping into `lib`.
 
 ## Boundaries
 
@@ -42,6 +52,7 @@ Prefer equational-style code for non-trivial transformations: name intermediate 
 - Operation-specific request or response schemas belong in that operation folder.
 - Routes belong in `<feature>.routes.ts` and should mainly compose operations.
 - `*.util.ts` modules should be pure. They should not import database clients, Drizzle tables, environment config, or HTTP errors. Inject dependencies instead.
+- `*.service.ts` modules are for named feature behavior that is more than a small pure helper, such as aggregation, derivation, schema evaluation, or compatibility rules. They should still stay framework-agnostic where practical.
 - Feature-local persistence modules may use Drizzle and database tables, but should not own unrelated business rules or pure derivation logic. Keep invariants and pure transformations in separately named modules when extraction is justified.
 - `src/db/schema.ts` should only export Drizzle database schemas.
 - Do not use database-derived insert/select types as HTTP operation input/output contracts. Use schema-derived DTO types and map database rows to response DTOs.
