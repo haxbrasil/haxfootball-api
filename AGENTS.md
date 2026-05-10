@@ -74,6 +74,8 @@ Run `bun run db:generate` after any schema changes to create migrations automati
 
 E2E tests are the primary test layer. Put them under `test/e2e`.
 
+Aim for E2E coverage that is strong enough to define the external behavior of the API. If this project were fully re-implemented, passing the E2E suite should be enough evidence that the new implementation preserves the expected behavior.
+
 Use the shared helpers from `test/e2e/helpers.ts`:
 
 - `request()` is the default for API tests. It sends an authenticated JSON request and stringifies object bodies.
