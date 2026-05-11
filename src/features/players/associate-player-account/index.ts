@@ -21,7 +21,10 @@ export async function associatePlayerAccount(
   externalId: string,
   input: AssociatePlayerAccountInput
 ): Promise<PlayerResponse> {
-  const [player] = await db.select().from(players).where(eq(players.externalId, externalId));
+  const [player] = await db
+    .select()
+    .from(players)
+    .where(eq(players.externalId, externalId));
 
   if (!player) {
     throw notFound("Player not found");

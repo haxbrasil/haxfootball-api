@@ -83,7 +83,10 @@ async function isValidRecording(bytes: Uint8Array): Promise<boolean> {
   return !report.issues.some((issue) => issue.severity === "error");
 }
 
-async function putRecordingObject(key: string, bytes: Uint8Array): Promise<void> {
+async function putRecordingObject(
+  key: string,
+  bytes: Uint8Array
+): Promise<void> {
   await r2Client.send(
     new PutObjectCommand({
       Bucket: env.r2Bucket,

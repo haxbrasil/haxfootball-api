@@ -120,20 +120,24 @@ export function validateJsonValue(
       return false;
     }
 
-    return Object.entries(schema.properties).every(([property, propertySchema]) => {
-      const propertyValue = value[property];
+    return Object.entries(schema.properties).every(
+      ([property, propertySchema]) => {
+        const propertyValue = value[property];
 
-      return (
-        propertyValue === undefined ||
-        validateJsonValue(propertyValue, propertySchema)
-      );
-    });
+        return (
+          propertyValue === undefined ||
+          validateJsonValue(propertyValue, propertySchema)
+        );
+      }
+    );
   }
 
   return true;
 }
 
-function isValidSchemaType(value: JsonValue | undefined): value is JsonType | undefined {
+function isValidSchemaType(
+  value: JsonValue | undefined
+): value is JsonType | undefined {
   return (
     value === undefined ||
     value === "null" ||

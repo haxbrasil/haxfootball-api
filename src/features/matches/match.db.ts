@@ -3,7 +3,7 @@ import {
   real,
   sqliteTable,
   text,
-  uniqueIndex,
+  uniqueIndex
 } from "drizzle-orm/sqlite-core";
 import { players } from "@/features/players/player.db";
 import { recordings } from "@/features/recordings/recording.db";
@@ -18,9 +18,9 @@ export const matches = sqliteTable(
     recordingId: integer("recording_id")
       .references(() => recordings.id)
       .unique(),
-    statEventSchemaVersionId: integer("stat_event_schema_version_id").references(
-      () => statEventSchemaVersions.id
-    ),
+    statEventSchemaVersionId: integer(
+      "stat_event_schema_version_id"
+    ).references(() => statEventSchemaVersions.id),
     initiatedAt: text("initiated_at"),
     endedAt: text("ended_at"),
     createdAt: text("created_at")

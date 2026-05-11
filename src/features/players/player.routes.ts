@@ -22,34 +22,26 @@ export const playerRoutes = new Elysia({
   name: "player-routes",
   prefix: "/players"
 })
-  .get(
-    "",
-    () => listPlayers(),
-    {
-      response: {
-        200: listPlayersResponseSchema
-      },
-      detail: {
-        tags: ["Players"],
-        summary: "List players"
-      }
+  .get("", () => listPlayers(), {
+    response: {
+      200: listPlayersResponseSchema
+    },
+    detail: {
+      tags: ["Players"],
+      summary: "List players"
     }
-  )
-  .get(
-    "/:externalId",
-    ({ params }) => getPlayer(params.externalId),
-    {
-      params: playerIdParamsSchema,
-      response: {
-        200: playerResponseSchema,
-        404: notFoundErrorResponseSchema
-      },
-      detail: {
-        tags: ["Players"],
-        summary: "Get a player"
-      }
+  })
+  .get("/:externalId", ({ params }) => getPlayer(params.externalId), {
+    params: playerIdParamsSchema,
+    response: {
+      200: playerResponseSchema,
+      404: notFoundErrorResponseSchema
+    },
+    detail: {
+      tags: ["Players"],
+      summary: "Get a player"
     }
-  )
+  })
   .post(
     "",
     ({ body, set }) => {

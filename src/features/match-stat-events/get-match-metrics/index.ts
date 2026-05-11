@@ -10,7 +10,9 @@ import {
 
 export { matchMetricsResponseSchema };
 
-export async function getMatchMetrics(id: string): Promise<MatchMetricsResponse> {
+export async function getMatchMetrics(
+  id: string
+): Promise<MatchMetricsResponse> {
   const { match, schemaVersion } = await getSchemaBoundMatch(id);
   const events = await listMatchStatEventsByMatchId(match.id);
 

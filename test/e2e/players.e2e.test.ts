@@ -119,12 +119,15 @@ describe("players", () => {
     expect(createPlayerResponse.status).toBe(201);
 
     const player: PlayerResponse = await createPlayerResponse.json();
-    const associateResponse = await request(`/api/players/${player.id}/account`, {
-      method: "PATCH",
-      body: {
-        accountUuid: account.uuid
+    const associateResponse = await request(
+      `/api/players/${player.id}/account`,
+      {
+        method: "PATCH",
+        body: {
+          accountUuid: account.uuid
+        }
       }
-    });
+    );
 
     expect(associateResponse.status).toBe(200);
     expect(await associateResponse.json()).toMatchObject({
@@ -221,12 +224,15 @@ describe("players", () => {
   });
 
   it("returns 404 when associating a missing player or account", async () => {
-    const missingPlayerResponse = await request("/api/players/missing/account", {
-      method: "PATCH",
-      body: {
-        accountUuid: "00000000-0000-4000-8000-000000000000"
+    const missingPlayerResponse = await request(
+      "/api/players/missing/account",
+      {
+        method: "PATCH",
+        body: {
+          accountUuid: "00000000-0000-4000-8000-000000000000"
+        }
       }
-    });
+    );
 
     expect(missingPlayerResponse.status).toBe(404);
     expect(await missingPlayerResponse.json()).toEqual({

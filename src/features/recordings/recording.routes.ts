@@ -21,34 +21,26 @@ export const recordingRoutes = new Elysia({
   name: "recording-routes",
   prefix: "/recs"
 })
-  .get(
-    "",
-    () => listRecordings(),
-    {
-      response: {
-        200: listRecordingsResponseSchema
-      },
-      detail: {
-        tags: ["Recordings"],
-        summary: "List recordings"
-      }
+  .get("", () => listRecordings(), {
+    response: {
+      200: listRecordingsResponseSchema
+    },
+    detail: {
+      tags: ["Recordings"],
+      summary: "List recordings"
     }
-  )
-  .get(
-    "/:id",
-    ({ params }) => getRecording(params.id),
-    {
-      params: recordingPublicIdParamsSchema,
-      response: {
-        200: recordingResponseSchema,
-        404: notFoundErrorResponseSchema
-      },
-      detail: {
-        tags: ["Recordings"],
-        summary: "Get a recording"
-      }
+  })
+  .get("/:id", ({ params }) => getRecording(params.id), {
+    params: recordingPublicIdParamsSchema,
+    response: {
+      200: recordingResponseSchema,
+      404: notFoundErrorResponseSchema
+    },
+    detail: {
+      tags: ["Recordings"],
+      summary: "Get a recording"
     }
-  )
+  })
   .post(
     "",
     async ({ body, set }) => {

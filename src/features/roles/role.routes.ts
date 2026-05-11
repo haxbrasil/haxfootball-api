@@ -1,7 +1,10 @@
 import { Elysia } from "elysia";
 import { createRole, createRoleBodySchema } from "@/features/roles/create-role";
 import { getRole } from "@/features/roles/get-role";
-import { listRoles, listRolesResponseSchema } from "@/features/roles/list-roles";
+import {
+  listRoles,
+  listRolesResponseSchema
+} from "@/features/roles/list-roles";
 import {
   removeRole,
   removeRoleResponseSchema
@@ -16,34 +19,26 @@ export const roleRoutes = new Elysia({
   name: "role-routes",
   prefix: "/roles"
 })
-  .get(
-    "",
-    () => listRoles(),
-    {
-      response: {
-        200: listRolesResponseSchema
-      },
-      detail: {
-        tags: ["Roles"],
-        summary: "List roles"
-      }
+  .get("", () => listRoles(), {
+    response: {
+      200: listRolesResponseSchema
+    },
+    detail: {
+      tags: ["Roles"],
+      summary: "List roles"
     }
-  )
-  .get(
-    "/:uuid",
-    ({ params }) => getRole(params.uuid),
-    {
-      params: roleUuidParamsSchema,
-      response: {
-        200: roleResponseSchema,
-        404: notFoundErrorResponseSchema
-      },
-      detail: {
-        tags: ["Roles"],
-        summary: "Get a role"
-      }
+  })
+  .get("/:uuid", ({ params }) => getRole(params.uuid), {
+    params: roleUuidParamsSchema,
+    response: {
+      200: roleResponseSchema,
+      404: notFoundErrorResponseSchema
+    },
+    detail: {
+      tags: ["Roles"],
+      summary: "Get a role"
     }
-  )
+  })
   .post(
     "",
     ({ body, set }) => {
@@ -62,18 +57,14 @@ export const roleRoutes = new Elysia({
       }
     }
   )
-  .delete(
-    "/:uuid",
-    ({ params }) => removeRole(params.uuid),
-    {
-      params: roleUuidParamsSchema,
-      response: {
-        200: removeRoleResponseSchema,
-        404: notFoundErrorResponseSchema
-      },
-      detail: {
-        tags: ["Roles"],
-        summary: "Remove a role"
-      }
+  .delete("/:uuid", ({ params }) => removeRole(params.uuid), {
+    params: roleUuidParamsSchema,
+    response: {
+      200: removeRoleResponseSchema,
+      404: notFoundErrorResponseSchema
+    },
+    detail: {
+      tags: ["Roles"],
+      summary: "Remove a role"
     }
-  );
+  });

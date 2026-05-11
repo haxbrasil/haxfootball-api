@@ -1,6 +1,9 @@
 import { type Static, t } from "elysia";
 import type { Role } from "@/features/roles/role.db";
-import { roleResponseSchema, toRoleResponse } from "@/features/roles/role.contract";
+import {
+  roleResponseSchema,
+  toRoleResponse
+} from "@/features/roles/role.contract";
 import type { Account } from "@/features/accounts/account.db";
 
 export const accountNameSchema = t.String({

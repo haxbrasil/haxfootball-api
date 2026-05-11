@@ -251,7 +251,9 @@ describe("matches", () => {
     const match: MatchResponse = await createResponse.json();
 
     expect(match.events).toHaveLength(5);
-    expect(match.events.map((event) => event.sequence)).toEqual([1, 2, 3, 4, 5]);
+    expect(match.events.map((event) => event.sequence)).toEqual([
+      1, 2, 3, 4, 5
+    ]);
     expect(match.participations).toMatchObject([
       {
         player: {
@@ -557,17 +559,20 @@ describe("matches", () => {
 
     expect(completeResponse.status).toBe(200);
 
-    const secondAppendResponse = await request(`/api/matches/${match.id}/events`, {
-      method: "POST",
-      body: {
-        events: [
-          {
-            type: "player_leave",
-            playerId: player.id
-          }
-        ]
+    const secondAppendResponse = await request(
+      `/api/matches/${match.id}/events`,
+      {
+        method: "POST",
+        body: {
+          events: [
+            {
+              type: "player_leave",
+              playerId: player.id
+            }
+          ]
+        }
       }
-    });
+    );
 
     expect(secondAppendResponse.status).toBe(400);
   });
@@ -593,19 +598,22 @@ describe("matches", () => {
     expect(createResponse.status).toBe(201);
 
     const createdMatch: MatchResponse = await createResponse.json();
-    const appendResponse = await request(`/api/matches/${createdMatch.id}/events`, {
-      method: "POST",
-      body: {
-        events: [
-          {
-            type: "player_leave",
-            playerId: player.id,
-            occurredAt: "2026-05-10T12:01:00.000Z",
-            elapsedSeconds: 60
-          }
-        ]
+    const appendResponse = await request(
+      `/api/matches/${createdMatch.id}/events`,
+      {
+        method: "POST",
+        body: {
+          events: [
+            {
+              type: "player_leave",
+              playerId: player.id,
+              occurredAt: "2026-05-10T12:01:00.000Z",
+              elapsedSeconds: 60
+            }
+          ]
+        }
       }
-    });
+    );
 
     expect(appendResponse.status).toBe(200);
 
@@ -699,18 +707,21 @@ describe("matches", () => {
     expect(createResponse.status).toBe(201);
 
     const match: MatchResponse = await createResponse.json();
-    const leaveWithTeamResponse = await request(`/api/matches/${match.id}/events`, {
-      method: "POST",
-      body: {
-        events: [
-          {
-            type: "player_leave",
-            playerId: player.id,
-            team: "red"
-          }
-        ]
+    const leaveWithTeamResponse = await request(
+      `/api/matches/${match.id}/events`,
+      {
+        method: "POST",
+        body: {
+          events: [
+            {
+              type: "player_leave",
+              playerId: player.id,
+              team: "red"
+            }
+          ]
+        }
       }
-    });
+    );
 
     expect(leaveWithTeamResponse.status).toBe(400);
     expect(await leaveWithTeamResponse.json()).toEqual({
@@ -720,17 +731,20 @@ describe("matches", () => {
       }
     });
 
-    const joinWithoutTeamResponse = await request(`/api/matches/${match.id}/events`, {
-      method: "POST",
-      body: {
-        events: [
-          {
-            type: "player_join",
-            playerId: player.id
-          }
-        ]
+    const joinWithoutTeamResponse = await request(
+      `/api/matches/${match.id}/events`,
+      {
+        method: "POST",
+        body: {
+          events: [
+            {
+              type: "player_join",
+              playerId: player.id
+            }
+          ]
+        }
       }
-    });
+    );
 
     expect(joinWithoutTeamResponse.status).toBe(400);
     expect(await joinWithoutTeamResponse.json()).toEqual({
@@ -740,25 +754,29 @@ describe("matches", () => {
       }
     });
 
-    const partialTimeResponse = await request(`/api/matches/${match.id}/events`, {
-      method: "POST",
-      body: {
-        events: [
-          {
-            type: "player_join",
-            playerId: player.id,
-            team: "red",
-            occurredAt: "2026-05-10T12:00:00.000Z"
-          }
-        ]
+    const partialTimeResponse = await request(
+      `/api/matches/${match.id}/events`,
+      {
+        method: "POST",
+        body: {
+          events: [
+            {
+              type: "player_join",
+              playerId: player.id,
+              team: "red",
+              occurredAt: "2026-05-10T12:00:00.000Z"
+            }
+          ]
+        }
       }
-    });
+    );
 
     expect(partialTimeResponse.status).toBe(400);
     expect(await partialTimeResponse.json()).toEqual({
       error: {
         code: "BAD_REQUEST",
-        message: "Player event occurredAt and elapsedSeconds must be provided together"
+        message:
+          "Player event occurredAt and elapsedSeconds must be provided together"
       }
     });
   });
@@ -830,24 +848,30 @@ describe("matches", () => {
     expect(createResponse.status).toBe(201);
 
     const match: MatchResponse = await createResponse.json();
-    const associateResponse = await request(`/api/matches/${match.id}/recording`, {
-      method: "PATCH",
-      body: {
-        recordingId: recording.id
+    const associateResponse = await request(
+      `/api/matches/${match.id}/recording`,
+      {
+        method: "PATCH",
+        body: {
+          recordingId: recording.id
+        }
       }
-    });
+    );
 
     expect(associateResponse.status).toBe(200);
     expect(await associateResponse.json()).toMatchObject({
       recording
     });
 
-    const replaceResponse = await request(`/api/matches/${match.id}/recording`, {
-      method: "PATCH",
-      body: {
-        recordingId: recording.id
+    const replaceResponse = await request(
+      `/api/matches/${match.id}/recording`,
+      {
+        method: "PATCH",
+        body: {
+          recordingId: recording.id
+        }
       }
-    });
+    );
 
     expect(replaceResponse.status).toBe(400);
     expect(await replaceResponse.json()).toEqual({

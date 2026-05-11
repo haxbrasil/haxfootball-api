@@ -17,6 +17,10 @@ Bun.env.R2_ENDPOINT ??= "https://example.r2.cloudflarestorage.com";
 Bun.env.R2_ACCESS_KEY_ID ??= "test-access-key-id";
 Bun.env.R2_SECRET_ACCESS_KEY ??= "test-secret-access-key";
 Bun.env.R2_PUBLIC_BASE_URL ??= "https://recs.haxbrasil.com";
+Bun.env.ROOM_GITHUB_API_BASE_URL ??= "http://127.0.0.1:19081";
+Bun.env.ROOM_PROCESS_RUNNER ??= "node";
+Bun.env.ROOM_PACKAGE_CACHE_DIR ??= `/tmp/haxfootball-api-room-packages-${crypto.randomUUID()}`;
+Bun.env.ROOM_PROCESS_LOG_DIR ??= `/tmp/haxfootball-api-room-logs-${crypto.randomUUID()}`;
 
 let databaseReady = false;
 
@@ -27,9 +31,9 @@ function setupTestDatabase() {
 
   const database = new Database(Bun.env.DATABASE_FILE);
 
-  for (const migrationFile of readdirSync("drizzle").filter((file) =>
-    file.endsWith(".sql")
-  ).sort()) {
+  for (const migrationFile of readdirSync("drizzle")
+    .filter((file) => file.endsWith(".sql"))
+    .sort()) {
     // Migration files contain multiple statements; Database.run only accepts one.
     // eslint-disable-next-line @typescript-eslint/no-deprecated
     database.exec(readFileSync(join("drizzle", migrationFile), "utf8"));

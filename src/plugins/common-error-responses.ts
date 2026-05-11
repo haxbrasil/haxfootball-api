@@ -1,7 +1,7 @@
 import type { Elysia } from "elysia";
 import {
   badRequestOrValidationErrorResponseSchema,
-  internalServerErrorResponseSchema,
+  internalServerErrorResponseSchema
 } from "@/shared/http/errors";
 
 export const withCommonErrorResponses = (app: Elysia) =>

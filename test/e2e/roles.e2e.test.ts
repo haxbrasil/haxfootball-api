@@ -152,12 +152,15 @@ describe("roles", () => {
     expect(createAccountResponse.status).toBe(201);
 
     const account = await createAccountResponse.json();
-    const updateAccountResponse = await request(`/api/accounts/${account.uuid}`, {
-      method: "PATCH",
-      body: {
-        roleUuid: role.uuid
+    const updateAccountResponse = await request(
+      `/api/accounts/${account.uuid}`,
+      {
+        method: "PATCH",
+        body: {
+          roleUuid: role.uuid
+        }
       }
-    });
+    );
 
     expect(updateAccountResponse.status).toBe(200);
     expect(await updateAccountResponse.json()).toMatchObject({

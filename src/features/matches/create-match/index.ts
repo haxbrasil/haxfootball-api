@@ -37,7 +37,9 @@ export { matchResponseSchema as createMatchResponseSchema };
 
 export type CreateMatchInput = Static<typeof createMatchBodySchema>;
 
-export async function createMatch(input: CreateMatchInput): Promise<MatchResponse> {
+export async function createMatch(
+  input: CreateMatchInput
+): Promise<MatchResponse> {
   assertCompletedMatchFields(input);
 
   const publicId = await createRequiredMatchPublicId();
@@ -58,10 +60,7 @@ export async function createMatch(input: CreateMatchInput): Promise<MatchRespons
     endedAt: input.endedAt
   };
 
-  const [match] = await db
-    .insert(matches)
-    .values(matchValues)
-    .returning();
+  const [match] = await db.insert(matches).values(matchValues).returning();
 
   await persistMatchScore(match.id, input.score);
   await persistMatchEvents(match.id, initialEvents);

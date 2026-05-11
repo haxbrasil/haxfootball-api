@@ -62,7 +62,9 @@ function evaluateOperation(
     case "multiply":
       return numeric(args[0]) * numeric(args[1]);
     case "divide":
-      return numeric(args[1]) === 0 ? null : numeric(args[0]) / numeric(args[1]);
+      return numeric(args[1]) === 0
+        ? null
+        : numeric(args[0]) / numeric(args[1]);
     case "eq":
       return JSON.stringify(args[0]) === JSON.stringify(args[1]);
     case "gt":
@@ -89,7 +91,7 @@ function evaluateOperation(
         : 0;
     case "if":
       return evaluateJsonExpression(
-        args[0] ? expression.then ?? null : expression.else ?? null,
+        args[0] ? (expression.then ?? null) : (expression.else ?? null),
         scope
       );
     default:

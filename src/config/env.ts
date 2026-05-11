@@ -19,6 +19,24 @@ const envSchema = Type.Object({
   recordingMaxBytes: Type.Integer({
     default: 25 * 1024 * 1024,
     minimum: 1
+  }),
+  roomGithubApiBaseUrl: Type.String({
+    default: "https://api.github.com",
+    minLength: 1
+  }),
+  roomProcessRunner: Type.Union(
+    [Type.Literal("bubblewrap"), Type.Literal("node")],
+    {
+      default: "bubblewrap"
+    }
+  ),
+  roomPackageCacheDir: Type.String({
+    default: "/tmp/haxfootball-api-room-packages",
+    minLength: 1
+  }),
+  roomProcessLogDir: Type.String({
+    default: "/tmp/haxfootball-api-rooms",
+    minLength: 1
   })
 });
 
@@ -35,11 +53,18 @@ const envInput = {
   r2Endpoint: Bun.env.R2_ENDPOINT,
   r2AccessKeyId: Bun.env.R2_ACCESS_KEY_ID,
   r2SecretAccessKey: Bun.env.R2_SECRET_ACCESS_KEY,
-  recordingMaxBytes: Bun.env.RECORDING_MAX_BYTES
+  recordingMaxBytes: Bun.env.RECORDING_MAX_BYTES,
+  roomGithubApiBaseUrl: Bun.env.ROOM_GITHUB_API_BASE_URL,
+  roomProcessRunner: Bun.env.ROOM_PROCESS_RUNNER,
+  roomPackageCacheDir: Bun.env.ROOM_PACKAGE_CACHE_DIR,
+  roomProcessLogDir: Bun.env.ROOM_PROCESS_LOG_DIR
 };
 
 const envValidator = TypeCompiler.Compile(envSchema);
-const envCandidate = Value.Convert(envSchema, Value.Default(envSchema, envInput));
+const envCandidate = Value.Convert(
+  envSchema,
+  Value.Default(envSchema, envInput)
+);
 
 if (!envValidator.Check(envCandidate)) {
   const errors = [...envValidator.Errors(envCandidate)]

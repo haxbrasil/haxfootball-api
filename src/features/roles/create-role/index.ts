@@ -17,7 +17,9 @@ export const createRoleBodySchema = t.Object({
 
 export type CreateRoleInput = Static<typeof createRoleBodySchema>;
 
-export async function createRole(input: CreateRoleInput): Promise<RoleResponse> {
+export async function createRole(
+  input: CreateRoleInput
+): Promise<RoleResponse> {
   const [existingRole] = await db
     .select()
     .from(roles)

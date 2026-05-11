@@ -9,7 +9,9 @@
     "start": "bun src/index.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "lint": "eslint .",
+    "format": "biome format --write .",
+    "format:check": "biome format .",
+    "lint": "biome lint .",
     "test": "bash scripts/test-e2e.sh",
     "test:e2e": "bash scripts/test-e2e.sh",
     "typecheck": "tsc --noEmit"
@@ -24,11 +26,9 @@
     "elysia": "^1.4.28"
   },
   "devDependencies": {
-    "@eslint/js": "^10.0.1",
+    "@biomejs/biome": "^2.4.15",
     "@types/bun": "^1.2.0",
     "drizzle-kit": "~0.31.4",
-    "eslint": "^10.3.0",
-    "typescript": "^5.8.0",
-    "typescript-eslint": "^8.59.2"
+    "typescript": "^5.8.0"
   }
 }

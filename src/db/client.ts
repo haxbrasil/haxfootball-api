@@ -20,9 +20,7 @@ type JsonSupportCheckRow = {
 function assertSqliteJsonSupport(sqlite: Database): void {
   const validJson = '{"ok":true}';
   const jsonSupportCheck = sqlite
-    .query<JsonSupportCheckRow, [string]>(
-      "select json_valid(?) as jsonIsValid"
-    )
+    .query<JsonSupportCheckRow, [string]>("select json_valid(?) as jsonIsValid")
     .get(validJson);
 
   if (jsonSupportCheck?.jsonIsValid !== 1) {

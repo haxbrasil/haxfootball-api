@@ -7,7 +7,9 @@ import { listStatEventSchemaRows } from "@/features/stat-event-schemas/stat-even
 
 export { listStatEventSchemasResponseSchema };
 
-export async function listStatEventSchemas(): Promise<StatEventSchemaResponse[]> {
+export async function listStatEventSchemas(): Promise<
+  StatEventSchemaResponse[]
+> {
   const rows = await listStatEventSchemaRows();
 
   return rows.map(toStatEventSchemaResponse);

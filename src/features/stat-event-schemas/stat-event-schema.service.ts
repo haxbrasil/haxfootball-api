@@ -81,7 +81,9 @@ export function validateStatEventSchemaDefinition(
   return {
     events: eventDefinitions,
     ...(virtualMetrics
-      ? { virtualMetrics: virtualMetrics.map(toRequiredVirtualMetricDefinition) }
+      ? {
+          virtualMetrics: virtualMetrics.map(toRequiredVirtualMetricDefinition)
+        }
       : {})
   };
 }
@@ -97,7 +99,9 @@ export function isBreakingSchemaChange(
   previous: StatEventSchemaDefinition,
   next: StatEventSchemaDefinition
 ): boolean {
-  const nextEventByType = new Map(next.events.map((event) => [event.type, event]));
+  const nextEventByType = new Map(
+    next.events.map((event) => [event.type, event])
+  );
 
   const changedExistingEvent = previous.events.some((previousEvent) => {
     const nextEvent = nextEventByType.get(previousEvent.type);
@@ -205,7 +209,11 @@ function toAggregationRule(value: JsonValue): StatEventAggregationRule | null {
     return null;
   }
 
-  if (!("initial" in value) || !("step" in value) || !isExpression(value.step)) {
+  if (
+    !("initial" in value) ||
+    !("step" in value) ||
+    !isExpression(value.step)
+  ) {
     return null;
   }
 

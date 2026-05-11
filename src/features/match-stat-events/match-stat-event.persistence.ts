@@ -9,9 +9,7 @@ import { matches } from "@/features/matches/match.db";
 import { players } from "@/features/players/player.db";
 import type { StatEventSchemaVersion } from "@/features/stat-event-schemas/stat-event-schema.db";
 import { statEventSchemaVersions } from "@/features/stat-event-schemas/stat-event-schema.db";
-import {
-  validateStatValue
-} from "@/features/stat-event-schemas/stat-event-schema.service";
+import { validateStatValue } from "@/features/stat-event-schemas/stat-event-schema.service";
 import { badRequest, notFound } from "@/shared/http/errors";
 import { isJsonValue } from "@lib";
 
@@ -152,7 +150,10 @@ export async function disableMatchStatEvent(
     .select()
     .from(matchStatEvents)
     .where(
-      and(eq(matchStatEvents.matchId, match.id), eq(matchStatEvents.uuid, eventId))
+      and(
+        eq(matchStatEvents.matchId, match.id),
+        eq(matchStatEvents.uuid, eventId)
+      )
     );
 
   if (!existingEvent) {

@@ -32,7 +32,9 @@ export async function updateStatEventSchema(
   const row = await getStatEventSchemaRow(id, versionNumber);
 
   if (row.version.version !== row.latestVersion) {
-    throw badRequest("Only the latest stat event schema version can be updated");
+    throw badRequest(
+      "Only the latest stat event schema version can be updated"
+    );
   }
 
   const definition = validateStatEventSchemaDefinition(input.definition);

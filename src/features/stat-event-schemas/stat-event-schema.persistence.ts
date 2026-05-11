@@ -19,7 +19,10 @@ export async function listStatEventSchemaRows(): Promise<StatEventSchemaRow[]> {
       statEventSchemaFamilies,
       eq(statEventSchemaVersions.familyId, statEventSchemaFamilies.id)
     )
-    .orderBy(desc(statEventSchemaFamilies.createdAt), desc(statEventSchemaVersions.version));
+    .orderBy(
+      desc(statEventSchemaFamilies.createdAt),
+      desc(statEventSchemaVersions.version)
+    );
 
   const latestByFamily = latestVersionByFamily(rows);
 

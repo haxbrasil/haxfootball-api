@@ -27,48 +27,36 @@ export const accountRoutes = new Elysia({
   name: "account-routes",
   prefix: "/accounts"
 })
-  .get(
-    "",
-    () => listAccounts(),
-    {
-      response: {
-        200: listAccountsResponseSchema
-      },
-      detail: {
-        tags: ["Accounts"],
-        summary: "List accounts"
-      }
+  .get("", () => listAccounts(), {
+    response: {
+      200: listAccountsResponseSchema
+    },
+    detail: {
+      tags: ["Accounts"],
+      summary: "List accounts"
     }
-  )
-  .get(
-    "/:uuid",
-    ({ params }) => getAccount(params.uuid),
-    {
-      params: accountUuidParamsSchema,
-      response: {
-        200: accountResponseSchema,
-        404: notFoundErrorResponseSchema
-      },
-      detail: {
-        tags: ["Accounts"],
-        summary: "Get an account"
-      }
+  })
+  .get("/:uuid", ({ params }) => getAccount(params.uuid), {
+    params: accountUuidParamsSchema,
+    response: {
+      200: accountResponseSchema,
+      404: notFoundErrorResponseSchema
+    },
+    detail: {
+      tags: ["Accounts"],
+      summary: "Get an account"
     }
-  )
-  .post(
-    "/confirm",
-    ({ body }) => confirm(body),
-    {
-      body: confirmBodySchema,
-      response: {
-        200: confirmResponseSchema
-      },
-      detail: {
-        tags: ["Accounts"],
-        summary: "Confirm an account"
-      }
+  })
+  .post("/confirm", ({ body }) => confirm(body), {
+    body: confirmBodySchema,
+    response: {
+      200: confirmResponseSchema
+    },
+    detail: {
+      tags: ["Accounts"],
+      summary: "Confirm an account"
     }
-  )
+  })
   .post(
     "",
     ({ body, set }) => {
@@ -87,19 +75,15 @@ export const accountRoutes = new Elysia({
       }
     }
   )
-  .patch(
-    "/:uuid",
-    ({ body, params }) => updateAccount(params.uuid, body),
-    {
-      body: updateAccountBodySchema,
-      params: accountUuidParamsSchema,
-      response: {
-        200: accountResponseSchema,
-        404: notFoundErrorResponseSchema
-      },
-      detail: {
-        tags: ["Accounts"],
-        summary: "Update an account"
-      }
+  .patch("/:uuid", ({ body, params }) => updateAccount(params.uuid, body), {
+    body: updateAccountBodySchema,
+    params: accountUuidParamsSchema,
+    response: {
+      200: accountResponseSchema,
+      404: notFoundErrorResponseSchema
+    },
+    detail: {
+      tags: ["Accounts"],
+      summary: "Update an account"
     }
-  );
+  });

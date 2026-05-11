@@ -54,34 +54,26 @@ export const matchRoutes = new Elysia({
   name: "match-routes",
   prefix: "/matches"
 })
-  .get(
-    "",
-    () => listMatches(),
-    {
-      response: {
-        200: listMatchesResponseSchema
-      },
-      detail: {
-        tags: ["Matches"],
-        summary: "List matches"
-      }
+  .get("", () => listMatches(), {
+    response: {
+      200: listMatchesResponseSchema
+    },
+    detail: {
+      tags: ["Matches"],
+      summary: "List matches"
     }
-  )
-  .get(
-    "/:id",
-    ({ params }) => getMatch(params.id),
-    {
-      params: matchPublicIdParamsSchema,
-      response: {
-        200: matchResponseSchema,
-        404: notFoundErrorResponseSchema
-      },
-      detail: {
-        tags: ["Matches"],
-        summary: "Get a match"
-      }
+  })
+  .get("/:id", ({ params }) => getMatch(params.id), {
+    params: matchPublicIdParamsSchema,
+    response: {
+      200: matchResponseSchema,
+      404: notFoundErrorResponseSchema
+    },
+    detail: {
+      tags: ["Matches"],
+      summary: "Get a match"
     }
-  )
+  })
   .post(
     "",
     async ({ body, set }) => {
@@ -104,23 +96,19 @@ export const matchRoutes = new Elysia({
       }
     }
   )
-  .patch(
-    "/:id",
-    ({ body, params }) => updateMatch(params.id, body),
-    {
-      body: updateMatchBodySchema,
-      params: matchPublicIdParamsSchema,
-      response: {
-        200: matchResponseSchema,
-        400: badRequestErrorResponseSchema,
-        404: notFoundErrorResponseSchema
-      },
-      detail: {
-        tags: ["Matches"],
-        summary: "Update a match"
-      }
+  .patch("/:id", ({ body, params }) => updateMatch(params.id, body), {
+    body: updateMatchBodySchema,
+    params: matchPublicIdParamsSchema,
+    response: {
+      200: matchResponseSchema,
+      400: badRequestErrorResponseSchema,
+      404: notFoundErrorResponseSchema
+    },
+    detail: {
+      tags: ["Matches"],
+      summary: "Update a match"
     }
-  )
+  })
   .post(
     "/:id/events",
     ({ body, params }) => appendMatchEvents(params.id, body),
@@ -138,22 +126,18 @@ export const matchRoutes = new Elysia({
       }
     }
   )
-  .get(
-    "/:id/stat-events",
-    ({ params }) => listMatchStatEvents(params.id),
-    {
-      params: matchPublicIdParamsSchema,
-      response: {
-        200: listMatchStatEventsResponseSchema,
-        400: badRequestErrorResponseSchema,
-        404: notFoundErrorResponseSchema
-      },
-      detail: {
-        tags: ["Match Stat Events"],
-        summary: "List match stat events"
-      }
+  .get("/:id/stat-events", ({ params }) => listMatchStatEvents(params.id), {
+    params: matchPublicIdParamsSchema,
+    response: {
+      200: listMatchStatEventsResponseSchema,
+      400: badRequestErrorResponseSchema,
+      404: notFoundErrorResponseSchema
+    },
+    detail: {
+      tags: ["Match Stat Events"],
+      summary: "List match stat events"
     }
-  )
+  })
   .post(
     "/:id/stat-events",
     async ({ body, params, set }) => {
@@ -194,22 +178,18 @@ export const matchRoutes = new Elysia({
       }
     }
   )
-  .get(
-    "/:id/metrics",
-    ({ params }) => getMatchMetrics(params.id),
-    {
-      params: matchPublicIdParamsSchema,
-      response: {
-        200: matchMetricsResponseSchema,
-        400: badRequestErrorResponseSchema,
-        404: notFoundErrorResponseSchema
-      },
-      detail: {
-        tags: ["Match Metrics"],
-        summary: "Get match metrics"
-      }
+  .get("/:id/metrics", ({ params }) => getMatchMetrics(params.id), {
+    params: matchPublicIdParamsSchema,
+    response: {
+      200: matchMetricsResponseSchema,
+      400: badRequestErrorResponseSchema,
+      404: notFoundErrorResponseSchema
+    },
+    detail: {
+      tags: ["Match Metrics"],
+      summary: "Get match metrics"
     }
-  )
+  })
   .patch(
     "/:id/recording",
     ({ body, params }) => associateMatchRecording(params.id, body),

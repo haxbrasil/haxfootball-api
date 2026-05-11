@@ -19,7 +19,9 @@ export const withJwtGuard = (app: Elysia) =>
         throw unauthorized("Missing or invalid bearer token");
       }
 
-      const payload = await jwt.verify(authorization.slice(bearerPrefix.length));
+      const payload = await jwt.verify(
+        authorization.slice(bearerPrefix.length)
+      );
 
       if (!payload) {
         throw unauthorized("Missing or invalid bearer token");

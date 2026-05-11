@@ -66,7 +66,9 @@ export function stableJsonStringify(value: JsonValue | undefined): string {
   if (value !== undefined && isJsonObject(value)) {
     return `{${Object.entries(value)
       .sort(([first], [second]) => first.localeCompare(second))
-      .map(([key, item]) => `${JSON.stringify(key)}:${stableJsonStringify(item)}`)
+      .map(
+        ([key, item]) => `${JSON.stringify(key)}:${stableJsonStringify(item)}`
+      )
       .join(",")}}`;
   }
 

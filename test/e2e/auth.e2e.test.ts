@@ -1,9 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import {
-  publicRequest,
-  rawRequest,
-  request
-} from "@/test/e2e/helpers/helpers";
+import { publicRequest, rawRequest, request } from "@/test/e2e/helpers/helpers";
 
 describe("auth", () => {
   it("creates a JWT with a valid API key", async () => {

@@ -364,11 +364,9 @@ describe("match stat events", () => {
 
     const events = await listResponse.json();
 
-    expect(events.map((event: { sequence: number }) => event.sequence)).toEqual([
-      1,
-      2,
-      3
-    ]);
+    expect(events.map((event: { sequence: number }) => event.sequence)).toEqual(
+      [1, 2, 3]
+    );
 
     const metricsResponse = await request(`/api/matches/${match.id}/metrics`);
 
@@ -1133,7 +1131,9 @@ async function createPlayer(label: string): Promise<PlayerResponse> {
   return response.json();
 }
 
-async function createMatch(schema: StatEventSchemaResponse): Promise<MatchResponse> {
+async function createMatch(
+  schema: StatEventSchemaResponse
+): Promise<MatchResponse> {
   const response = await request("/api/matches", {
     method: "POST",
     body: {

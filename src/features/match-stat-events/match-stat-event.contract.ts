@@ -51,7 +51,9 @@ export const matchMetricsResponseSchema = t.Array(
 );
 
 export type MatchStatEventInput = Static<typeof matchStatEventInputSchema>;
-export type MatchStatEventResponse = Static<typeof matchStatEventResponseSchema>;
+export type MatchStatEventResponse = Static<
+  typeof matchStatEventResponseSchema
+>;
 export type MatchMetricsResponse = Static<typeof matchMetricsResponseSchema>;
 
 export type MatchStatEventRow = MatchStatEvent & {

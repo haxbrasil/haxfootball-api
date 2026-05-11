@@ -21,9 +21,7 @@ import {
   statEventSchemaFamilies,
   statEventSchemaVersions
 } from "@/features/stat-event-schemas/stat-event-schema.db";
-import {
-  resolveStatEventSchemaVersion
-} from "@/features/stat-event-schemas/stat-event-schema.persistence";
+import { resolveStatEventSchemaVersion } from "@/features/stat-event-schemas/stat-event-schema.persistence";
 import { badRequest, notFound } from "@/shared/http/errors";
 
 export type PersistedMatchEvent = MatchPlayerEventInput & {
@@ -59,7 +57,9 @@ export async function listMatchSummaries(): Promise<MatchSummaryRow[]> {
   );
 }
 
-export async function getMatchSummary(publicId: string): Promise<MatchSummaryRow> {
+export async function getMatchSummary(
+  publicId: string
+): Promise<MatchSummaryRow> {
   const [row] = await db
     .select({
       match: matches,
@@ -89,10 +89,8 @@ export async function getMatchSummary(publicId: string): Promise<MatchSummaryRow
   };
 }
 
-export async function resolveMatchStatEventSchemaVersionId(input:
-  | { id: string; version: number }
-  | null
-  | undefined
+export async function resolveMatchStatEventSchemaVersionId(
+  input: { id: string; version: number } | null | undefined
 ): Promise<number | null | undefined> {
   if (input === undefined) {
     return undefined;
@@ -122,7 +120,9 @@ export async function assertMatchStatEventSchemaCanChange(
   }
 }
 
-export async function getMatchDetail(publicId: string): Promise<MatchDetailRow> {
+export async function getMatchDetail(
+  publicId: string
+): Promise<MatchDetailRow> {
   const summary = await getMatchSummary(publicId);
 
   return {
@@ -158,7 +158,9 @@ export async function persistMatchScore(
   matchId: number,
   score: MatchScore | null | undefined
 ): Promise<void> {
-  await db.delete(matchTeamMetadata).where(eq(matchTeamMetadata.matchId, matchId));
+  await db
+    .delete(matchTeamMetadata)
+    .where(eq(matchTeamMetadata.matchId, matchId));
 
   if (!score) {
     return;
@@ -207,7 +209,9 @@ export async function replaceMatchEvents(
   matchId: number,
   events: MatchPlayerEventInput[]
 ): Promise<void> {
-  await db.delete(matchPlayerEvents).where(eq(matchPlayerEvents.matchId, matchId));
+  await db
+    .delete(matchPlayerEvents)
+    .where(eq(matchPlayerEvents.matchId, matchId));
   await persistMatchEvents(matchId, events);
 }
 
@@ -225,7 +229,9 @@ export async function recomputeMatchStints(matchId: number): Promise<void> {
   const events = await listMatchEvents(matchId);
   const stints = deriveMatchStints(events);
 
-  await db.delete(matchPlayerStints).where(eq(matchPlayerStints.matchId, matchId));
+  await db
+    .delete(matchPlayerStints)
+    .where(eq(matchPlayerStints.matchId, matchId));
 
   if (stints.length === 0) {
     return;
@@ -251,7 +257,9 @@ async function resolveMatchEvents(
 ): Promise<PersistedMatchEvent[]> {
   validateMatchEvents(events);
 
-  const externalIds = Array.from(new Set(events.map((event) => event.playerId)));
+  const externalIds = Array.from(
+    new Set(events.map((event) => event.playerId))
+  );
 
   const playerRows =
     externalIds.length > 0

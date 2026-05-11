@@ -52,7 +52,6 @@ export const statEventSchemaVersions = sqliteTable(
   ]
 );
 
-export type StatEventSchemaFamily =
-  typeof statEventSchemaFamilies.$inferSelect;
+export type StatEventSchemaFamily = typeof statEventSchemaFamilies.$inferSelect;
 export type StatEventSchemaVersion =
   typeof statEventSchemaVersions.$inferSelect;

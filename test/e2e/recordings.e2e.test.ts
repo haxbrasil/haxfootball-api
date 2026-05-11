@@ -1,16 +1,10 @@
 import { describe, expect, it } from "bun:test";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
-import {
-  recordingBytes,
-  recordingFile
-} from "@/test/e2e/fixtures/recording";
+import { recordingBytes, recordingFile } from "@/test/e2e/fixtures/recording";
 import type { RecordingResponse } from "@/features/recordings/recording.contract";
 import { recordings } from "@/features/recordings/recording.db";
-import {
-  recordingObjectExists,
-  request
-} from "@/test/e2e/helpers/helpers";
+import { recordingObjectExists, request } from "@/test/e2e/helpers/helpers";
 import { createUniquePublicId } from "@/features/recordings/create-recording";
 
 describe("recordings", () => {
@@ -78,9 +72,7 @@ describe("recordings", () => {
       sizeBytes: 1
     });
 
-    const publicId = await createUniquePublicId(
-      "abcdef1".padEnd(64, "1")
-    );
+    const publicId = await createUniquePublicId("abcdef1".padEnd(64, "1"));
 
     expect(publicId).toBe("abcdef1");
   });
@@ -144,8 +136,12 @@ describe("recordings", () => {
     expect(response.status).toBe(200);
 
     const body: RecordingResponse[] = await response.json();
-    const firstIndex = body.findIndex((recording) => recording.id === "aaaaaaa");
-    const secondIndex = body.findIndex((recording) => recording.id === "bbbbbbb");
+    const firstIndex = body.findIndex(
+      (recording) => recording.id === "aaaaaaa"
+    );
+    const secondIndex = body.findIndex(
+      (recording) => recording.id === "bbbbbbb"
+    );
 
     expect(secondIndex).toBeLessThan(firstIndex);
   });
