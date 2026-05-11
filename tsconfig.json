@@ -15,5 +15,11 @@
     "allowImportingTsExtensions": true,
     "noEmit": true
   },
-  "include": ["src/**/*.ts", "lib/**/*.ts", "test/**/*.ts", "drizzle.config.ts"]
+  "include": [
+    "src/**/*.ts",
+    "lib/**/*.ts",
+    "test/**/*.ts",
+    "scripts/**/*.ts",
+    "drizzle.config.ts"
+  ]
 }

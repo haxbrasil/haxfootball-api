@@ -1,9 +1,37 @@
 import { describe, expect, it } from "bun:test";
-import type { MatchResponse } from "@/features/matches/match.contract";
-import type { MatchMetricsResponse } from "@/features/match-stat-events/match-stat-event.contract";
-import type { PlayerResponse } from "@/features/players/player.contract";
-import type { StatEventSchemaResponse } from "@/features/stat-event-schemas/stat-event-schema.contract";
 import { request } from "@/test/e2e/helpers/helpers";
+
+type JsonObject = Record<string, unknown>;
+
+type MatchResponse = {
+  id: string;
+  statEventSchema: {
+    id: string;
+    version: number;
+  } | null;
+};
+
+type MatchMetricsResponse = Array<{
+  player: {
+    id: string;
+  };
+  metrics: Record<string, unknown>;
+}>;
+
+type PlayerResponse = {
+  id: string;
+};
+
+type StatEventSchemaResponse = {
+  id: string;
+  name: string;
+  title: string;
+  version: number;
+  isLatest: boolean;
+  definition: JsonObject;
+  createdAt: string;
+  updatedAt: string;
+};
 
 describe("stat event schemas", () => {
   it("creates, lists, gets, and updates the latest schema version", async () => {

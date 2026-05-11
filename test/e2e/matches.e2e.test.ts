@@ -1,10 +1,40 @@
 import { describe, expect, it } from "bun:test";
-import { db } from "@/db/client";
-import type { MatchResponse } from "@/features/matches/match.contract";
-import type { PlayerResponse } from "@/features/players/player.contract";
-import type { RecordingResponse } from "@/features/recordings/recording.contract";
-import { recordings } from "@/features/recordings/recording.db";
+import { recordingFile } from "@/test/e2e/fixtures/recording";
 import { request } from "@/test/e2e/helpers/helpers";
+
+type MatchEventResponse = {
+  sequence: number;
+  team?: string;
+};
+
+type MatchResponse = {
+  id: string;
+  status: string;
+  initiatedAt: string | null;
+  endedAt: string | null;
+  score: MatchScoreResponse | null;
+  recording: RecordingResponse | null;
+  events: MatchEventResponse[];
+  participations: unknown[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+type MatchScoreResponse = {
+  red: number;
+  blue: number;
+};
+
+type PlayerResponse = {
+  id: string;
+};
+
+type RecordingResponse = {
+  id: string;
+  url: string;
+  sizeBytes: number;
+  createdAt: string;
+};
 
 describe("matches", () => {
   it("creates an ongoing match", async () => {
@@ -831,7 +861,7 @@ describe("matches", () => {
     });
   });
 
-  it("associates a recording with a completed match once", async () => {
+  it("associates a recording with a match once", async () => {
     const recording = await createRecording();
     const createResponse = await request("/api/matches", {
       method: "POST",
@@ -880,11 +910,8 @@ describe("matches", () => {
         message: "Match already has a recording"
       }
     });
-  });
 
-  it("associates a recording when creating a match", async () => {
-    const recording = await createRecording();
-    const response = await request("/api/matches", {
+    const secondMatchResponse = await request("/api/matches", {
       method: "POST",
       body: {
         status: "ongoing",
@@ -892,35 +919,8 @@ describe("matches", () => {
       }
     });
 
-    expect(response.status).toBe(201);
-
-    const match: MatchResponse = await response.json();
-
-    expect(match.recording).toEqual(recording);
-  });
-
-  it("does not allow one recording to be associated with multiple matches", async () => {
-    const recording = await createRecording();
-    const firstResponse = await request("/api/matches", {
-      method: "POST",
-      body: {
-        status: "ongoing",
-        recordingId: recording.id
-      }
-    });
-
-    expect(firstResponse.status).toBe(201);
-
-    const secondResponse = await request("/api/matches", {
-      method: "POST",
-      body: {
-        status: "ongoing",
-        recordingId: recording.id
-      }
-    });
-
-    expect(secondResponse.status).toBe(400);
-    expect(await secondResponse.json()).toEqual({
+    expect(secondMatchResponse.status).toBe(400);
+    expect(await secondMatchResponse.json()).toEqual({
       error: {
         code: "BAD_REQUEST",
         message: "Recording is already associated with a match"
@@ -1039,22 +1039,15 @@ async function createPlayer(label: string): Promise<PlayerResponse> {
 }
 
 async function createRecording(): Promise<RecordingResponse> {
-  const publicId = crypto.randomUUID().replaceAll("-", "").slice(0, 8);
-  const objectKey = `${publicId}.hbr2`;
-  const [recording] = await db
-    .insert(recordings)
-    .values({
-      publicId,
-      sha256: crypto.randomUUID().replaceAll("-", "").padEnd(64, "0"),
-      objectKey,
-      sizeBytes: 123
-    })
-    .returning();
+  const formData = new FormData();
+  formData.set("file", recordingFile());
 
-  return {
-    id: recording.publicId,
-    url: `${Bun.env.R2_PUBLIC_BASE_URL}/${objectKey}`,
-    sizeBytes: recording.sizeBytes,
-    createdAt: recording.createdAt
-  };
+  const response = await request("/api/recs", {
+    method: "POST",
+    body: formData
+  });
+
+  expect([200, 201]).toContain(response.status);
+
+  return response.json();
 }

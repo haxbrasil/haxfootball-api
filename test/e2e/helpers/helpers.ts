@@ -1,8 +1,6 @@
 import { Database } from "bun:sqlite";
 import { HeadObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { expect } from "bun:test";
-import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
 
 type TestRequestInit = {
   method?: string;
@@ -24,27 +22,37 @@ Bun.env.ROOM_PROCESS_LOG_DIR ??= `/tmp/haxfootball-api-room-logs-${crypto.random
 
 let databaseReady = false;
 
-function setupTestDatabase() {
+async function setupTestDatabase(): Promise<void> {
   if (databaseReady) {
     return;
   }
 
   const database = new Database(Bun.env.DATABASE_FILE);
+  const migrationFiles = await migrationSqlFiles();
 
-  for (const migrationFile of readdirSync("drizzle")
-    .filter((file) => file.endsWith(".sql"))
-    .sort()) {
+  for (const migrationFile of migrationFiles) {
     // Migration files contain multiple statements; Database.run only accepts one.
     // eslint-disable-next-line @typescript-eslint/no-deprecated
-    database.exec(readFileSync(join("drizzle", migrationFile), "utf8"));
+    database.exec(await Bun.file(migrationFile).text());
   }
 
   database.close();
   databaseReady = true;
 }
 
+async function migrationSqlFiles(): Promise<string[]> {
+  const files: string[] = [];
+  const glob = new Bun.Glob("drizzle/*.sql");
+
+  for await (const file of glob.scan()) {
+    files.push(file);
+  }
+
+  return files.sort();
+}
+
 async function getApp() {
-  setupTestDatabase();
+  await setupTestDatabase();
 
   const { app } = await import("@/app");
 

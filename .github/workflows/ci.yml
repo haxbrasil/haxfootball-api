@@ -42,3 +42,6 @@ jobs:
 
       - name: E2E tests
         run: bun run test:e2e
+
+      - name: Internal tests
+        run: bun run test:internal

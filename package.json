@@ -12,8 +12,10 @@
     "format": "biome format --write .",
     "format:check": "biome format .",
     "lint": "biome lint .",
-    "test": "bash scripts/test-e2e.sh",
-    "test:e2e": "bash scripts/test-e2e.sh",
+    "test": "bun run test:e2e && bun run test:internal",
+    "test:e2e": "bun run test:e2e:boundaries && bash scripts/test-e2e.sh",
+    "test:e2e:boundaries": "bun scripts/check-e2e-boundaries.ts",
+    "test:internal": "bun test test/internal",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
