@@ -132,12 +132,16 @@ async function launchNodeProcess(
   await mkdir(roomRoot, { recursive: true });
 
   const logFd = openSync(logPath, "a");
-  const childProcess = spawn("node", [input.version.nodeEntrypoint], {
-    cwd: packageRoot,
-    detached: true,
-    env: input.environment,
-    stdio: ["ignore", logFd, logFd]
-  });
+  const childProcess = spawn(
+    env.roomNodeBinary,
+    [input.version.nodeEntrypoint],
+    {
+      cwd: packageRoot,
+      detached: true,
+      env: input.environment,
+      stdio: ["ignore", logFd, logFd]
+    }
+  );
 
   closeSync(logFd);
   childProcess.unref();

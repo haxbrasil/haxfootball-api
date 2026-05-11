@@ -28,6 +28,9 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Configure room runtime
+        run: echo "ROOM_NODE_BINARY=$(command -v node)" >> "$GITHUB_ENV"
+
       - name: Typecheck
         run: bun run typecheck
 

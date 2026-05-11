@@ -30,6 +30,7 @@ const envSchema = Type.Object({
       default: "bubblewrap"
     }
   ),
+  roomNodeBinary: Type.String({ default: "node", minLength: 1 }),
   roomPackageCacheDir: Type.String({
     default: "/tmp/haxfootball-api-room-packages",
     minLength: 1
@@ -56,6 +57,7 @@ const envInput = {
   recordingMaxBytes: Bun.env.RECORDING_MAX_BYTES,
   roomGithubApiBaseUrl: Bun.env.ROOM_GITHUB_API_BASE_URL,
   roomProcessRunner: Bun.env.ROOM_PROCESS_RUNNER,
+  roomNodeBinary: Bun.env.ROOM_NODE_BINARY,
   roomPackageCacheDir: Bun.env.ROOM_PACKAGE_CACHE_DIR,
   roomProcessLogDir: Bun.env.ROOM_PROCESS_LOG_DIR
 };
