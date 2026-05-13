@@ -1,7 +1,3 @@
-PRAGMA foreign_keys=OFF;
---> statement-breakpoint
-BEGIN TRANSACTION;
---> statement-breakpoint
 CREATE TABLE `__new_roles` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`uuid` text NOT NULL,
@@ -31,7 +27,3 @@ ALTER TABLE `__new_roles` RENAME TO `roles`;
 CREATE UNIQUE INDEX `roles_uuid_unique` ON `roles` (`uuid`);
 --> statement-breakpoint
 CREATE UNIQUE INDEX `roles_name_unique` ON `roles` (`name`);
---> statement-breakpoint
-COMMIT;
---> statement-breakpoint
-PRAGMA foreign_keys=ON;

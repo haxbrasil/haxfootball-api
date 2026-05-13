@@ -30,6 +30,7 @@
   "devDependencies": {
     "@biomejs/biome": "^2.4.15",
     "@types/bun": "^1.2.0",
+    "better-sqlite3": "^12.10.0",
     "drizzle-kit": "~0.31.4",
     "typescript": "^5.8.0"
   }
