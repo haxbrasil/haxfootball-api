@@ -9,6 +9,7 @@ import type {
   RoomProgramVersionArtifact,
   RoomProxyEndpoint
 } from "@/features/rooms/room.db";
+import { paginatedResponseSchema } from "@lib";
 
 export const roomUuidSchema = t.String({ format: "uuid" });
 
@@ -74,7 +75,7 @@ export const roomProgramResponseSchema = t.Object({
   updatedAt: t.String()
 });
 
-export const listRoomProgramsResponseSchema = t.Array(
+export const listRoomProgramsResponseSchema = paginatedResponseSchema(
   roomProgramResponseSchema
 );
 
@@ -127,7 +128,7 @@ export const roomProgramVersionResponseSchema = t.Object({
   updatedAt: t.String()
 });
 
-export const listRoomProgramVersionsResponseSchema = t.Array(
+export const listRoomProgramVersionsResponseSchema = paginatedResponseSchema(
   roomProgramVersionResponseSchema
 );
 
@@ -158,7 +159,7 @@ export const roomProxyEndpointResponseSchema = t.Object({
   updatedAt: t.String()
 });
 
-export const listRoomProxyEndpointsResponseSchema = t.Array(
+export const listRoomProxyEndpointsResponseSchema = paginatedResponseSchema(
   roomProxyEndpointResponseSchema
 );
 
@@ -225,13 +226,16 @@ export const roomResponseSchema = t.Object({
   closedAt: t.Nullable(t.String())
 });
 
-export const listRoomsResponseSchema = t.Array(roomResponseSchema);
+export const listRoomsResponseSchema =
+  paginatedResponseSchema(roomResponseSchema);
 
 export const roomIdParamsSchema = t.Object({
   id: roomUuidSchema
 });
 
 export const listRoomsQuerySchema = t.Object({
+  limit: t.Optional(t.Integer({ minimum: 1, maximum: 100 })),
+  cursor: t.Optional(t.String({ minLength: 1 })),
   state: t.Optional(
     t.Union([
       t.Literal("open"),

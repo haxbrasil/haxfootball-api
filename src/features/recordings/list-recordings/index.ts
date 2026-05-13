@@ -1,4 +1,3 @@
-import { desc } from "drizzle-orm";
 import { db } from "@/db/client";
 import {
   type RecordingResponse,
@@ -6,14 +5,31 @@ import {
   toRecordingResponse
 } from "@/features/recordings/recording.contract";
 import { recordings } from "@/features/recordings/recording.db";
+import {
+  cursorAfter,
+  cursorSort,
+  pageItems,
+  pageLimit,
+  type PaginatedResponse,
+  type PaginationQuery
+} from "@lib";
 
 export { listRecordingsResponseSchema };
 
-export async function listRecordings(): Promise<RecordingResponse[]> {
+export async function listRecordings(
+  query: PaginationQuery = {}
+): Promise<PaginatedResponse<RecordingResponse>> {
   const recordingRows = await db
     .select()
     .from(recordings)
-    .orderBy(desc(recordings.createdAt));
+    .where(cursorAfter(recordings.id, query.cursor, "desc"))
+    .orderBy(cursorSort(recordings.id, "desc"))
+    .limit(pageLimit(query));
 
-  return recordingRows.map(toRecordingResponse);
+  const page = pageItems(recordingRows, query, (recording) => recording.id);
+
+  return {
+    items: page.items.map(toRecordingResponse),
+    page: page.page
+  };
 }

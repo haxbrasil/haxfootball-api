@@ -1,5 +1,9 @@
 import { describe, expect, it } from "bun:test";
-import { request } from "@/test/e2e/helpers/helpers";
+import {
+  paginatedBody,
+  paginatedItems,
+  request
+} from "@/test/e2e/helpers/helpers";
 
 type RoleResponse = {
   uuid: string;
@@ -51,7 +55,7 @@ describe("roles", () => {
 
     expect(response.status).toBe(200);
 
-    const roles = await response.json();
+    const roles = await paginatedItems<RoleResponse>(response);
 
     expect(roles).toContainEqual(role);
     expect(roles).toContainEqual(
@@ -61,6 +65,50 @@ describe("roles", () => {
         isDefault: true
       })
     );
+  });
+
+  it("paginates roles with cursors", async () => {
+    const firstResponse = await request("/api/roles", {
+      method: "POST",
+      body: {
+        name: "cursor-role-a",
+        title: "Cursor Role A"
+      }
+    });
+    const secondResponse = await request("/api/roles", {
+      method: "POST",
+      body: {
+        name: "cursor-role-b",
+        title: "Cursor Role B"
+      }
+    });
+
+    expect(firstResponse.status).toBe(201);
+    expect(secondResponse.status).toBe(201);
+
+    const firstPageResponse = await request("/api/roles?limit=1");
+
+    expect(firstPageResponse.status).toBe(200);
+
+    const firstPage = await paginatedBody<RoleResponse>(firstPageResponse);
+
+    expect(firstPage.items).toHaveLength(1);
+    expect(firstPage.page.limit).toBe(1);
+    expect(firstPage.page.nextCursor).toEqual(expect.any(String));
+
+    const secondPageResponse = await request(
+      `/api/roles?limit=1&cursor=${encodeURIComponent(
+        firstPage.page.nextCursor ?? ""
+      )}`
+    );
+
+    expect(secondPageResponse.status).toBe(200);
+
+    const secondPage = await paginatedBody<RoleResponse>(secondPageResponse);
+
+    expect(secondPage.items).toHaveLength(1);
+    expect(secondPage.page.limit).toBe(1);
+    expect(secondPage.items[0].uuid).not.toBe(firstPage.items[0].uuid);
   });
 
   it("gets a role by UUID", async () => {
@@ -199,7 +247,7 @@ describe("roles", () => {
 
     expect(listResponse.status).toBe(200);
 
-    const roles: RoleResponse[] = await listResponse.json();
+    const roles = await paginatedItems<RoleResponse>(listResponse);
     const defaultRole = roles.find((role) => role.isDefault);
 
     if (!defaultRole) {

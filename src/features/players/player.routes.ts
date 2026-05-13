@@ -17,12 +17,14 @@ import {
   playerResponseSchema
 } from "@/features/players/player.contract";
 import { notFoundErrorResponseSchema } from "@/shared/http/errors";
+import { paginationQuerySchema } from "@lib";
 
 export const playerRoutes = new Elysia({
   name: "player-routes",
   prefix: "/players"
 })
-  .get("", () => listPlayers(), {
+  .get("", ({ query }) => listPlayers(query), {
+    query: paginationQuerySchema,
     response: {
       200: listPlayersResponseSchema
     },

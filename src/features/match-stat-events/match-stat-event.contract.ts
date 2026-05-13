@@ -5,6 +5,7 @@ import {
   toPlayerResponse
 } from "@/features/players/player.contract";
 import type { Player } from "@/features/players/player.db";
+import { paginatedResponseSchema } from "@lib";
 
 export const matchStatEventIdSchema = t.String({ format: "uuid" });
 
@@ -34,7 +35,7 @@ export const matchStatEventResponseSchema = t.Object({
   updatedAt: t.String()
 });
 
-export const listMatchStatEventsResponseSchema = t.Array(
+export const listMatchStatEventsResponseSchema = paginatedResponseSchema(
   matchStatEventResponseSchema
 );
 

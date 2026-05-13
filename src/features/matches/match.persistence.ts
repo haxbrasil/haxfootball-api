@@ -23,13 +23,16 @@ import {
 } from "@/features/stat-event-schemas/stat-event-schema.db";
 import { resolveStatEventSchemaVersion } from "@/features/stat-event-schemas/stat-event-schema.persistence";
 import { badRequest, notFound } from "@/shared/http/errors";
+import { cursorAfter, cursorSort, pageLimit, type PaginationQuery } from "@lib";
 
 export type PersistedMatchEvent = MatchPlayerEventInput & {
   sequence: number;
   player: Player;
 };
 
-export async function listMatchSummaries(): Promise<MatchSummaryRow[]> {
+export async function listMatchSummaries(
+  query: PaginationQuery = {}
+): Promise<MatchSummaryRow[]> {
   const rows = await db
     .select({
       match: matches,
@@ -47,7 +50,9 @@ export async function listMatchSummaries(): Promise<MatchSummaryRow[]> {
       statEventSchemaFamilies,
       eq(statEventSchemaVersions.familyId, statEventSchemaFamilies.id)
     )
-    .orderBy(desc(matches.createdAt));
+    .where(cursorAfter(matches.id, query.cursor, "desc"))
+    .orderBy(cursorSort(matches.id, "desc"))
+    .limit(pageLimit(query));
 
   return Promise.all(
     rows.map(async (row) => ({

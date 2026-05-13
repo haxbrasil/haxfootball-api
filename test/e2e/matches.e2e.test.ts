@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { recordingFile } from "@/test/e2e/fixtures/recording";
-import { request } from "@/test/e2e/helpers/helpers";
+import { paginatedItems, request } from "@/test/e2e/helpers/helpers";
 
 type MatchEventResponse = {
   sequence: number;
@@ -19,6 +19,8 @@ type MatchResponse = {
   createdAt: string;
   updatedAt: string;
 };
+
+type MatchSummaryResponse = Omit<MatchResponse, "events" | "participations">;
 
 type MatchScoreResponse = {
   red: number;
@@ -970,16 +972,19 @@ describe("matches", () => {
 
     expect(listResponse.status).toBe(200);
 
-    const listBody: unknown[] = await listResponse.json();
-    const listedMatch = listBody.find(
-      (item) =>
-        typeof item === "object" &&
-        item !== null &&
-        "id" in item &&
-        item.id === match.id
-    );
+    const matches = await paginatedItems<MatchSummaryResponse>(listResponse);
+    const listedMatch = matches.find((item) => item.id === match.id);
 
-    expect(listedMatch).toBeDefined();
+    expect(listedMatch).toMatchObject({
+      id: match.id,
+      status: match.status,
+      initiatedAt: match.initiatedAt,
+      endedAt: match.endedAt,
+      score: match.score,
+      recording: match.recording,
+      createdAt: match.createdAt,
+      updatedAt: match.updatedAt
+    });
     expect(listedMatch).not.toHaveProperty("events");
     expect(listedMatch).not.toHaveProperty("participations");
 

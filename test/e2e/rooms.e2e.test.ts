@@ -8,7 +8,11 @@ import {
   writeFileSync
 } from "node:fs";
 import { join } from "node:path";
-import { rawRequest, request } from "@/test/e2e/helpers/helpers";
+import {
+  paginatedItems,
+  rawRequest,
+  request
+} from "@/test/e2e/helpers/helpers";
 
 type FixtureEnv = Record<string, string | undefined>;
 
@@ -295,7 +299,9 @@ describe("rooms", () => {
     expect(refetchResponse.status).toBe(200);
     expect(duplicateResponse.status).toBe(400);
 
-    const programs = await listResponse.json();
+    const programs = await paginatedItems<
+      RoomProgramIdOnly & RoomProgramResponse
+    >(listResponse);
     const alphaIndex = programs.findIndex(
       (program: RoomProgramIdOnly) => program.id === alpha.id
     );
@@ -418,7 +424,7 @@ describe("rooms", () => {
     expect(updateResponse.status).toBe(200);
     expect(duplicateResponse.status).toBe(400);
 
-    const endpoints = await listResponse.json();
+    const endpoints = await paginatedItems<RoomProxyResponse>(listResponse);
     const alphaIndex = endpoints.findIndex(
       (endpoint: RoomEndpointIdOnly) => endpoint.id === alpha.id
     );
@@ -881,7 +887,7 @@ describe("rooms", () => {
     expect(repeatedDiscoverResponse.status).toBe(201);
 
     const discoveredVersions = await discoverResponse.json();
-    const versions = await versionsResponse.json();
+    const versions = await paginatedItems<RoomVersionSummary>(versionsResponse);
     const repeatedDiscoveredVersions = await repeatedDiscoverResponse.json();
 
     expect(discoveredVersions).toHaveLength(2);
@@ -990,8 +996,8 @@ describe("rooms", () => {
 
     expect(latestVersionsResponse.status).toBe(200);
     expect(
-      (await latestVersionsResponse.json()).map(
-        (version: RoomVersionSummary) => version.version
+      (await paginatedItems<RoomVersionSummary>(latestVersionsResponse)).map(
+        (version) => version.version
       )
     ).toEqual(["v1.0.0", "v2.0.0"]);
 
@@ -1751,10 +1757,12 @@ describe("rooms", () => {
     expect(runningResponse.status).toBe(200);
     expect(provisioningResponse.status).toBe(200);
     expect(allResponse.status).toBe(200);
-    const openRooms = await openResponse.json();
-    const runningRooms = await runningResponse.json();
-    const provisioningRooms = await provisioningResponse.json();
-    const allRooms = await allResponse.json();
+    const openRooms = await paginatedItems<RoomStateSummary>(openResponse);
+    const runningRooms =
+      await paginatedItems<RoomStateSummary>(runningResponse);
+    const provisioningRooms =
+      await paginatedItems<RoomStateSummary>(provisioningResponse);
+    const allRooms = await paginatedItems<RoomIdSummary>(allResponse);
 
     expect(
       openRooms.some(
@@ -1823,7 +1831,9 @@ describe("rooms", () => {
     expect(closeSecondResponse.status).toBe(200);
     expect(closeManualResponse.status).toBe(200);
     expect(readyAfterCloseResponse.status).toBe(400);
-    const openAfterClose = await openAfterCloseResponse.json();
+    const openAfterClose = await paginatedItems<RoomIdSummary>(
+      openAfterCloseResponse
+    );
     expect(await closeSecondResponse.json()).toMatchObject({
       id: runningRoom.id,
       state: "closed"
@@ -1833,7 +1843,8 @@ describe("rooms", () => {
       state: "closed",
       closedAt: expect.any(String)
     });
-    const closedRooms = await closedListResponse.json();
+    const closedRooms =
+      await paginatedItems<RoomStateSummary>(closedListResponse);
     expect(
       closedRooms.some(
         (room: RoomStateSummary) =>
@@ -2038,9 +2049,9 @@ async function disableAllProxyEndpoints(): Promise<void> {
 
   expect(response.status).toBe(200);
 
-  const endpoints = await response.json();
+  const endpoints = await paginatedItems<RoomProxyResponse>(response);
 
-  for (const endpoint of endpoints as RoomProxyResponse[]) {
+  for (const endpoint of endpoints) {
     const updateResponse = await request(
       `/api/room-proxy-endpoints/${endpoint.id}`,
       {

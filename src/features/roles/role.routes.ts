@@ -14,12 +14,14 @@ import {
   roleUuidParamsSchema
 } from "@/features/roles/role.contract";
 import { notFoundErrorResponseSchema } from "@/shared/http/errors";
+import { paginationQuerySchema } from "@lib";
 
 export const roleRoutes = new Elysia({
   name: "role-routes",
   prefix: "/roles"
 })
-  .get("", () => listRoles(), {
+  .get("", ({ query }) => listRoles(query), {
+    query: paginationQuerySchema,
     response: {
       200: listRolesResponseSchema
     },

@@ -1,6 +1,10 @@
 import { describe, expect, it } from "bun:test";
 import { recordingBytes, recordingFile } from "@/test/e2e/fixtures/recording";
-import { recordingObjectExists, request } from "@/test/e2e/helpers/helpers";
+import {
+  paginatedItems,
+  recordingObjectExists,
+  request
+} from "@/test/e2e/helpers/helpers";
 
 type RecordingResponse = {
   id: string;
@@ -92,7 +96,7 @@ describe("recordings", () => {
     const listResponse = await request("/api/recs");
 
     expect(listResponse.status).toBe(200);
-    expect(await listResponse.json()).toContainEqual(recording);
+    expect(await paginatedItems(listResponse)).toContainEqual(recording);
   });
 
   it("does not expose internal recording fields", async () => {

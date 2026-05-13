@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { request } from "@/test/e2e/helpers/helpers";
+import { paginatedItems, request } from "@/test/e2e/helpers/helpers";
 
 type AccountResponse = {
   uuid: string;
@@ -73,7 +73,7 @@ describe("players", () => {
     const listResponse = await request("/api/players");
 
     expect(listResponse.status).toBe(200);
-    expect(await listResponse.json()).toContainEqual(player);
+    expect(await paginatedItems(listResponse)).toContainEqual(player);
   });
 
   it("gets a player by ID", async () => {

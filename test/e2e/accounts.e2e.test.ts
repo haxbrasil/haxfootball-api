@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { request } from "@/test/e2e/helpers/helpers";
+import { paginatedItems, request } from "@/test/e2e/helpers/helpers";
 
 describe("accounts", () => {
   it("creates an account", async () => {
@@ -49,7 +49,7 @@ describe("accounts", () => {
     const listResponse = await request("/api/accounts");
 
     expect(listResponse.status).toBe(200);
-    expect(await listResponse.json()).toContainEqual(account);
+    expect(await paginatedItems(listResponse)).toContainEqual(account);
   });
 
   it("gets an account by UUID", async () => {

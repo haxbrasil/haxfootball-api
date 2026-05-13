@@ -1,6 +1,7 @@
 import { type Static, t } from "elysia";
 import { env } from "@/config/env";
 import type { Recording } from "@/features/recordings/recording.db";
+import { paginatedResponseSchema } from "@lib";
 
 export const recordingPublicIdSchema = t.String({
   minLength: 7,
@@ -15,7 +16,9 @@ export const recordingResponseSchema = t.Object({
   createdAt: t.String()
 });
 
-export const listRecordingsResponseSchema = t.Array(recordingResponseSchema);
+export const listRecordingsResponseSchema = paginatedResponseSchema(
+  recordingResponseSchema
+);
 
 export const recordingPublicIdParamsSchema = t.Object({
   id: recordingPublicIdSchema

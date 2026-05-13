@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { request } from "@/test/e2e/helpers/helpers";
+import { paginatedItems, request } from "@/test/e2e/helpers/helpers";
 
 type JsonObject = Record<string, unknown>;
 
@@ -61,7 +61,7 @@ describe("stat event schemas", () => {
     const listResponse = await request("/api/stat-event-schemas");
 
     expect(listResponse.status).toBe(200);
-    expect(await listResponse.json()).toContainEqual(schema);
+    expect(await paginatedItems(listResponse)).toContainEqual(schema);
 
     const getResponse = await request(`/api/stat-event-schemas/${schemaId}`);
 
@@ -390,11 +390,9 @@ describe("match stat events", () => {
 
     expect(listResponse.status).toBe(200);
 
-    const events = await listResponse.json();
+    const events = await paginatedItems<{ sequence: number }>(listResponse);
 
-    expect(events.map((event: { sequence: number }) => event.sequence)).toEqual(
-      [1, 2, 3]
-    );
+    expect(events.map((event) => event.sequence)).toEqual([1, 2, 3]);
 
     const metricsResponse = await request(`/api/matches/${match.id}/metrics`);
 
@@ -505,7 +503,7 @@ describe("match stat events", () => {
       disabled: true
     });
     expect(listResponse.status).toBe(200);
-    expect(await listResponse.json()).toContainEqual(
+    expect(await paginatedItems(listResponse)).toContainEqual(
       expect.objectContaining({
         id: event.id,
         disabled: true

@@ -23,6 +23,7 @@ import type {
   StatEventSchemaFamily,
   StatEventSchemaVersion
 } from "@/features/stat-event-schemas/stat-event-schema.db";
+import { paginatedResponseSchema } from "@lib";
 
 export const matchStatusSchema = t.Union([
   t.Literal("ongoing"),
@@ -110,7 +111,9 @@ export const matchPublicIdParamsSchema = t.Object({
   id: matchPublicIdSchema
 });
 
-export const listMatchesResponseSchema = t.Array(matchSummaryResponseSchema);
+export const listMatchesResponseSchema = paginatedResponseSchema(
+  matchSummaryResponseSchema
+);
 
 export type MatchStatus = Static<typeof matchStatusSchema>;
 export type MatchTeam = Static<typeof matchTeamSchema>;

@@ -31,12 +31,14 @@ import {
   badRequestErrorResponseSchema,
   notFoundErrorResponseSchema
 } from "@/shared/http/errors";
+import { paginationQuerySchema } from "@lib";
 
 export const statEventSchemaRoutes = new Elysia({
   name: "stat-event-schema-routes",
   prefix: "/stat-event-schemas"
 })
-  .get("", () => listStatEventSchemas(), {
+  .get("", ({ query }) => listStatEventSchemas(query), {
+    query: paginationQuerySchema,
     response: {
       200: listStatEventSchemasResponseSchema
     },

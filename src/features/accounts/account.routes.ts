@@ -22,12 +22,14 @@ import {
   updateAccountBodySchema
 } from "@/features/accounts/update-account";
 import { notFoundErrorResponseSchema } from "@/shared/http/errors";
+import { paginationQuerySchema } from "@lib";
 
 export const accountRoutes = new Elysia({
   name: "account-routes",
   prefix: "/accounts"
 })
-  .get("", () => listAccounts(), {
+  .get("", ({ query }) => listAccounts(query), {
+    query: paginationQuerySchema,
     response: {
       200: listAccountsResponseSchema
     },

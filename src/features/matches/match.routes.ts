@@ -49,12 +49,14 @@ import {
   badRequestErrorResponseSchema,
   notFoundErrorResponseSchema
 } from "@/shared/http/errors";
+import { paginationQuerySchema } from "@lib";
 
 export const matchRoutes = new Elysia({
   name: "match-routes",
   prefix: "/matches"
 })
-  .get("", () => listMatches(), {
+  .get("", ({ query }) => listMatches(query), {
+    query: paginationQuerySchema,
     response: {
       200: listMatchesResponseSchema
     },
@@ -126,18 +128,23 @@ export const matchRoutes = new Elysia({
       }
     }
   )
-  .get("/:id/stat-events", ({ params }) => listMatchStatEvents(params.id), {
-    params: matchPublicIdParamsSchema,
-    response: {
-      200: listMatchStatEventsResponseSchema,
-      400: badRequestErrorResponseSchema,
-      404: notFoundErrorResponseSchema
-    },
-    detail: {
-      tags: ["Match Stat Events"],
-      summary: "List match stat events"
+  .get(
+    "/:id/stat-events",
+    ({ params, query }) => listMatchStatEvents(params.id, query),
+    {
+      params: matchPublicIdParamsSchema,
+      query: paginationQuerySchema,
+      response: {
+        200: listMatchStatEventsResponseSchema,
+        400: badRequestErrorResponseSchema,
+        404: notFoundErrorResponseSchema
+      },
+      detail: {
+        tags: ["Match Stat Events"],
+        summary: "List match stat events"
+      }
     }
-  })
+  )
   .post(
     "/:id/stat-events",
     async ({ body, params, set }) => {

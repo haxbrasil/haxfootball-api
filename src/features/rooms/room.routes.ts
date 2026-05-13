@@ -68,6 +68,7 @@ import {
   badRequestErrorResponseSchema,
   notFoundErrorResponseSchema
 } from "@/shared/http/errors";
+import { paginationQuerySchema } from "@lib";
 
 export const roomRoutes = new Elysia({
   name: "room-routes"
@@ -75,7 +76,8 @@ export const roomRoutes = new Elysia({
   .use(jwtPlugin())
   .group("/room-programs", (app) =>
     app
-      .get("", () => listRoomPrograms(), {
+      .get("", ({ query }) => listRoomPrograms(query), {
+        query: paginationQuerySchema,
         response: {
           200: listRoomProgramsResponseSchema
         },
@@ -129,9 +131,10 @@ export const roomRoutes = new Elysia({
       })
       .get(
         "/:id/versions",
-        ({ params }) => listRoomProgramVersions(params.id),
+        ({ params, query }) => listRoomProgramVersions(params.id, query),
         {
           params: roomProgramIdParamsSchema,
+          query: paginationQuerySchema,
           response: {
             200: listRoomProgramVersionsResponseSchema,
             404: notFoundErrorResponseSchema
@@ -186,7 +189,8 @@ export const roomRoutes = new Elysia({
   )
   .group("/room-proxy-endpoints", (app) =>
     app
-      .get("", () => listRoomProxyEndpoints(), {
+      .get("", ({ query }) => listRoomProxyEndpoints(query), {
+        query: paginationQuerySchema,
         response: {
           200: listRoomProxyEndpointsResponseSchema
         },

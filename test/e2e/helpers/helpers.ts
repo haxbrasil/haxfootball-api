@@ -8,6 +8,14 @@ type TestRequestInit = {
   body?: unknown;
 };
 
+type PaginatedResponse<T> = {
+  items: T[];
+  page: {
+    limit: number;
+    nextCursor: string | null;
+  };
+};
+
 Bun.env.APP_API_KEY ??= "test-api-key";
 Bun.env.JWT_SECRET ??= "test-jwt-secret";
 Bun.env.DATABASE_FILE ??= `/tmp/haxfootball-api-e2e-${crypto.randomUUID()}.sqlite`;
@@ -123,6 +131,26 @@ export async function publicRequest(path: string, init: TestRequestInit = {}) {
     body: serializeBody(body),
     headers
   });
+}
+
+export async function paginatedBody<T>(
+  response: Response
+): Promise<PaginatedResponse<T>> {
+  const body: PaginatedResponse<T> = await response.json();
+
+  expect(Array.isArray(body.items)).toBe(true);
+  expect(typeof body.page.limit).toBe("number");
+  expect(
+    typeof body.page.nextCursor === "string" || body.page.nextCursor === null
+  ).toBe(true);
+
+  return body;
+}
+
+export async function paginatedItems<T>(response: Response): Promise<T[]> {
+  const body = await paginatedBody<T>(response);
+
+  return body.items;
 }
 
 export async function recordingObjectExists(key: string): Promise<boolean> {

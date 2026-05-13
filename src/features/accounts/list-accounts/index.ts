@@ -1,5 +1,4 @@
 import { eq } from "drizzle-orm";
-import { t } from "elysia";
 import { db } from "@/db/client";
 import {
   type AccountResponse,
@@ -8,10 +7,23 @@ import {
 } from "@/features/accounts/account.contract";
 import { accounts } from "@/features/accounts/account.db";
 import { roles } from "@/features/roles/role.db";
+import {
+  cursorAfter,
+  cursorSort,
+  pageItems,
+  pageLimit,
+  paginatedResponseSchema,
+  type PaginatedResponse,
+  type PaginationQuery
+} from "@lib";
 
-export const listAccountsResponseSchema = t.Array(accountResponseSchema);
+export const listAccountsResponseSchema = paginatedResponseSchema(
+  accountResponseSchema
+);
 
-export async function listAccounts(): Promise<AccountResponse[]> {
+export async function listAccounts(
+  query: PaginationQuery = {}
+): Promise<PaginatedResponse<AccountResponse>> {
   const rows = await db
     .select({
       account: accounts,
@@ -19,7 +31,14 @@ export async function listAccounts(): Promise<AccountResponse[]> {
     })
     .from(accounts)
     .innerJoin(roles, eq(accounts.roleId, roles.id))
-    .orderBy(accounts.id);
+    .where(cursorAfter(accounts.id, query.cursor, "asc"))
+    .orderBy(cursorSort(accounts.id, "asc"))
+    .limit(pageLimit(query));
 
-  return rows.map(toAccountResponse);
+  const page = pageItems(rows, query, (row) => row.account.id);
+
+  return {
+    items: page.items.map(toAccountResponse),
+    page: page.page
+  };
 }

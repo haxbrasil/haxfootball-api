@@ -16,12 +16,14 @@ import {
   badRequestErrorResponseSchema,
   notFoundErrorResponseSchema
 } from "@/shared/http/errors";
+import { paginationQuerySchema } from "@lib";
 
 export const recordingRoutes = new Elysia({
   name: "recording-routes",
   prefix: "/recs"
 })
-  .get("", () => listRecordings(), {
+  .get("", ({ query }) => listRecordings(query), {
+    query: paginationQuerySchema,
     response: {
       200: listRecordingsResponseSchema
     },

@@ -11,7 +11,13 @@ import type { StatEventSchemaVersion } from "@/features/stat-event-schemas/stat-
 import { statEventSchemaVersions } from "@/features/stat-event-schemas/stat-event-schema.db";
 import { validateStatValue } from "@/features/stat-event-schemas/stat-event-schema.service";
 import { badRequest, notFound } from "@/shared/http/errors";
-import { isJsonValue } from "@lib";
+import {
+  cursorAfter,
+  cursorSort,
+  isJsonValue,
+  pageLimit,
+  type PaginationQuery
+} from "@lib";
 
 export async function getSchemaBoundMatch(publicId: string): Promise<{
   match: typeof matches.$inferSelect;
@@ -102,15 +108,17 @@ export async function addMatchStatEvent(
 }
 
 export async function listMatchStatEventRows(
-  publicId: string
+  publicId: string,
+  query: PaginationQuery = {}
 ): Promise<MatchStatEventRow[]> {
   const { match } = await getSchemaBoundMatch(publicId);
 
-  return listMatchStatEventsByMatchId(match.id);
+  return listMatchStatEventsByMatchId(match.id, query);
 }
 
 export async function listMatchStatEventsByMatchId(
-  matchId: number
+  matchId: number,
+  query?: PaginationQuery
 ): Promise<MatchStatEventRow[]> {
   return db
     .select({
@@ -131,8 +139,14 @@ export async function listMatchStatEventsByMatchId(
     })
     .from(matchStatEvents)
     .innerJoin(players, eq(matchStatEvents.playerId, players.id))
-    .where(eq(matchStatEvents.matchId, matchId))
-    .orderBy(asc(matchStatEvents.sequence));
+    .where(
+      and(
+        eq(matchStatEvents.matchId, matchId),
+        cursorAfter(matchStatEvents.sequence, query?.cursor, "asc")
+      )
+    )
+    .orderBy(cursorSort(matchStatEvents.sequence, "asc"))
+    .limit(query ? pageLimit(query) : -1);
 }
 
 export async function disableMatchStatEvent(

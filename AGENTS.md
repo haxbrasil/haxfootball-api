@@ -84,6 +84,17 @@ Operation-specific schemas should stay in the operation folder. They do not need
 - Use wrapper plugins for shared route metadata, such as common error response schemas.
 - Keep operation functions framework-agnostic where practical. They should accept typed inputs and return DTOs, not Elysia context objects.
 
+## Pagination
+
+All GET list endpoints must use cursor-based pagination. Do not return bare arrays from list endpoints. Use the shared pagination utilities from `@lib`:
+
+- Use `paginationQuerySchema` or equivalent `limit` and `cursor` fields in route query schemas.
+- Use `paginatedResponseSchema(itemSchema)` and `PaginatedResponse<T>`.
+- Use `cursorAfter(column, query.cursor, direction)`, `cursorSort(column, direction)`, and `pageLimit(query)` in database queries.
+- Use `pageItems(rows, query, cursorFor)` to build responses.
+- Cursor columns must be stable and match the sort direction. Prefer unique columns such as internal IDs, unique names, unique keys, or per-parent sequences.
+- List tests should assert endpoint-specific data inside `items`, not only the paginated envelope.
+
 ## Errors
 
 Use `HttpError` helpers from `src/shared/http/errors.ts` for expected HTTP errors. Do not hand-build error response objects inside operations.

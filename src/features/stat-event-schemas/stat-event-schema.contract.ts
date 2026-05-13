@@ -3,6 +3,7 @@ import type {
   StatEventSchemaFamily,
   StatEventSchemaVersion
 } from "@/features/stat-event-schemas/stat-event-schema.db";
+import { paginatedResponseSchema } from "@lib";
 
 export const statEventSchemaIdSchema = t.String({ format: "uuid" });
 
@@ -29,7 +30,7 @@ export const statEventSchemaResponseSchema = t.Object({
   updatedAt: t.String()
 });
 
-export const listStatEventSchemasResponseSchema = t.Array(
+export const listStatEventSchemasResponseSchema = paginatedResponseSchema(
   statEventSchemaResponseSchema
 );
 

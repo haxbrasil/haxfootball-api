@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import type { StatEventSchemaRow } from "@/features/stat-event-schemas/stat-event-schema.contract";
 import {
@@ -7,8 +7,11 @@ import {
 } from "@/features/stat-event-schemas/stat-event-schema.db";
 import type { StatEventSchemaDefinition } from "@/features/stat-event-schemas/stat-event-schema.service";
 import { notFound } from "@/shared/http/errors";
+import { cursorAfter, cursorSort, pageLimit, type PaginationQuery } from "@lib";
 
-export async function listStatEventSchemaRows(): Promise<StatEventSchemaRow[]> {
+export async function listStatEventSchemaRows(
+  query: PaginationQuery = {}
+): Promise<StatEventSchemaRow[]> {
   const rows = await db
     .select({
       family: statEventSchemaFamilies,
@@ -19,12 +22,18 @@ export async function listStatEventSchemaRows(): Promise<StatEventSchemaRow[]> {
       statEventSchemaFamilies,
       eq(statEventSchemaVersions.familyId, statEventSchemaFamilies.id)
     )
-    .orderBy(
-      desc(statEventSchemaFamilies.createdAt),
-      desc(statEventSchemaVersions.version)
-    );
+    .where(cursorAfter(statEventSchemaVersions.id, query.cursor, "asc"))
+    .orderBy(cursorSort(statEventSchemaVersions.id, "asc"))
+    .limit(pageLimit(query));
 
-  const latestByFamily = latestVersionByFamily(rows);
+  const latestRows = await db
+    .select({
+      familyId: statEventSchemaVersions.familyId,
+      latestVersion: sql<number>`max(${statEventSchemaVersions.version})`
+    })
+    .from(statEventSchemaVersions)
+    .groupBy(statEventSchemaVersions.familyId);
+  const latestByFamily = latestVersionByFamily(latestRows);
 
   return rows.map((row) => ({
     ...row,
@@ -118,15 +127,12 @@ async function getStatEventSchemaFamily(uuid: string) {
 
 function latestVersionByFamily(
   rows: Array<{
-    family: { id: number };
-    version: { version: number };
+    familyId: number;
+    latestVersion: number;
   }>
 ): Map<number, number> {
   return rows.reduce((latestByFamily, row) => {
-    const currentLatest = latestByFamily.get(row.family.id) ?? 0;
-    const nextLatest = Math.max(currentLatest, row.version.version);
-
-    latestByFamily.set(row.family.id, nextLatest);
+    latestByFamily.set(row.familyId, row.latestVersion);
 
     return latestByFamily;
   }, new Map<number, number>());

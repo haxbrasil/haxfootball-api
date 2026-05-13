@@ -53,11 +53,11 @@ describe("recording internals", () => {
       }
     ]);
 
-    const recordings = await listRecordings();
-    const firstIndex = recordings.findIndex(
+    const page = await listRecordings();
+    const firstIndex = page.items.findIndex(
       (recording) => recording.id === "aaaaaaa"
     );
-    const secondIndex = recordings.findIndex(
+    const secondIndex = page.items.findIndex(
       (recording) => recording.id === "bbbbbbb"
     );
 

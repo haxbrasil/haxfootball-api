@@ -11,6 +11,7 @@ import {
   type RoomProxyEndpoint
 } from "@/features/rooms/room.db";
 import { notFound } from "@/shared/http/errors";
+import { cursorAfter, cursorSort, pageLimit, type PaginationQuery } from "@lib";
 
 export type RoomRow = {
   room: RoomInstance;
@@ -27,6 +28,7 @@ export type RoomStateFilter =
   | undefined;
 export type ListRoomRowsInput = {
   state?: RoomStateFilter;
+  pagination?: PaginationQuery;
 };
 export type GetProgramVersionByProgramAndVersionInput = {
   programId: number;
@@ -96,8 +98,14 @@ export async function listRoomRows(
       roomProxyEndpoints,
       eq(roomInstances.proxyEndpointId, roomProxyEndpoints.id)
     )
-    .where(roomStateWhere(input.state))
-    .orderBy(desc(roomInstances.createdAt));
+    .where(
+      and(
+        roomStateWhere(input.state),
+        cursorAfter(roomInstances.id, input.pagination?.cursor, "desc")
+      )
+    )
+    .orderBy(cursorSort(roomInstances.id, "desc"))
+    .limit(pageLimit(input.pagination));
 
   return rows;
 }

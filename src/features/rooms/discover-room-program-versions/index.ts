@@ -1,7 +1,7 @@
 import { db } from "@/db/client";
 import {
   discoverRoomProgramVersionsBodySchema,
-  listRoomProgramVersionsResponseSchema,
+  roomProgramVersionResponseSchema,
   toRoomProgramVersionResponse,
   type DiscoverRoomProgramVersionsInput,
   type RoomProgramVersionResponse
@@ -13,11 +13,13 @@ import {
   getRoomProgramByUuid
 } from "@/features/rooms/room.persistence";
 import { matchReleaseAsset } from "@/features/rooms/room.service";
+import { t } from "elysia";
 
-export {
-  discoverRoomProgramVersionsBodySchema,
-  listRoomProgramVersionsResponseSchema as discoverRoomProgramVersionsResponseSchema
-};
+export { discoverRoomProgramVersionsBodySchema };
+
+export const discoverRoomProgramVersionsResponseSchema = t.Array(
+  roomProgramVersionResponseSchema
+);
 
 export async function discoverRoomProgramVersions(
   programUuid: string,
