@@ -11,7 +11,7 @@ import {
   persistMatchEvents,
   recomputeMatchStints
 } from "@/features/matches/match.persistence";
-import { assertMatchIsEditable } from "@/features/matches/match.invariants";
+import { assertMatchIsEditable } from "@/features/matches/match.service";
 
 export const appendMatchEventsBodySchema = t.Object({
   events: t.Array(matchPlayerEventInputSchema, { minItems: 1 })

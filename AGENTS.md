@@ -30,7 +30,6 @@ src/features/<feature>/
   <feature>.routes.ts
   <feature>.service.ts
   <feature>.persistence.ts
-  <feature>.invariants.ts
   <feature>.util.ts
   create-<entity>/index.ts
   list-<entity>/index.ts
@@ -54,7 +53,6 @@ Only use the file suffixes listed here. Do not introduce any other suffix withou
 - `<feature>.routes.ts`: route composition for one feature. Route files should mainly connect operations to Elysia.
 - `<feature>.service.ts`: named feature behavior that is more than a small pure helper, such as aggregation, derivation, schema evaluation, compatibility rules, or runtime coordination that is part of the feature.
 - `<feature>.persistence.ts`: shared feature-local database persistence when multiple operations need the same persistence behavior.
-- `<feature>.invariants.ts`: shared feature-local business invariants and rule checks.
 - `*.util.ts`: pure utility helpers. Utility modules must not import database clients, Drizzle tables, environment config, or HTTP errors.
 - `index.ts`: operation entrypoints inside operation folders such as `create-<entity>/index.ts`, `list-<entity>/index.ts`, `get-<entity>/index.ts`, `update-<entity>/index.ts`, and `delete-<entity>/index.ts`.
 
@@ -74,7 +72,7 @@ Operation-specific schemas should stay in the operation folder. They do not need
 - Routes belong in `<feature>.routes.ts` and should mainly compose operations.
 - `*.util.ts` modules should be pure. Inject dependencies instead of importing infrastructure.
 - `*.service.ts` modules should still stay framework-agnostic where practical.
-- Feature-local persistence modules may use Drizzle and database tables, but should not own unrelated business rules or pure derivation logic. Keep invariants and pure transformations in separately named modules when extraction is justified.
+- Feature-local persistence modules may use Drizzle and database tables, but should not own unrelated business rules or pure derivation logic. Keep pure transformations in separately named modules when extraction is justified.
 - `src/db/schema.ts` should only export Drizzle database schemas.
 - Do not use database-derived insert/select types as HTTP operation input/output contracts. Use schema-derived DTO types and map database rows to response DTOs.
 - Do not add defensive runtime type guards just to appease lint or TypeScript. Prefer precise types at the boundary and simple annotations where needed. Add runtime validation only when the input is genuinely untrusted or validation is the behavior being implemented.

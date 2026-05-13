@@ -23,7 +23,7 @@ import { statEventSchemaReferenceSchema } from "@/features/stat-event-schemas/st
 import {
   assertCompletedMatchFields,
   assertMatchIsEditable
-} from "@/features/matches/match.invariants";
+} from "@/features/matches/match.service";
 
 export const updateMatchBodySchema = t.Partial(
   t.Object({

@@ -14,7 +14,7 @@ import {
   matches,
   matchTeamMetadata
 } from "@/features/matches/match.db";
-import { validateMatchEvents } from "@/features/matches/match.invariants";
+import { validateMatchEvents } from "@/features/matches/match.service";
 import { players, type Player } from "@/features/players/player.db";
 import { recordings } from "@/features/recordings/recording.db";
 import {

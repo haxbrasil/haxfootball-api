@@ -19,8 +19,8 @@ import {
   resolveMatchStatEventSchemaVersionId,
   recomputeMatchStints
 } from "@/features/matches/match.persistence";
+import { assertCompletedMatchFields } from "@/features/matches/match.service";
 import { statEventSchemaReferenceSchema } from "@/features/stat-event-schemas/stat-event-schema.contract";
-import { assertCompletedMatchFields } from "@/features/matches/match.invariants";
 import { badRequest } from "@/shared/http/errors";
 
 export const createMatchBodySchema = t.Object({
