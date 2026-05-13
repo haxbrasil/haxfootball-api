@@ -45,3 +45,56 @@ jobs:
 
       - name: Internal tests
         run: bun run test:internal
+
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    needs: checks
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment: production
+    concurrency:
+      group: production-deploy
+      cancel-in-progress: false
+
+    steps:
+      - name: Configure SSH
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "${{ secrets.ORACLE_SSH_PRIVATE_KEY }}" > ~/.ssh/oracle
+          printf '%s\n' "${{ secrets.ORACLE_SSH_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/oracle
+
+      - name: Deploy to Oracle
+        env:
+          ORACLE_SSH_HOST: ${{ secrets.ORACLE_SSH_HOST }}
+          ORACLE_SSH_USER: ${{ secrets.ORACLE_SSH_USER }}
+          DEPLOY_SHA: ${{ github.sha }}
+        run: |
+          ssh -i ~/.ssh/oracle -o BatchMode=yes -o StrictHostKeyChecking=yes "$ORACLE_SSH_USER@$ORACLE_SSH_HOST" "DEPLOY_SHA='$DEPLOY_SHA' bash -s" <<'REMOTE'
+          set -euo pipefail
+
+          export PATH=/home/ubuntu/.nvm/versions/node/v22.20.0/bin:/home/ubuntu/.bun/bin:$PATH
+
+          cd /home/ubuntu/haxfootball-api
+          git fetch origin main
+          git reset --hard "$DEPLOY_SHA"
+          bun install --frozen-lockfile
+          DATABASE_FILE=/home/ubuntu/haxfootball-api/data/app.sqlite bun run db:migrate
+          sudo systemctl restart haxfootball-api
+          systemctl is-active --quiet haxfootball-api
+          REMOTE
+
+      - name: Verify production health
+        run: |
+          curl --retry 10 --retry-delay 3 --retry-all-errors -fsS http://152.67.59.41/health
+
+      - name: Print service logs on failure
+        if: failure()
+        env:
+          ORACLE_SSH_HOST: ${{ secrets.ORACLE_SSH_HOST }}
+          ORACLE_SSH_USER: ${{ secrets.ORACLE_SSH_USER }}
+        run: |
+          ssh -i ~/.ssh/oracle -o BatchMode=yes -o StrictHostKeyChecking=yes "$ORACLE_SSH_USER@$ORACLE_SSH_HOST" <<'REMOTE'
+          systemctl status haxfootball-api --no-pager -l || true
+          journalctl -u haxfootball-api -n 120 --no-pager || true
+          REMOTE
