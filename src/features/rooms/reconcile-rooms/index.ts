@@ -13,6 +13,17 @@ export async function reconcileOpenRooms(): Promise<void> {
     const status = await inspectRoomProcess(room);
 
     if (status.alive && status.expected) {
+      if (room.state === "provisioning" && !room.roomLink && status.roomLink) {
+        await db
+          .update(roomInstances)
+          .set({
+            state: "running",
+            roomLink: status.roomLink,
+            updatedAt: new Date().toISOString()
+          })
+          .where(eq(roomInstances.id, room.id));
+      }
+
       continue;
     }
 

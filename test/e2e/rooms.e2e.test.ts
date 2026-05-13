@@ -1422,6 +1422,13 @@ describe("rooms", () => {
         autoLinkDelay: 100
       }
     });
+    const reconciledLinkRoom = await launchRoom({
+      programId: program.id,
+      launchConfig: {
+        envCapture: fixtureEnvPath(),
+        autoLinkDelay: 800
+      }
+    });
     const noLinkRoom = await launchRoom({
       programId: program.id,
       launchConfig: {
@@ -1450,6 +1457,10 @@ describe("rooms", () => {
       state: "running",
       roomLink: "https://www.haxball.com/play?c=fixture123"
     });
+    expect(reconciledLinkRoom).toMatchObject({
+      state: "provisioning",
+      roomLink: null
+    });
     expect(noLinkRoom).toMatchObject({
       state: "provisioning",
       roomLink: null
@@ -1463,6 +1474,10 @@ describe("rooms", () => {
       exitedRoom.id,
       "closed"
     );
+    const reconciledRunningRoom = await waitForRoomState(
+      reconciledLinkRoom.id,
+      "running"
+    );
     const signalCloseResponse = await request(
       `/api/rooms/${signalRoom.id}/close`,
       {
@@ -1474,6 +1489,9 @@ describe("rooms", () => {
       state: "closed",
       closedAt: expect.any(String)
     });
+    expect(reconciledRunningRoom).toMatchObject({
+      roomLink: "https://www.haxball.com/play?c=fixture123"
+    });
     expect(signalCloseResponse.status).toBe(200);
     expect(await signalCloseResponse.json()).toMatchObject({
       id: signalRoom.id,
@@ -1482,6 +1500,7 @@ describe("rooms", () => {
     await waitForFile(sigtermPath);
 
     await closeRoom(delayedRoom.id);
+    await closeRoom(reconciledLinkRoom.id);
     await closeRoom(noLinkRoom.id);
   });
 

@@ -29,6 +29,7 @@ export type RoomProcessLaunchResult = {
 export type RoomProcessStatus = {
   alive: boolean;
   expected: boolean;
+  roomLink?: string;
 };
 
 export async function launchRoomProcess(
@@ -55,19 +56,23 @@ export function closeRoomProcess(room: RoomInstance): Promise<void> {
   return Promise.resolve();
 }
 
-export function inspectRoomProcess(
+export async function inspectRoomProcess(
   room: RoomInstance
 ): Promise<RoomProcessStatus> {
   if (!room.pid) {
-    return Promise.resolve({ alive: false, expected: false });
+    return { alive: false, expected: false };
   }
 
   try {
     process.kill(room.pid, 0);
 
-    return Promise.resolve({ alive: true, expected: true });
+    const roomLink = room.logPath
+      ? (detectRoomLink(await readLogFile(room.logPath)) ?? undefined)
+      : undefined;
+
+    return { alive: true, expected: true, roomLink };
   } catch {
-    return Promise.resolve({ alive: false, expected: false });
+    return { alive: false, expected: false };
   }
 }
 
