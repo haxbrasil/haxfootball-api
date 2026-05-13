@@ -1550,20 +1550,22 @@ describe("rooms", () => {
       outboundIp: "10.0.0.243"
     });
 
+    const explicitKeyEnvPath = fixtureEnvPath();
     const explicitKeyRoom = await launchRoom({
       programId: program.id,
       launchConfig: {
         roomPublic: false,
         proxy: proxyAlpha.key,
-        envCapture: fixtureEnvPath()
+        envCapture: explicitKeyEnvPath
       }
     });
+    const explicitIdEnvPath = fixtureEnvPath();
     const explicitIdRoom = await launchRoom({
       programId: program.id,
       launchConfig: {
         roomPublic: false,
         proxy: proxyBeta.id,
-        envCapture: fixtureEnvPath()
+        envCapture: explicitIdEnvPath
       }
     });
     const disableGammaResponse = await request(
@@ -1596,6 +1598,14 @@ describe("rooms", () => {
     expect(explicitIdRoom.proxyEndpoint).toMatchObject({
       id: proxyBeta.id,
       key: proxyBeta.key
+    });
+    expect(explicitKeyRoom.launchConfig.proxy).toBe(proxyAlpha.proxyUrl);
+    expect(explicitIdRoom.launchConfig.proxy).toBe(proxyBeta.proxyUrl);
+    expect(await readFixtureEnv(explicitKeyEnvPath)).toMatchObject({
+      PROXY: proxyAlpha.proxyUrl
+    });
+    expect(await readFixtureEnv(explicitIdEnvPath)).toMatchObject({
+      PROXY: proxyBeta.proxyUrl
     });
     expect(disableGammaResponse.status).toBe(200);
     expect(disabledProxyResponse.status).toBe(400);

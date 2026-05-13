@@ -108,11 +108,10 @@ export function resolveLaunchConfig(
   const environmentValues: RoomLaunchConfig = {};
 
   for (const field of input.fields) {
-    const candidate = input.values[field.key] ?? field.defaultValue;
     const value =
       field.key === "proxy" && input.assignedProxy
-        ? (input.values[field.key] ?? input.assignedProxy.proxyUrl)
-        : candidate;
+        ? input.assignedProxy.proxyUrl
+        : (input.values[field.key] ?? field.defaultValue);
 
     if (value === undefined || value === null || value === "") {
       if (field.required) {
