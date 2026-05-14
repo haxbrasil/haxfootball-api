@@ -16,8 +16,6 @@ const envSchema = Type.Object({
   r2Endpoint: Type.String({ minLength: 1 }),
   r2AccessKeyId: Type.String({ minLength: 1 }),
   r2SecretAccessKey: Type.String({ minLength: 1 }),
-  r2UploadUrl: Type.Optional(Type.String({ minLength: 1 })),
-  r2UploadToken: Type.Optional(Type.String({ minLength: 1 })),
   recordingMaxBytes: Type.Integer({
     default: 25 * 1024 * 1024,
     minimum: 1
@@ -56,8 +54,6 @@ const envInput = {
   r2Endpoint: Bun.env.R2_ENDPOINT,
   r2AccessKeyId: Bun.env.R2_ACCESS_KEY_ID,
   r2SecretAccessKey: Bun.env.R2_SECRET_ACCESS_KEY,
-  r2UploadUrl: Bun.env.R2_UPLOAD_URL,
-  r2UploadToken: Bun.env.R2_UPLOAD_TOKEN,
   recordingMaxBytes: Bun.env.RECORDING_MAX_BYTES,
   roomGithubApiBaseUrl: Bun.env.ROOM_GITHUB_API_BASE_URL,
   roomProcessRunner: Bun.env.ROOM_PROCESS_RUNNER,

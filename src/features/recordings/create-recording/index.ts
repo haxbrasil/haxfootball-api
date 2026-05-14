@@ -87,11 +87,6 @@ async function putRecordingObject(
   key: string,
   bytes: Uint8Array
 ): Promise<void> {
-  if (env.r2UploadUrl && env.r2UploadToken) {
-    await putRecordingObjectViaUploadApi(key, bytes);
-    return;
-  }
-
   await r2Client.send(
     new PutObjectCommand({
       Bucket: env.r2Bucket,
@@ -100,36 +95,6 @@ async function putRecordingObject(
       ContentType: "application/octet-stream"
     })
   );
-}
-
-async function putRecordingObjectViaUploadApi(
-  key: string,
-  bytes: Uint8Array
-): Promise<void> {
-  const baseUrl = env.r2UploadUrl?.replace(/\/+$/, "");
-  const uploadToken = env.r2UploadToken;
-
-  if (!baseUrl || !uploadToken) {
-    throw new Error("R2 upload API is not configured");
-  }
-
-  const body = new ArrayBuffer(bytes.byteLength);
-  const bodyView = new Uint8Array(body);
-
-  bodyView.set(bytes);
-
-  const response = await fetch(`${baseUrl}/${encodeURIComponent(key)}`, {
-    method: "PUT",
-    body: new Blob([body], { type: "application/octet-stream" }),
-    headers: {
-      authorization: `Bearer ${uploadToken}`,
-      "content-type": "application/octet-stream"
-    }
-  });
-
-  if (!response.ok) {
-    throw new Error(`R2 upload API failed with status ${response.status}`);
-  }
 }
 
 async function hashBytes(bytes: Uint8Array): Promise<string> {
