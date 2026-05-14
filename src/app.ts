@@ -21,7 +21,7 @@ import { errorHandler } from "@/plugins/error-handler";
 
 const openApiDocumentation = {
   info: {
-    title: "Backend API",
+    title: "HaxFootball API",
     version: "0.1.0"
   },
   components: {
