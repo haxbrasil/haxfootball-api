@@ -1,4 +1,4 @@
-import { swagger } from "@elysiajs/swagger";
+import { openapi } from "@elysiajs/openapi";
 import { Elysia } from "elysia";
 import { authRoutes } from "@/features/auth/auth.routes";
 import { accountRoutes } from "@/features/accounts/account.routes";
@@ -20,7 +20,7 @@ export const app = new Elysia()
   })
   .use(errorHandler())
   .use(
-    swagger({
+    openapi({
       path: "/docs",
       documentation: {
         info: {

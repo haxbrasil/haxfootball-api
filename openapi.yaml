@@ -142,13 +142,11 @@ components:
             - type: "null"
           nullable: true
         state:
-          anyOf:
-            - const: provisioning
-              type: string
-            - const: running
-              type: string
-            - const: closed
-              type: string
+          enum:
+            - provisioning
+            - running
+            - closed
+          type: string
         updatedAt:
           type: string
         version:
@@ -262,11 +260,10 @@ components:
             - version
           type: object
         status:
-          anyOf:
-            - const: ongoing
-              type: string
-            - const: completed
-              type: string
+          enum:
+            - ongoing
+            - completed
+          type: string
       required:
         - status
       type: object
@@ -398,13 +395,11 @@ components:
         artifact:
           $ref: "#/components/schemas/RoomProgramVersionArtifact"
         installStrategy:
-          anyOf:
-            - const: none
-              type: string
-            - const: npm-ci
-              type: string
-            - const: npm-install
-              type: string
+          enum:
+            - none
+            - npm-ci
+            - npm-install
+          type: string
         nodeEntrypoint:
           maxLength: 240
           minLength: 1
@@ -487,13 +482,11 @@ components:
     DiscoverRoomProgramVersionsBody:
       properties:
         installStrategy:
-          anyOf:
-            - const: none
-              type: string
-            - const: npm-ci
-              type: string
-            - const: npm-install
-              type: string
+          enum:
+            - none
+            - npm-ci
+            - npm-install
+          type: string
         nodeEntrypoint:
           maxLength: 240
           minLength: 1
@@ -715,13 +708,11 @@ components:
             - type: "null"
           nullable: true
         type:
-          anyOf:
-            - const: player_join
-              type: string
-            - const: player_leave
-              type: string
-            - const: player_team_change
-              type: string
+          enum:
+            - player_join
+            - player_leave
+            - player_team_change
+          type: string
       required:
         - sequence
         - type
@@ -752,21 +743,17 @@ components:
               type: integer
           minimum: 0
         team:
-          anyOf:
-            - const: spectators
-              type: string
-            - const: red
-              type: string
-            - const: blue
-              type: string
+          enum:
+            - spectators
+            - red
+            - blue
+          type: string
         type:
-          anyOf:
-            - const: player_join
-              type: string
-            - const: player_leave
-              type: string
-            - const: player_team_change
-              type: string
+          enum:
+            - player_join
+            - player_leave
+            - player_team_change
+          type: string
       required:
         - type
         - playerId
@@ -889,11 +876,10 @@ components:
             - type: "null"
           nullable: true
         team:
-          anyOf:
-            - const: red
-              type: string
-            - const: blue
-              type: string
+          enum:
+            - red
+            - blue
+          type: string
       required:
         - player
         - team
@@ -938,11 +924,10 @@ components:
             - type: "null"
           nullable: true
         status:
-          anyOf:
-            - const: ongoing
-              type: string
-            - const: completed
-              type: string
+          enum:
+            - ongoing
+            - completed
+          type: string
         updatedAt:
           type: string
       required:
@@ -1178,13 +1163,11 @@ components:
             - type: "null"
           nullable: true
         state:
-          anyOf:
-            - const: provisioning
-              type: string
-            - const: running
-              type: string
-            - const: closed
-              type: string
+          enum:
+            - provisioning
+            - running
+            - closed
+          type: string
         updatedAt:
           type: string
         version:
@@ -1243,13 +1226,11 @@ components:
           default: false
           type: boolean
         valueType:
-          anyOf:
-            - const: string
-              type: string
-            - const: number
-              type: string
-            - const: boolean
-              type: string
+          enum:
+            - string
+            - number
+            - boolean
+          type: string
       required:
         - key
         - displayName
@@ -1336,13 +1317,11 @@ components:
           format: uuid
           type: string
         installStrategy:
-          anyOf:
-            - const: none
-              type: string
-            - const: npm-ci
-              type: string
-            - const: npm-install
-              type: string
+          enum:
+            - none
+            - npm-ci
+            - npm-install
+          type: string
         nodeEntrypoint:
           minLength: 1
           type: string
@@ -1621,11 +1600,10 @@ components:
             - version
           type: object
         status:
-          anyOf:
-            - const: ongoing
-              type: string
-            - const: completed
-              type: string
+          enum:
+            - ongoing
+            - completed
+          type: string
       type: object
     UpdatePermissionBody:
       properties:
@@ -1761,31 +1739,34 @@ paths:
             type: string
       responses:
         "200":
-          $ref: ListAccounts
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ListAccounts"
+          description: Response for status 200
         "400":
-          $ref: BadRequestOrValidationError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
         "401":
-          $ref: "#/components/schemas/UnauthorizedError"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
         "500":
-          $ref: InternalServerError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
       summary: List accounts
       tags:
         - Accounts
     post:
       operationId: postApiAccounts
-      parameters: []
       requestBody:
         content:
           application/json:
@@ -1794,32 +1775,35 @@ paths:
         required: true
       responses:
         "201":
-          $ref: Account
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Account"
+          description: Response for status 201
         "400":
-          $ref: BadRequestOrValidationError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
         "401":
-          $ref: "#/components/schemas/UnauthorizedError"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
         "500":
-          $ref: InternalServerError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
       summary: Create an account
       tags:
         - Accounts
   /api/accounts/confirm:
     post:
       operationId: postApiAccountsConfirm
-      parameters: []
       requestBody:
         content:
           application/json:
@@ -1828,25 +1812,29 @@ paths:
         required: true
       responses:
         "200":
-          $ref: ConfirmAccountResponse
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ConfirmAccountResponse"
+          description: Response for status 200
         "400":
-          $ref: BadRequestOrValidationError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
         "401":
-          $ref: "#/components/schemas/UnauthorizedError"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
         "500":
-          $ref: InternalServerError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
       summary: Confirm an account
       tags:
         - Accounts
@@ -1862,31 +1850,35 @@ paths:
             type: string
       responses:
         "200":
-          $ref: Account
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Account"
+          description: Response for status 200
         "400":
-          $ref: BadRequestOrValidationError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
         "401":
-          $ref: "#/components/schemas/UnauthorizedError"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
         "404":
-          $ref: NotFoundError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
         "500":
-          $ref: InternalServerError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
       summary: Get an account
       tags:
         - Accounts
@@ -1907,31 +1899,35 @@ paths:
         required: true
       responses:
         "200":
-          $ref: Account
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Account"
+          description: Response for status 200
         "400":
-          $ref: BadRequestOrValidationError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
         "401":
-          $ref: "#/components/schemas/UnauthorizedError"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
         "404":
-          $ref: NotFoundError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
         "500":
-          $ref: InternalServerError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
       summary: Update an account
       tags:
         - Accounts
@@ -1960,31 +1956,34 @@ paths:
             type: string
       responses:
         "200":
-          $ref: ListMatches
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ListMatches"
+          description: Response for status 200
         "400":
-          $ref: BadRequestOrValidationError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
         "401":
-          $ref: "#/components/schemas/UnauthorizedError"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
         "500":
-          $ref: InternalServerError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
       summary: List matches
       tags:
         - Matches
     post:
       operationId: postApiMatches
-      parameters: []
       requestBody:
         content:
           application/json:
@@ -1993,31 +1992,35 @@ paths:
         required: true
       responses:
         "201":
-          $ref: Match
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Match"
+          description: Response for status 201
         "400":
-          $ref: BadRequestOrValidationError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
         "401":
-          $ref: "#/components/schemas/UnauthorizedError"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
         "404":
-          $ref: NotFoundError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
         "500":
-          $ref: InternalServerError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
       summary: Create a match
       tags:
         - Matches
@@ -2035,31 +2038,35 @@ paths:
             type: string
       responses:
         "200":
-          $ref: Match
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Match"
+          description: Response for status 200
         "400":
-          $ref: BadRequestOrValidationError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
         "401":
-          $ref: "#/components/schemas/UnauthorizedError"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
         "404":
-          $ref: NotFoundError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
         "500":
-          $ref: InternalServerError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
       summary: Get a match
       tags:
         - Matches
@@ -2082,31 +2089,35 @@ paths:
         required: true
       responses:
         "200":
-          $ref: Match
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Match"
+          description: Response for status 200
         "400":
-          $ref: BadRequestOrValidationError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
         "401":
-          $ref: "#/components/schemas/UnauthorizedError"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
         "404":
-          $ref: NotFoundError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
         "500":
-          $ref: InternalServerError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
       summary: Update a match
       tags:
         - Matches
@@ -2130,31 +2141,35 @@ paths:
         required: true
       responses:
         "200":
-          $ref: Match
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Match"
+          description: Response for status 200
         "400":
-          $ref: BadRequestOrValidationError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
         "401":
-          $ref: "#/components/schemas/UnauthorizedError"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
         "404":
-          $ref: NotFoundError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
         "500":
-          $ref: InternalServerError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
       summary: Append match player events
       tags:
         - Matches
@@ -2172,31 +2187,35 @@ paths:
             type: string
       responses:
         "200":
-          $ref: MatchMetrics
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/MatchMetrics"
+          description: Response for status 200
         "400":
-          $ref: BadRequestOrValidationError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
         "401":
-          $ref: "#/components/schemas/UnauthorizedError"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
         "404":
-          $ref: NotFoundError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
         "500":
-          $ref: InternalServerError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
       summary: Get match metrics
       tags:
         - Match Metrics
@@ -2220,31 +2239,35 @@ paths:
         required: true
       responses:
         "200":
-          $ref: Match
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Match"
+          description: Response for status 200
         "400":
-          $ref: BadRequestOrValidationError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
         "401":
-          $ref: "#/components/schemas/UnauthorizedError"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
         "404":
-          $ref: NotFoundError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
         "500":
-          $ref: InternalServerError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
       summary: Associate a match recording
       tags:
         - Matches
@@ -2281,31 +2304,35 @@ paths:
             type: string
       responses:
         "200":
-          $ref: ListMatchStatEvents
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ListMatchStatEvents"
+          description: Response for status 200
         "400":
-          $ref: BadRequestOrValidationError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
         "401":
-          $ref: "#/components/schemas/UnauthorizedError"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
         "404":
-          $ref: NotFoundError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
         "500":
-          $ref: InternalServerError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
       summary: List match stat events
       tags:
         - Match Stat Events
@@ -2328,31 +2355,35 @@ paths:
         required: true
       responses:
         "201":
-          $ref: MatchStatEvent
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/MatchStatEvent"
+          description: Response for status 201
         "400":
-          $ref: BadRequestOrValidationError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
         "401":
-          $ref: "#/components/schemas/UnauthorizedError"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
         "404":
-          $ref: NotFoundError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
         "500":
-          $ref: InternalServerError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
       summary: Add match stat event
       tags:
         - Match Stat Events
@@ -2382,31 +2413,35 @@ paths:
         required: true
       responses:
         "200":
-          $ref: MatchStatEvent
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/MatchStatEvent"
+          description: Response for status 200
         "400":
-          $ref: BadRequestOrValidationError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
         "401":
-          $ref: "#/components/schemas/UnauthorizedError"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
         "404":
-          $ref: NotFoundError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
         "500":
-          $ref: InternalServerError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
       summary: Disable match stat event
       tags:
         - Match Stat Events
@@ -2435,31 +2470,34 @@ paths:
             type: string
       responses:
         "200":
-          $ref: ListPermissions
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ListPermissions"
+          description: Response for status 200
         "400":
-          $ref: BadRequestOrValidationError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
         "401":
-          $ref: "#/components/schemas/UnauthorizedError"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
         "500":
-          $ref: InternalServerError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
       summary: List permissions
       tags:
         - Permissions
     post:
       operationId: postApiPermissions
-      parameters: []
       requestBody:
         content:
           application/json:
@@ -2468,25 +2506,29 @@ paths:
         required: true
       responses:
         "201":
-          $ref: Permission
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Permission"
+          description: Response for status 201
         "400":
-          $ref: BadRequestOrValidationError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
         "401":
-          $ref: "#/components/schemas/UnauthorizedError"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
         "500":
-          $ref: InternalServerError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
       summary: Create a permission
       tags:
         - Permissions
@@ -2502,31 +2544,35 @@ paths:
             type: string
       responses:
         "200":
-          $ref: RemovePermissionResponse
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/RemovePermissionResponse"
+          description: Response for status 200
         "400":
-          $ref: BadRequestOrValidationError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
         "401":
-          $ref: "#/components/schemas/UnauthorizedError"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
         "404":
-          $ref: NotFoundError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
         "500":
-          $ref: InternalServerError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
       summary: Remove a permission
       tags:
         - Permissions
@@ -2541,31 +2587,35 @@ paths:
             type: string
       responses:
         "200":
-          $ref: Permission
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Permission"
+          description: Response for status 200
         "400":
-          $ref: BadRequestOrValidationError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
         "401":
-          $ref: "#/components/schemas/UnauthorizedError"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
         "404":
-          $ref: NotFoundError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
         "500":
-          $ref: InternalServerError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
       summary: Get a permission
       tags:
         - Permissions
@@ -2586,31 +2636,35 @@ paths:
         required: true
       responses:
         "200":
-          $ref: Permission
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Permission"
+          description: Response for status 200
         "400":
-          $ref: BadRequestOrValidationError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
         "401":
-          $ref: "#/components/schemas/UnauthorizedError"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
         "404":
-          $ref: NotFoundError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
         "500":
-          $ref: InternalServerError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
       summary: Update a permission
       tags:
         - Permissions
@@ -2639,31 +2693,34 @@ paths:
             type: string
       responses:
         "200":
-          $ref: ListPlayers
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ListPlayers"
+          description: Response for status 200
         "400":
-          $ref: BadRequestOrValidationError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
         "401":
-          $ref: "#/components/schemas/UnauthorizedError"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
         "500":
-          $ref: InternalServerError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
       summary: List players
       tags:
         - Players
     post:
       operationId: postApiPlayers
-      parameters: []
       requestBody:
         content:
           application/json:
@@ -2672,25 +2729,29 @@ paths:
         required: true
       responses:
         "201":
-          $ref: Player
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Player"
+          description: Response for status 201
         "400":
-          $ref: BadRequestOrValidationError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
         "401":
-          $ref: "#/components/schemas/UnauthorizedError"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
         "500":
-          $ref: InternalServerError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
       summary: Add a player
       tags:
         - Players
@@ -2707,31 +2768,35 @@ paths:
             type: string
       responses:
         "200":
-          $ref: Player
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Player"
+          description: Response for status 200
         "400":
-          $ref: BadRequestOrValidationError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
         "401":
-          $ref: "#/components/schemas/UnauthorizedError"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
         "404":
-          $ref: NotFoundError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
         "500":
-          $ref: InternalServerError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
       summary: Get a player
       tags:
         - Players
@@ -2754,31 +2819,35 @@ paths:
         required: true
       responses:
         "200":
-          $ref: Player
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Player"
+          description: Response for status 200
         "400":
-          $ref: BadRequestOrValidationError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
         "401":
-          $ref: "#/components/schemas/UnauthorizedError"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
         "404":
-          $ref: NotFoundError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
         "500":
-          $ref: InternalServerError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
       summary: Associate a player with an account
       tags:
         - Players
@@ -2807,31 +2876,34 @@ paths:
             type: string
       responses:
         "200":
-          $ref: ListRecordings
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ListRecordings"
+          description: Response for status 200
         "400":
-          $ref: BadRequestOrValidationError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
         "401":
-          $ref: "#/components/schemas/UnauthorizedError"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
         "500":
-          $ref: InternalServerError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
       summary: List recordings
       tags:
         - Recordings
     post:
       operationId: postApiRecs
-      parameters: []
       requestBody:
         content:
           multipart/form-data:
@@ -2840,31 +2912,35 @@ paths:
         required: true
       responses:
         "200":
-          $ref: Recording
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Recording"
+          description: Response for status 200
         "201":
-          $ref: Recording
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Recording"
+          description: Response for status 201
         "400":
-          $ref: BadRequestOrValidationError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
         "401":
-          $ref: "#/components/schemas/UnauthorizedError"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
         "500":
-          $ref: InternalServerError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
       summary: Save a recording
       tags:
         - Recordings
@@ -2882,31 +2958,35 @@ paths:
             type: string
       responses:
         "200":
-          $ref: Recording
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Recording"
+          description: Response for status 200
         "400":
-          $ref: BadRequestOrValidationError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
         "401":
-          $ref: "#/components/schemas/UnauthorizedError"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
         "404":
-          $ref: NotFoundError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
         "500":
-          $ref: InternalServerError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
       summary: Get a recording
       tags:
         - Recordings
@@ -2935,31 +3015,34 @@ paths:
             type: string
       responses:
         "200":
-          $ref: ListRoles
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ListRoles"
+          description: Response for status 200
         "400":
-          $ref: BadRequestOrValidationError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
         "401":
-          $ref: "#/components/schemas/UnauthorizedError"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
         "500":
-          $ref: InternalServerError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
       summary: List roles
       tags:
         - Roles
     post:
       operationId: postApiRoles
-      parameters: []
       requestBody:
         content:
           application/json:
@@ -2968,25 +3051,29 @@ paths:
         required: true
       responses:
         "201":
-          $ref: Role
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Role"
+          description: Response for status 201
         "400":
-          $ref: BadRequestOrValidationError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
         "401":
-          $ref: "#/components/schemas/UnauthorizedError"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
         "500":
-          $ref: InternalServerError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
       summary: Create a role
       tags:
         - Roles
@@ -3002,31 +3089,35 @@ paths:
             type: string
       responses:
         "200":
-          $ref: RemoveRoleResponse
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/RemoveRoleResponse"
+          description: Response for status 200
         "400":
-          $ref: BadRequestOrValidationError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
         "401":
-          $ref: "#/components/schemas/UnauthorizedError"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
         "404":
-          $ref: NotFoundError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
         "500":
-          $ref: InternalServerError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
       summary: Remove a role
       tags:
         - Roles
@@ -3041,31 +3132,35 @@ paths:
             type: string
       responses:
         "200":
-          $ref: Role
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Role"
+          description: Response for status 200
         "400":
-          $ref: BadRequestOrValidationError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
         "401":
-          $ref: "#/components/schemas/UnauthorizedError"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
         "404":
-          $ref: NotFoundError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
         "500":
-          $ref: InternalServerError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
       summary: Get a role
       tags:
         - Roles
@@ -3086,31 +3181,35 @@ paths:
         required: true
       responses:
         "200":
-          $ref: Role
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Role"
+          description: Response for status 200
         "400":
-          $ref: BadRequestOrValidationError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
         "401":
-          $ref: "#/components/schemas/UnauthorizedError"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
         "404":
-          $ref: NotFoundError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
         "500":
-          $ref: InternalServerError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
       summary: Update a role
       tags:
         - Roles
@@ -3139,31 +3238,34 @@ paths:
             type: string
       responses:
         "200":
-          $ref: ListRoomPrograms
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ListRoomPrograms"
+          description: Response for status 200
         "400":
-          $ref: BadRequestOrValidationError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
         "401":
-          $ref: "#/components/schemas/UnauthorizedError"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
         "500":
-          $ref: InternalServerError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
       summary: List room programs
       tags:
         - Rooms
     post:
       operationId: postApiRoom-programs
-      parameters: []
       requestBody:
         content:
           application/json:
@@ -3172,25 +3274,29 @@ paths:
         required: true
       responses:
         "201":
-          $ref: RoomProgram
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/RoomProgram"
+          description: Response for status 201
         "400":
-          $ref: BadRequestOrValidationError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
         "401":
-          $ref: "#/components/schemas/UnauthorizedError"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
         "500":
-          $ref: InternalServerError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
       summary: Create room program
       tags:
         - Rooms
@@ -3206,31 +3312,35 @@ paths:
             type: string
       responses:
         "200":
-          $ref: RoomProgram
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/RoomProgram"
+          description: Response for status 200
         "400":
-          $ref: BadRequestOrValidationError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
         "401":
-          $ref: "#/components/schemas/UnauthorizedError"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
         "404":
-          $ref: NotFoundError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
         "500":
-          $ref: InternalServerError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
       summary: Get room program
       tags:
         - Rooms
@@ -3251,31 +3361,35 @@ paths:
         required: true
       responses:
         "200":
-          $ref: RoomProgram
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/RoomProgram"
+          description: Response for status 200
         "400":
-          $ref: BadRequestOrValidationError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
         "401":
-          $ref: "#/components/schemas/UnauthorizedError"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
         "404":
-          $ref: NotFoundError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
         "500":
-          $ref: InternalServerError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
       summary: Update room program
       tags:
         - Rooms
@@ -3310,31 +3424,35 @@ paths:
             type: string
       responses:
         "200":
-          $ref: ListRoomProgramVersions
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ListRoomProgramVersions"
+          description: Response for status 200
         "400":
-          $ref: BadRequestOrValidationError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
         "401":
-          $ref: "#/components/schemas/UnauthorizedError"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
         "404":
-          $ref: NotFoundError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
         "500":
-          $ref: InternalServerError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
       summary: List room program versions
       tags:
         - Rooms
@@ -3355,31 +3473,35 @@ paths:
         required: true
       responses:
         "201":
-          $ref: RoomProgramVersion
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/RoomProgramVersion"
+          description: Response for status 201
         "400":
-          $ref: BadRequestOrValidationError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
         "401":
-          $ref: "#/components/schemas/UnauthorizedError"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
         "404":
-          $ref: NotFoundError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
         "500":
-          $ref: InternalServerError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
       summary: Create room program version
       tags:
         - Rooms
@@ -3401,31 +3523,35 @@ paths:
         required: true
       responses:
         "201":
-          $ref: DiscoverRoomProgramVersionsResponse
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/DiscoverRoomProgramVersionsResponse"
+          description: Response for status 201
         "400":
-          $ref: BadRequestOrValidationError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
         "401":
-          $ref: "#/components/schemas/UnauthorizedError"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
         "404":
-          $ref: NotFoundError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
         "500":
-          $ref: InternalServerError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
       summary: Discover room program versions from GitHub Releases
       tags:
         - Rooms
@@ -3454,31 +3580,34 @@ paths:
             type: string
       responses:
         "200":
-          $ref: ListRoomProxyEndpoints
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ListRoomProxyEndpoints"
+          description: Response for status 200
         "400":
-          $ref: BadRequestOrValidationError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
         "401":
-          $ref: "#/components/schemas/UnauthorizedError"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
         "500":
-          $ref: InternalServerError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
       summary: List room proxy endpoints
       tags:
         - Rooms
     post:
       operationId: postApiRoom-proxy-endpoints
-      parameters: []
       requestBody:
         content:
           application/json:
@@ -3487,25 +3616,29 @@ paths:
         required: true
       responses:
         "201":
-          $ref: RoomProxyEndpoint
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/RoomProxyEndpoint"
+          description: Response for status 201
         "400":
-          $ref: BadRequestOrValidationError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
         "401":
-          $ref: "#/components/schemas/UnauthorizedError"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
         "500":
-          $ref: InternalServerError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
       summary: Create room proxy endpoint
       tags:
         - Rooms
@@ -3527,31 +3660,35 @@ paths:
         required: true
       responses:
         "200":
-          $ref: RoomProxyEndpoint
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/RoomProxyEndpoint"
+          description: Response for status 200
         "400":
-          $ref: BadRequestOrValidationError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
         "401":
-          $ref: "#/components/schemas/UnauthorizedError"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
         "404":
-          $ref: NotFoundError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
         "500":
-          $ref: InternalServerError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
       summary: Update room proxy endpoint
       tags:
         - Rooms
@@ -3582,44 +3719,43 @@ paths:
           name: state
           required: false
           schema:
-            anyOf:
-              - const: open
-                type: string
-              - const: provisioning
-                type: string
-              - const: running
-                type: string
-              - const: closed
-                type: string
-              - const: all
-                type: string
+            enum:
+              - open
+              - provisioning
+              - running
+              - closed
+              - all
+            type: string
       responses:
         "200":
-          $ref: ListRooms
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ListRooms"
+          description: Response for status 200
         "400":
-          $ref: BadRequestOrValidationError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
         "401":
-          $ref: "#/components/schemas/UnauthorizedError"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
         "500":
-          $ref: InternalServerError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
       summary: List room instances
       tags:
         - Rooms
     post:
       operationId: postApiRooms
-      parameters: []
       requestBody:
         content:
           application/json:
@@ -3628,31 +3764,35 @@ paths:
         required: true
       responses:
         "201":
-          $ref: Room
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Room"
+          description: Response for status 201
         "400":
-          $ref: BadRequestOrValidationError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
         "401":
-          $ref: "#/components/schemas/UnauthorizedError"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
         "404":
-          $ref: NotFoundError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
         "500":
-          $ref: InternalServerError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
       summary: Launch room instance
       tags:
         - Rooms
@@ -3668,31 +3808,35 @@ paths:
             type: string
       responses:
         "200":
-          $ref: Room
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Room"
+          description: Response for status 200
         "400":
-          $ref: BadRequestOrValidationError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
         "401":
-          $ref: "#/components/schemas/UnauthorizedError"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
         "404":
-          $ref: NotFoundError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
         "500":
-          $ref: InternalServerError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
       summary: Get room instance
       tags:
         - Rooms
@@ -3708,31 +3852,35 @@ paths:
             type: string
       responses:
         "200":
-          $ref: CloseRoomResponse
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/CloseRoomResponse"
+          description: Response for status 200
         "400":
-          $ref: BadRequestOrValidationError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
         "401":
-          $ref: "#/components/schemas/UnauthorizedError"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
         "404":
-          $ref: NotFoundError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
         "500":
-          $ref: InternalServerError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
       summary: Close room instance
       tags:
         - Rooms
@@ -3754,31 +3902,35 @@ paths:
         required: true
       responses:
         "200":
-          $ref: Room
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Room"
+          description: Response for status 200
         "400":
-          $ref: BadRequestOrValidationError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
         "401":
-          $ref: "#/components/schemas/UnauthorizedError"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
         "404":
-          $ref: NotFoundError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
         "500":
-          $ref: InternalServerError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
       summary: Report room ready for manual linking
       tags:
         - Rooms
@@ -3807,31 +3959,34 @@ paths:
             type: string
       responses:
         "200":
-          $ref: ListStatEventSchemas
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ListStatEventSchemas"
+          description: Response for status 200
         "400":
-          $ref: BadRequestOrValidationError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
         "401":
-          $ref: "#/components/schemas/UnauthorizedError"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
         "500":
-          $ref: InternalServerError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
       summary: List stat event schemas
       tags:
         - Stat Event Schemas
     post:
       operationId: postApiStat-event-schemas
-      parameters: []
       requestBody:
         content:
           application/json:
@@ -3840,25 +3995,29 @@ paths:
         required: true
       responses:
         "201":
-          $ref: StatEventSchema
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/StatEventSchema"
+          description: Response for status 201
         "400":
-          $ref: BadRequestOrValidationError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
         "401":
-          $ref: "#/components/schemas/UnauthorizedError"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
         "500":
-          $ref: InternalServerError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
       summary: Create stat event schema
       tags:
         - Stat Event Schemas
@@ -3874,31 +4033,35 @@ paths:
             type: string
       responses:
         "200":
-          $ref: StatEventSchema
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/StatEventSchema"
+          description: Response for status 200
         "400":
-          $ref: BadRequestOrValidationError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
         "401":
-          $ref: "#/components/schemas/UnauthorizedError"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
         "404":
-          $ref: NotFoundError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
         "500":
-          $ref: InternalServerError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
       summary: Get latest stat event schema
       tags:
         - Stat Event Schemas
@@ -3920,31 +4083,35 @@ paths:
         required: true
       responses:
         "201":
-          $ref: StatEventSchema
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/StatEventSchema"
+          description: Response for status 201
         "400":
-          $ref: BadRequestOrValidationError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
         "401":
-          $ref: "#/components/schemas/UnauthorizedError"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
         "404":
-          $ref: NotFoundError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
         "500":
-          $ref: InternalServerError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
       summary: Publish stat event schema version
       tags:
         - Stat Event Schemas
@@ -3971,31 +4138,35 @@ paths:
             minimum: 1
       responses:
         "200":
-          $ref: StatEventSchema
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/StatEventSchema"
+          description: Response for status 200
         "400":
-          $ref: BadRequestOrValidationError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
         "401":
-          $ref: "#/components/schemas/UnauthorizedError"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
         "404":
-          $ref: NotFoundError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
         "500":
-          $ref: InternalServerError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
       summary: Get stat event schema version
       tags:
         - Stat Event Schemas
@@ -4027,38 +4198,41 @@ paths:
         required: true
       responses:
         "200":
-          $ref: StatEventSchema
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/StatEventSchema"
+          description: Response for status 200
         "400":
-          $ref: BadRequestOrValidationError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
         "401":
-          $ref: "#/components/schemas/UnauthorizedError"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
         "404":
-          $ref: NotFoundError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
         "500":
-          $ref: InternalServerError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
       summary: Update stat event schema version
       tags:
         - Stat Event Schemas
   /auth:
     post:
       operationId: postAuth
-      parameters: []
       requestBody:
         content:
           application/json:
@@ -4067,29 +4241,29 @@ paths:
         required: true
       responses:
         "200":
-          $ref: CreateTokenResponse
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/CreateTokenResponse"
+          description: Response for status 200
         "400":
-          $ref: BadRequestOrValidationError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
         "401":
-          $ref: UnauthorizedError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
         "500":
-          $ref: InternalServerError
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
       security: []
       summary: Create a JWT
       tags:
@@ -4097,8 +4271,6 @@ paths:
   /health:
     get:
       operationId: getHealth
-      responses:
-        "200": {}
       security: []
       tags:
         - System

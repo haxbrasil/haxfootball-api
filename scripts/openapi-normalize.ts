@@ -1,5 +1,8 @@
 export function normalizeOpenApiDocument(document: unknown): unknown {
-  const documentWithNestedRefs = replaceNestedComponentSchemas(document);
+  const documentWithComponentRefs = normalizeComponentRefs(document);
+  const documentWithNestedRefs = replaceNestedComponentSchemas(
+    documentWithComponentRefs
+  );
   const documentWithoutInternalIds = stripInternalSchemaIds(
     documentWithNestedRefs
   );
@@ -8,6 +11,47 @@ export function normalizeOpenApiDocument(document: unknown): unknown {
   );
 
   return sortKeys(documentWithNarrowContentTypes);
+}
+
+function normalizeComponentRefs(document: unknown): unknown {
+  if (!isRecord(document)) {
+    return document;
+  }
+
+  const components = recordValue(document.components);
+  const schemas = recordValue(components.schemas);
+  const componentRefsByName = new Map(
+    Object.keys(schemas).map((name) => [name, `#/components/schemas/${name}`])
+  );
+
+  return normalizeComponentRefValue(document, componentRefsByName);
+}
+
+function normalizeComponentRefValue(
+  value: unknown,
+  componentRefsByName: Map<string, string>
+): unknown {
+  if (Array.isArray(value)) {
+    return value.map((item) =>
+      normalizeComponentRefValue(item, componentRefsByName)
+    );
+  }
+
+  if (!isRecord(value)) {
+    return value;
+  }
+
+  return mapRecord(value, (nestedValue, key) => {
+    if (
+      key === "$ref" &&
+      typeof nestedValue === "string" &&
+      componentRefsByName.has(nestedValue)
+    ) {
+      return componentRefsByName.get(nestedValue);
+    }
+
+    return normalizeComponentRefValue(nestedValue, componentRefsByName);
+  });
 }
 
 function replaceNestedComponentSchemas(document: unknown): unknown {
