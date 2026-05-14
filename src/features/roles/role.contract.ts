@@ -1,4 +1,5 @@
 import { type Static, t } from "elysia";
+import { permissionKeySchema } from "@/features/permissions/permission.contract";
 import { defaultRoleName, type Role } from "@/features/roles/role.db";
 
 export const roleNameSchema = t.String({
@@ -11,13 +12,7 @@ export const roleTitleSchema = t.String({
   minLength: 1
 });
 
-export const accountPermissionSchema = t.String({
-  minLength: 1,
-  maxLength: 100,
-  pattern: "^[a-z][a-z0-9-]*:[a-z][a-z0-9-]*$"
-});
-
-export const rolePermissionsSchema = t.Array(accountPermissionSchema, {
+export const rolePermissionsSchema = t.Array(permissionKeySchema, {
   default: [],
   uniqueItems: true
 });

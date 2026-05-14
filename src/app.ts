@@ -3,6 +3,7 @@ import { Elysia } from "elysia";
 import { authRoutes } from "@/features/auth/auth.routes";
 import { accountRoutes } from "@/features/accounts/account.routes";
 import { matchRoutes } from "@/features/matches/match.routes";
+import { permissionRoutes } from "@/features/permissions/permission.routes";
 import { playerRoutes } from "@/features/players/player.routes";
 import { recordingRoutes } from "@/features/recordings/recording.routes";
 import { roleRoutes } from "@/features/roles/role.routes";
@@ -51,6 +52,7 @@ export const app = new Elysia()
     api
       .use(withJwtGuard)
       .use(accountRoutes)
+      .use(permissionRoutes)
       .use(roleRoutes)
       .use(playerRoutes)
       .use(matchRoutes)

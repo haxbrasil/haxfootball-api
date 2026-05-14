@@ -10,7 +10,10 @@ import {
   toRoleResponse
 } from "@/features/roles/role.contract";
 import { rolePermissions, roles } from "@/features/roles/role.db";
-import { roleWithPermissions } from "@/features/roles/role.persistence";
+import {
+  ensurePermissionsByKeys,
+  roleWithPermissions
+} from "@/features/roles/role.persistence";
 
 export const createRoleBodySchema = t.Object({
   name: roleNameSchema,
@@ -32,7 +35,7 @@ export async function createRole(
     throw badRequest("Role name already exists");
   }
 
-  const permissions = input.permissions ?? [];
+  const permissionKeys = input.permissions ?? [];
 
   const role = await db.transaction(async (tx) => {
     const [createdRole] = await tx
@@ -43,11 +46,13 @@ export async function createRole(
       })
       .returning();
 
-    if (permissions.length > 0) {
+    const permissionRows = await ensurePermissionsByKeys(tx, permissionKeys);
+
+    if (permissionRows.length > 0) {
       await tx.insert(rolePermissions).values(
-        permissions.map((permission) => ({
+        permissionRows.map((permission) => ({
           roleId: createdRole.id,
-          permission
+          permissionId: permission.id
         }))
       );
     }

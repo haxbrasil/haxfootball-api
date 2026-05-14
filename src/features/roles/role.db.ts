@@ -4,6 +4,7 @@ import {
   text,
   uniqueIndex
 } from "drizzle-orm/sqlite-core";
+import { permissions } from "@/features/permissions/permission.db";
 
 export const defaultRoleId = 1;
 export const defaultRoleName = "default";
@@ -32,15 +33,17 @@ export const rolePermissions = sqliteTable(
     roleId: integer("role_id")
       .notNull()
       .references(() => roles.id),
-    permission: text("permission").notNull(),
+    permissionId: integer("permission_id")
+      .notNull()
+      .references(() => permissions.id),
     createdAt: text("created_at")
       .notNull()
       .$defaultFn(() => new Date().toISOString())
   },
   (table) => [
-    uniqueIndex("role_permissions_role_id_permission_unique").on(
+    uniqueIndex("role_permissions_role_id_permission_id_unique").on(
       table.roleId,
-      table.permission
+      table.permissionId
     )
   ]
 );

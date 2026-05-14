@@ -13,6 +13,8 @@ assertSqliteJsonSupport(sqlite);
 
 export const db = drizzle(sqlite, { schema });
 
+export type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
 type JsonSupportCheckRow = {
   jsonIsValid: number;
 };

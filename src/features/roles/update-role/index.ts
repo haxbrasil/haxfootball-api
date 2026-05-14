@@ -13,7 +13,10 @@ import {
   rolePermissions,
   roles
 } from "@/features/roles/role.db";
-import { roleWithPermissions } from "@/features/roles/role.persistence";
+import {
+  ensurePermissionsByKeys,
+  roleWithPermissions
+} from "@/features/roles/role.persistence";
 import { badRequest, notFound } from "@/shared/http/errors";
 
 export const updateRoleBodySchema = t.Partial(
@@ -58,7 +61,7 @@ export async function updateRole(
 
   const name = nextName ?? role.name;
   const title = input.title ?? role.title;
-  const permissions = input.permissions;
+  const permissionKeys = input.permissions;
 
   const updatedRole = await db.transaction(async (tx) => {
     const [updated] = await tx
@@ -71,16 +74,18 @@ export async function updateRole(
       .where(eq(roles.id, role.id))
       .returning();
 
-    if (permissions !== undefined) {
+    if (permissionKeys !== undefined) {
       await tx
         .delete(rolePermissions)
         .where(eq(rolePermissions.roleId, role.id));
 
-      if (permissions.length > 0) {
+      const permissionRows = await ensurePermissionsByKeys(tx, permissionKeys);
+
+      if (permissionRows.length > 0) {
         await tx.insert(rolePermissions).values(
-          permissions.map((permission) => ({
+          permissionRows.map((permission) => ({
             roleId: role.id,
-            permission
+            permissionId: permission.id
           }))
         );
       }

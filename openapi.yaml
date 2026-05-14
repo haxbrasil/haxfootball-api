@@ -270,6 +270,21 @@ components:
       required:
         - status
       type: object
+    CreatePermissionBody:
+      properties:
+        key:
+          maxLength: 100
+          minLength: 1
+          pattern: ^[a-z][a-z0-9-]*:[a-z][a-z0-9-]*$
+          type: string
+        title:
+          anyOf:
+            - minLength: 1
+              type: string
+            - type: "null"
+      required:
+        - key
+      type: object
     CreatePlayerBody:
       properties:
         country:
@@ -535,6 +550,18 @@ components:
         items:
           items:
             $ref: "#/components/schemas/MatchSummary"
+          type: array
+        page:
+          $ref: "#/components/schemas/PageInfo"
+      required:
+        - items
+        - page
+      type: object
+    ListPermissions:
+      properties:
+        items:
+          items:
+            $ref: "#/components/schemas/Permission"
           type: array
         page:
           $ref: "#/components/schemas/PageInfo"
@@ -966,6 +993,28 @@ components:
         - limit
         - nextCursor
       type: object
+    Permission:
+      properties:
+        createdAt:
+          type: string
+        key:
+          type: string
+        title:
+          anyOf:
+            - type: string
+            - type: "null"
+        updatedAt:
+          type: string
+        uuid:
+          format: uuid
+          type: string
+      required:
+        - uuid
+        - key
+        - title
+        - createdAt
+        - updatedAt
+      type: object
     Player:
       properties:
         account:
@@ -1032,6 +1081,13 @@ components:
         - url
         - sizeBytes
         - createdAt
+      type: object
+    RemovePermissionResponse:
+      properties:
+        deleted:
+          type: boolean
+      required:
+        - deleted
       type: object
     RemoveRoleResponse:
       properties:
@@ -1570,6 +1626,19 @@ components:
               type: string
             - const: completed
               type: string
+      type: object
+    UpdatePermissionBody:
+      properties:
+        key:
+          maxLength: 100
+          minLength: 1
+          pattern: ^[a-z][a-z0-9-]*:[a-z][a-z0-9-]*$
+          type: string
+        title:
+          anyOf:
+            - minLength: 1
+              type: string
+            - type: "null"
       type: object
     UpdateRoleBody:
       properties:
@@ -2341,6 +2410,210 @@ paths:
       summary: Disable match stat event
       tags:
         - Match Stat Events
+  /api/permissions:
+    get:
+      operationId: getApiPermissions
+      parameters:
+        - in: query
+          name: limit
+          required: false
+          schema:
+            anyOf:
+              - default: 0
+                format: integer
+                type: string
+              - maximum: 100
+                minimum: 1
+                type: integer
+            maximum: 100
+            minimum: 1
+        - in: query
+          name: cursor
+          required: false
+          schema:
+            minLength: 1
+            type: string
+      responses:
+        "200":
+          $ref: ListPermissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListPermissions"
+        "400":
+          $ref: BadRequestOrValidationError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+        "401":
+          $ref: "#/components/schemas/UnauthorizedError"
+        "500":
+          $ref: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      summary: List permissions
+      tags:
+        - Permissions
+    post:
+      operationId: postApiPermissions
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePermissionBody"
+        required: true
+      responses:
+        "201":
+          $ref: Permission
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Permission"
+        "400":
+          $ref: BadRequestOrValidationError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+        "401":
+          $ref: "#/components/schemas/UnauthorizedError"
+        "500":
+          $ref: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      summary: Create a permission
+      tags:
+        - Permissions
+  /api/permissions/{uuid}:
+    delete:
+      operationId: deleteApiPermissionsByUuid
+      parameters:
+        - in: path
+          name: uuid
+          required: true
+          schema:
+            format: uuid
+            type: string
+      responses:
+        "200":
+          $ref: RemovePermissionResponse
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RemovePermissionResponse"
+        "400":
+          $ref: BadRequestOrValidationError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+        "401":
+          $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          $ref: NotFoundError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+        "500":
+          $ref: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      summary: Remove a permission
+      tags:
+        - Permissions
+    get:
+      operationId: getApiPermissionsByUuid
+      parameters:
+        - in: path
+          name: uuid
+          required: true
+          schema:
+            format: uuid
+            type: string
+      responses:
+        "200":
+          $ref: Permission
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Permission"
+        "400":
+          $ref: BadRequestOrValidationError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+        "401":
+          $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          $ref: NotFoundError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+        "500":
+          $ref: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      summary: Get a permission
+      tags:
+        - Permissions
+    patch:
+      operationId: patchApiPermissionsByUuid
+      parameters:
+        - in: path
+          name: uuid
+          required: true
+          schema:
+            format: uuid
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePermissionBody"
+        required: true
+      responses:
+        "200":
+          $ref: Permission
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Permission"
+        "400":
+          $ref: BadRequestOrValidationError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+        "401":
+          $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          $ref: NotFoundError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+        "500":
+          $ref: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      summary: Update a permission
+      tags:
+        - Permissions
   /api/players:
     get:
       operationId: getApiPlayers
