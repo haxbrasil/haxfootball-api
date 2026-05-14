@@ -1,4 +1,4 @@
-import { Elysia } from "elysia";
+import { Elysia, t } from "elysia";
 import {
   createToken,
   createTokenBodySchema,
@@ -9,14 +9,19 @@ import { unauthorizedErrorResponseSchema } from "@/shared/http/errors";
 
 export const authRoutes = new Elysia({ name: "auth-routes" })
   .use(jwtPlugin())
+  .model({
+    CreateTokenBody: createTokenBodySchema,
+    CreateTokenResponse: createTokenResponseSchema,
+    UnauthorizedError: unauthorizedErrorResponseSchema
+  })
   .post(
     "/auth",
     ({ body, jwt }) => createToken(body, (payload) => jwt.sign(payload)),
     {
-      body: createTokenBodySchema,
+      body: t.Ref("CreateTokenBody"),
       response: {
-        200: createTokenResponseSchema,
-        401: unauthorizedErrorResponseSchema
+        200: t.Ref("CreateTokenResponse"),
+        401: t.Ref("UnauthorizedError")
       },
       detail: {
         tags: ["Auth"],

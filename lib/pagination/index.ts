@@ -24,15 +24,17 @@ export type PaginatedResponse<T> = {
   page: PageInfo;
 };
 
+export const pageInfoSchema = t.Object({
+  limit: t.Integer({ minimum: 1, maximum: maxPageLimit }),
+  nextCursor: t.Nullable(t.String())
+});
+
 export function paginatedResponseSchema<TItemSchema extends TSchema>(
   itemSchema: TItemSchema
 ) {
   return t.Object({
     items: t.Array(itemSchema),
-    page: t.Object({
-      limit: t.Integer({ minimum: 1, maximum: maxPageLimit }),
-      nextCursor: t.Nullable(t.String())
-    })
+    page: pageInfoSchema
   });
 }
 

@@ -6,6 +6,7 @@
       "**",
       "!node_modules",
       "!data",
+      "!openapi.yaml",
       "!bun.lock",
       "!drizzle/meta/*.json",
       "!drizzle/*.sql"

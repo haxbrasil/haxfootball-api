@@ -40,6 +40,9 @@ jobs:
       - name: Check formatting
         run: bun run format:check
 
+      - name: Check OpenAPI spec
+        run: bun run openapi:check
+
       - name: E2E tests
         run: bun run test:e2e
 

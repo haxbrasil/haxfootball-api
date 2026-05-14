@@ -1,4 +1,4 @@
-import { Elysia } from "elysia";
+import { Elysia, t } from "elysia";
 import {
   closeRoom,
   closeRoomResponseSchema
@@ -44,16 +44,21 @@ import {
 } from "@/features/rooms/list-room-proxy-endpoints";
 import {
   reportRoomReady,
-  reportRoomReadyBodySchema,
-  reportRoomReadyResponseSchema
+  reportRoomReadyBodySchema
 } from "@/features/rooms/report-room-ready";
 import {
   listRoomsQuerySchema,
+  roomLaunchConfigFieldSchema,
   roomIdParamsSchema,
   roomProgramIdParamsSchema,
+  roomProgramReleaseSourceSchema,
+  roomProgramVersionArtifactSchema,
   roomProgramVersionResponseSchema,
   roomProxyEndpointIdParamsSchema,
-  roomProxyEndpointResponseSchema
+  roomProxyEndpointResponseSchema,
+  roomResponseProgramSummarySchema,
+  roomResponseProxyEndpointSummarySchema,
+  roomResponseVersionSummarySchema
 } from "@/features/rooms/room.contract";
 import {
   updateRoomProgram,
@@ -74,12 +79,41 @@ export const roomRoutes = new Elysia({
   name: "room-routes"
 })
   .use(jwtPlugin())
+  .model({
+    BadRequestError: badRequestErrorResponseSchema,
+    NotFoundError: notFoundErrorResponseSchema,
+    RoomLaunchConfigField: roomLaunchConfigFieldSchema,
+    RoomProgramReleaseSource: roomProgramReleaseSourceSchema,
+    RoomProgramVersionArtifact: roomProgramVersionArtifactSchema,
+    RoomResponseProgramSummary: roomResponseProgramSummarySchema,
+    RoomResponseProxyEndpointSummary: roomResponseProxyEndpointSummarySchema,
+    RoomResponseVersionSummary: roomResponseVersionSummarySchema,
+    CloseRoomResponse: closeRoomResponseSchema,
+    CreateRoomBody: createRoomBodySchema,
+    CreateRoomProgramBody: createRoomProgramBodySchema,
+    CreateRoomProgramVersionBody: createRoomProgramVersionBodySchema,
+    CreateRoomProxyEndpointBody: createRoomProxyEndpointBodySchema,
+    DiscoverRoomProgramVersionsBody: discoverRoomProgramVersionsBodySchema,
+    DiscoverRoomProgramVersionsResponse:
+      discoverRoomProgramVersionsResponseSchema,
+    ListRoomProgramVersions: listRoomProgramVersionsResponseSchema,
+    ListRoomPrograms: listRoomProgramsResponseSchema,
+    ListRoomProxyEndpoints: listRoomProxyEndpointsResponseSchema,
+    ListRooms: listRoomsResponseSchema,
+    ReportRoomReadyBody: reportRoomReadyBodySchema,
+    Room: roomResponseSchema,
+    RoomProgram: roomProgramResponseSchema,
+    RoomProgramVersion: roomProgramVersionResponseSchema,
+    RoomProxyEndpoint: roomProxyEndpointResponseSchema,
+    UpdateRoomProgramBody: updateRoomProgramBodySchema,
+    UpdateRoomProxyEndpointBody: updateRoomProxyEndpointBodySchema
+  })
   .group("/room-programs", (app) =>
     app
       .get("", ({ query }) => listRoomPrograms(query), {
         query: paginationQuerySchema,
         response: {
-          200: listRoomProgramsResponseSchema
+          200: t.Ref("ListRoomPrograms")
         },
         detail: {
           tags: ["Rooms"],
@@ -89,8 +123,8 @@ export const roomRoutes = new Elysia({
       .get("/:id", ({ params }) => getRoomProgram(params.id), {
         params: roomProgramIdParamsSchema,
         response: {
-          200: roomProgramResponseSchema,
-          404: notFoundErrorResponseSchema
+          200: t.Ref("RoomProgram"),
+          404: t.Ref("NotFoundError")
         },
         detail: {
           tags: ["Rooms"],
@@ -105,10 +139,10 @@ export const roomRoutes = new Elysia({
           return createRoomProgram(body);
         },
         {
-          body: createRoomProgramBodySchema,
+          body: t.Ref("CreateRoomProgramBody"),
           response: {
-            201: roomProgramResponseSchema,
-            400: badRequestErrorResponseSchema
+            201: t.Ref("RoomProgram"),
+            400: t.Ref("BadRequestError")
           },
           detail: {
             tags: ["Rooms"],
@@ -117,12 +151,12 @@ export const roomRoutes = new Elysia({
         }
       )
       .patch("/:id", ({ body, params }) => updateRoomProgram(params.id, body), {
-        body: updateRoomProgramBodySchema,
+        body: t.Ref("UpdateRoomProgramBody"),
         params: roomProgramIdParamsSchema,
         response: {
-          200: roomProgramResponseSchema,
-          400: badRequestErrorResponseSchema,
-          404: notFoundErrorResponseSchema
+          200: t.Ref("RoomProgram"),
+          400: t.Ref("BadRequestError"),
+          404: t.Ref("NotFoundError")
         },
         detail: {
           tags: ["Rooms"],
@@ -136,8 +170,8 @@ export const roomRoutes = new Elysia({
           params: roomProgramIdParamsSchema,
           query: paginationQuerySchema,
           response: {
-            200: listRoomProgramVersionsResponseSchema,
-            404: notFoundErrorResponseSchema
+            200: t.Ref("ListRoomProgramVersions"),
+            404: t.Ref("NotFoundError")
           },
           detail: {
             tags: ["Rooms"],
@@ -153,12 +187,12 @@ export const roomRoutes = new Elysia({
           return createRoomProgramVersion(params.id, body);
         },
         {
-          body: createRoomProgramVersionBodySchema,
+          body: t.Ref("CreateRoomProgramVersionBody"),
           params: roomProgramIdParamsSchema,
           response: {
-            201: roomProgramVersionResponseSchema,
-            400: badRequestErrorResponseSchema,
-            404: notFoundErrorResponseSchema
+            201: t.Ref("RoomProgramVersion"),
+            400: t.Ref("BadRequestError"),
+            404: t.Ref("NotFoundError")
           },
           detail: {
             tags: ["Rooms"],
@@ -174,11 +208,11 @@ export const roomRoutes = new Elysia({
           return discoverRoomProgramVersions(params.id, body);
         },
         {
-          body: discoverRoomProgramVersionsBodySchema,
+          body: t.Ref("DiscoverRoomProgramVersionsBody"),
           params: roomProgramIdParamsSchema,
           response: {
-            201: discoverRoomProgramVersionsResponseSchema,
-            404: notFoundErrorResponseSchema
+            201: t.Ref("DiscoverRoomProgramVersionsResponse"),
+            404: t.Ref("NotFoundError")
           },
           detail: {
             tags: ["Rooms"],
@@ -192,7 +226,7 @@ export const roomRoutes = new Elysia({
       .get("", ({ query }) => listRoomProxyEndpoints(query), {
         query: paginationQuerySchema,
         response: {
-          200: listRoomProxyEndpointsResponseSchema
+          200: t.Ref("ListRoomProxyEndpoints")
         },
         detail: {
           tags: ["Rooms"],
@@ -207,10 +241,10 @@ export const roomRoutes = new Elysia({
           return createRoomProxyEndpoint(body);
         },
         {
-          body: createRoomProxyEndpointBodySchema,
+          body: t.Ref("CreateRoomProxyEndpointBody"),
           response: {
-            201: roomProxyEndpointResponseSchema,
-            400: badRequestErrorResponseSchema
+            201: t.Ref("RoomProxyEndpoint"),
+            400: t.Ref("BadRequestError")
           },
           detail: {
             tags: ["Rooms"],
@@ -222,11 +256,11 @@ export const roomRoutes = new Elysia({
         "/:id",
         ({ body, params }) => updateRoomProxyEndpoint(params.id, body),
         {
-          body: updateRoomProxyEndpointBodySchema,
+          body: t.Ref("UpdateRoomProxyEndpointBody"),
           params: roomProxyEndpointIdParamsSchema,
           response: {
-            200: roomProxyEndpointResponseSchema,
-            404: notFoundErrorResponseSchema
+            200: t.Ref("RoomProxyEndpoint"),
+            404: t.Ref("NotFoundError")
           },
           detail: {
             tags: ["Rooms"],
@@ -240,7 +274,7 @@ export const roomRoutes = new Elysia({
       .get("", ({ query }) => listRooms(query), {
         query: listRoomsQuerySchema,
         response: {
-          200: listRoomsResponseSchema
+          200: t.Ref("ListRooms")
         },
         detail: {
           tags: ["Rooms"],
@@ -250,8 +284,8 @@ export const roomRoutes = new Elysia({
       .get("/:id", ({ params }) => getRoom(params.id), {
         params: roomIdParamsSchema,
         response: {
-          200: roomResponseSchema,
-          404: notFoundErrorResponseSchema
+          200: t.Ref("Room"),
+          404: t.Ref("NotFoundError")
         },
         detail: {
           tags: ["Rooms"],
@@ -272,11 +306,11 @@ export const roomRoutes = new Elysia({
           );
         },
         {
-          body: createRoomBodySchema,
+          body: t.Ref("CreateRoomBody"),
           response: {
-            201: roomResponseSchema,
-            400: badRequestErrorResponseSchema,
-            404: notFoundErrorResponseSchema
+            201: t.Ref("Room"),
+            400: t.Ref("BadRequestError"),
+            404: t.Ref("NotFoundError")
           },
           detail: {
             tags: ["Rooms"],
@@ -287,8 +321,8 @@ export const roomRoutes = new Elysia({
       .post("/:id/close", ({ params }) => closeRoom(params.id), {
         params: roomIdParamsSchema,
         response: {
-          200: closeRoomResponseSchema,
-          404: notFoundErrorResponseSchema
+          200: t.Ref("CloseRoomResponse"),
+          404: t.Ref("NotFoundError")
         },
         detail: {
           tags: ["Rooms"],
@@ -299,12 +333,12 @@ export const roomRoutes = new Elysia({
         "/:id/ready",
         ({ body, params }) => reportRoomReady(params.id, body),
         {
-          body: reportRoomReadyBodySchema,
+          body: t.Ref("ReportRoomReadyBody"),
           params: roomIdParamsSchema,
           response: {
-            200: reportRoomReadyResponseSchema,
-            400: badRequestErrorResponseSchema,
-            404: notFoundErrorResponseSchema
+            200: t.Ref("Room"),
+            400: t.Ref("BadRequestError"),
+            404: t.Ref("NotFoundError")
           },
           detail: {
             tags: ["Rooms"],

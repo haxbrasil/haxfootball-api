@@ -193,17 +193,29 @@ export const createRoomBodySchema = t.Object({
   launchConfig: t.Optional(roomLaunchConfigSchema)
 });
 
+export const roomResponseProgramSummarySchema = t.Object({
+  id: roomUuidSchema,
+  name: t.String(),
+  title: t.Nullable(t.String())
+});
+
+export const roomResponseVersionSummarySchema = t.Object({
+  id: roomUuidSchema,
+  version: t.String()
+});
+
+export const roomResponseProxyEndpointSummarySchema = t.Object({
+  id: roomUuidSchema,
+  key: t.String(),
+  displayName: t.String(),
+  outboundIp: t.String(),
+  proxyUrl: t.String()
+});
+
 export const roomResponseSchema = t.Object({
   id: roomUuidSchema,
-  program: t.Object({
-    id: roomUuidSchema,
-    name: t.String(),
-    title: t.Nullable(t.String())
-  }),
-  version: t.Object({
-    id: roomUuidSchema,
-    version: t.String()
-  }),
+  program: roomResponseProgramSummarySchema,
+  version: roomResponseVersionSummarySchema,
   state: t.Union([
     t.Literal("provisioning"),
     t.Literal("running"),
@@ -212,15 +224,7 @@ export const roomResponseSchema = t.Object({
   roomLink: t.Nullable(t.String()),
   launchConfig: roomLaunchConfigSchema,
   public: t.Boolean(),
-  proxyEndpoint: t.Nullable(
-    t.Object({
-      id: roomUuidSchema,
-      key: t.String(),
-      displayName: t.String(),
-      outboundIp: t.String(),
-      proxyUrl: t.String()
-    })
-  ),
+  proxyEndpoint: t.Nullable(roomResponseProxyEndpointSummarySchema),
   createdAt: t.String(),
   updatedAt: t.String(),
   closedAt: t.Nullable(t.String())

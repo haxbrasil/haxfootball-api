@@ -1,4 +1,4 @@
-import { Elysia } from "elysia";
+import { Elysia, t } from "elysia";
 import {
   associatePlayerAccount,
   associatePlayerAccountBodySchema
@@ -14,6 +14,7 @@ import {
 } from "@/features/players/list-players";
 import {
   playerIdParamsSchema,
+  playerAccountResponseSchema,
   playerResponseSchema
 } from "@/features/players/player.contract";
 import { notFoundErrorResponseSchema } from "@/shared/http/errors";
@@ -23,10 +24,18 @@ export const playerRoutes = new Elysia({
   name: "player-routes",
   prefix: "/players"
 })
+  .model({
+    AssociatePlayerAccountBody: associatePlayerAccountBodySchema,
+    CreatePlayerBody: createPlayerBodySchema,
+    ListPlayers: listPlayersResponseSchema,
+    NotFoundError: notFoundErrorResponseSchema,
+    PlayerAccount: playerAccountResponseSchema,
+    Player: playerResponseSchema
+  })
   .get("", ({ query }) => listPlayers(query), {
     query: paginationQuerySchema,
     response: {
-      200: listPlayersResponseSchema
+      200: t.Ref("ListPlayers")
     },
     detail: {
       tags: ["Players"],
@@ -36,8 +45,8 @@ export const playerRoutes = new Elysia({
   .get("/:externalId", ({ params }) => getPlayer(params.externalId), {
     params: playerIdParamsSchema,
     response: {
-      200: playerResponseSchema,
-      404: notFoundErrorResponseSchema
+      200: t.Ref("Player"),
+      404: t.Ref("NotFoundError")
     },
     detail: {
       tags: ["Players"],
@@ -52,9 +61,9 @@ export const playerRoutes = new Elysia({
       return createPlayer(body);
     },
     {
-      body: createPlayerBodySchema,
+      body: t.Ref("CreatePlayerBody"),
       response: {
-        201: playerResponseSchema
+        201: t.Ref("Player")
       },
       detail: {
         tags: ["Players"],
@@ -66,11 +75,11 @@ export const playerRoutes = new Elysia({
     "/:externalId/account",
     ({ body, params }) => associatePlayerAccount(params.externalId, body),
     {
-      body: associatePlayerAccountBodySchema,
+      body: t.Ref("AssociatePlayerAccountBody"),
       params: playerIdParamsSchema,
       response: {
-        200: playerResponseSchema,
-        404: notFoundErrorResponseSchema
+        200: t.Ref("Player"),
+        404: t.Ref("NotFoundError")
       },
       detail: {
         tags: ["Players"],

@@ -1,4 +1,4 @@
-import { Elysia } from "elysia";
+import { Elysia, t } from "elysia";
 import {
   confirm,
   confirmBodySchema,
@@ -21,6 +21,7 @@ import {
   updateAccount,
   updateAccountBodySchema
 } from "@/features/accounts/update-account";
+import { roleResponseSchema } from "@/features/roles/role.contract";
 import { notFoundErrorResponseSchema } from "@/shared/http/errors";
 import { paginationQuerySchema } from "@lib";
 
@@ -28,10 +29,20 @@ export const accountRoutes = new Elysia({
   name: "account-routes",
   prefix: "/accounts"
 })
+  .model({
+    Role: roleResponseSchema,
+    Account: accountResponseSchema,
+    ConfirmAccountBody: confirmBodySchema,
+    ConfirmAccountResponse: confirmResponseSchema,
+    CreateAccountBody: createAccountBodySchema,
+    ListAccounts: listAccountsResponseSchema,
+    NotFoundError: notFoundErrorResponseSchema,
+    UpdateAccountBody: updateAccountBodySchema
+  })
   .get("", ({ query }) => listAccounts(query), {
     query: paginationQuerySchema,
     response: {
-      200: listAccountsResponseSchema
+      200: t.Ref("ListAccounts")
     },
     detail: {
       tags: ["Accounts"],
@@ -41,8 +52,8 @@ export const accountRoutes = new Elysia({
   .get("/:uuid", ({ params }) => getAccount(params.uuid), {
     params: accountUuidParamsSchema,
     response: {
-      200: accountResponseSchema,
-      404: notFoundErrorResponseSchema
+      200: t.Ref("Account"),
+      404: t.Ref("NotFoundError")
     },
     detail: {
       tags: ["Accounts"],
@@ -50,9 +61,9 @@ export const accountRoutes = new Elysia({
     }
   })
   .post("/confirm", ({ body }) => confirm(body), {
-    body: confirmBodySchema,
+    body: t.Ref("ConfirmAccountBody"),
     response: {
-      200: confirmResponseSchema
+      200: t.Ref("ConfirmAccountResponse")
     },
     detail: {
       tags: ["Accounts"],
@@ -67,9 +78,9 @@ export const accountRoutes = new Elysia({
       return createAccount(body);
     },
     {
-      body: createAccountBodySchema,
+      body: t.Ref("CreateAccountBody"),
       response: {
-        201: accountResponseSchema
+        201: t.Ref("Account")
       },
       detail: {
         tags: ["Accounts"],
@@ -78,11 +89,11 @@ export const accountRoutes = new Elysia({
     }
   )
   .patch("/:uuid", ({ body, params }) => updateAccount(params.uuid, body), {
-    body: updateAccountBodySchema,
+    body: t.Ref("UpdateAccountBody"),
     params: accountUuidParamsSchema,
     response: {
-      200: accountResponseSchema,
-      404: notFoundErrorResponseSchema
+      200: t.Ref("Account"),
+      404: t.Ref("NotFoundError")
     },
     detail: {
       tags: ["Accounts"],

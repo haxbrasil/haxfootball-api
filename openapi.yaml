@@ -1,0 +1,3749 @@
+components:
+  schemas:
+    Account:
+      properties:
+        createdAt:
+          type: string
+        externalId:
+          type: string
+        name:
+          type: string
+        role:
+          $ref: "#/components/schemas/Role"
+        updatedAt:
+          type: string
+        uuid:
+          format: uuid
+          type: string
+      required:
+        - uuid
+        - name
+        - externalId
+        - role
+        - createdAt
+        - updatedAt
+      type: object
+    AddMatchStatEventBody:
+      properties:
+        occurredAt:
+          minLength: 1
+          type: string
+        playerId:
+          maxLength: 64
+          minLength: 1
+          type: string
+        tick:
+          minimum: 0
+          type: number
+        type:
+          maxLength: 64
+          minLength: 1
+          pattern: ^[a-z][a-z0-9-]{0,63}$
+          type: string
+        value: {}
+      required:
+        - type
+        - playerId
+        - value
+      type: object
+    AppendMatchEventsBody:
+      properties:
+        events:
+          items:
+            $ref: "#/components/schemas/MatchEventInput"
+          minItems: 1
+          type: array
+      required:
+        - events
+      type: object
+    AssociateMatchRecordingBody:
+      properties:
+        recordingId:
+          minLength: 1
+          type: string
+      required:
+        - recordingId
+      type: object
+    AssociatePlayerAccountBody:
+      properties:
+        accountUuid:
+          format: uuid
+          type: string
+      required:
+        - accountUuid
+      type: object
+    BadRequestError:
+      properties:
+        error:
+          properties:
+            code:
+              const: BAD_REQUEST
+              type: string
+            message:
+              type: string
+          required:
+            - code
+            - message
+          type: object
+      required:
+        - error
+      type: object
+    BadRequestOrValidationError:
+      anyOf:
+        - $ref: "#/components/schemas/BadRequestError"
+        - properties:
+            error:
+              properties:
+                code:
+                  const: VALIDATION_ERROR
+                  type: string
+                message:
+                  type: string
+              required:
+                - code
+                - message
+              type: object
+          required:
+            - error
+          type: object
+    CloseRoomResponse:
+      properties:
+        closedAt:
+          anyOf:
+            - type: string
+            - type: "null"
+          nullable: true
+        createdAt:
+          type: string
+        id:
+          format: uuid
+          type: string
+        launchConfig:
+          patternProperties:
+            ^(.*)$:
+              anyOf:
+                - type: string
+                - type: number
+                - type: boolean
+                - type: "null"
+          type: object
+        program:
+          $ref: "#/components/schemas/RoomResponseProgramSummary"
+        proxyEndpoint:
+          anyOf:
+            - $ref: "#/components/schemas/RoomResponseProxyEndpointSummary"
+            - type: "null"
+          nullable: true
+        public:
+          type: boolean
+        roomLink:
+          anyOf:
+            - type: string
+            - type: "null"
+          nullable: true
+        state:
+          anyOf:
+            - const: provisioning
+              type: string
+            - const: running
+              type: string
+            - const: closed
+              type: string
+        updatedAt:
+          type: string
+        version:
+          $ref: "#/components/schemas/RoomResponseVersionSummary"
+      required:
+        - id
+        - program
+        - version
+        - state
+        - roomLink
+        - launchConfig
+        - public
+        - proxyEndpoint
+        - createdAt
+        - updatedAt
+        - closedAt
+      type: object
+    ConfirmAccountBody:
+      properties:
+        name:
+          maxLength: 25
+          minLength: 1
+          pattern: .*[A-Za-z0-9].*
+          type: string
+        password:
+          maxLength: 19
+          minLength: 4
+          type: string
+      required:
+        - name
+        - password
+      type: object
+    ConfirmAccountResponse:
+      properties:
+        valid:
+          type: boolean
+      required:
+        - valid
+      type: object
+    CreateAccountBody:
+      properties:
+        externalId:
+          pattern: ^[0-9]{17,20}$
+          type: string
+        name:
+          maxLength: 25
+          minLength: 1
+          pattern: .*[A-Za-z0-9].*
+          type: string
+        password:
+          maxLength: 19
+          minLength: 4
+          type: string
+      required:
+        - name
+        - password
+        - externalId
+      type: object
+    CreateMatchBody:
+      properties:
+        endedAt:
+          minLength: 1
+          type: string
+        events:
+          items:
+            $ref: "#/components/schemas/MatchEventInput"
+          type: array
+        initiatedAt:
+          minLength: 1
+          type: string
+        recordingId:
+          minLength: 1
+          type: string
+        score:
+          properties:
+            blue:
+              anyOf:
+                - default: 0
+                  format: integer
+                  type: string
+                - minimum: 0
+                  type: integer
+              minimum: 0
+            red:
+              anyOf:
+                - default: 0
+                  format: integer
+                  type: string
+                - minimum: 0
+                  type: integer
+              minimum: 0
+          required:
+            - red
+            - blue
+          type: object
+        statEventSchema:
+          properties:
+            id:
+              format: uuid
+              type: string
+            version:
+              anyOf:
+                - default: 0
+                  format: integer
+                  type: string
+                - minimum: 1
+                  type: integer
+              minimum: 1
+          required:
+            - id
+            - version
+          type: object
+        status:
+          anyOf:
+            - const: ongoing
+              type: string
+            - const: completed
+              type: string
+      required:
+        - status
+      type: object
+    CreatePlayerBody:
+      properties:
+        country:
+          maxLength: 2
+          minLength: 2
+          pattern: ^[a-z]{2}$
+          type: string
+        externalId:
+          maxLength: 64
+          minLength: 1
+          type: string
+        name:
+          maxLength: 25
+          minLength: 1
+          pattern: .*[A-Za-z0-9].*
+          type: string
+      required:
+        - externalId
+        - name
+      type: object
+    CreateRecordingBody:
+      properties:
+        file:
+          default: File
+          format: binary
+          maxSize: 26214400
+          type: string
+      required:
+        - file
+      type: object
+    CreateRoleBody:
+      properties:
+        name:
+          maxLength: 25
+          minLength: 1
+          pattern: ^[a-z0-9-]+$
+          type: string
+        title:
+          minLength: 1
+          type: string
+      required:
+        - name
+        - title
+      type: object
+    CreateRoomBody:
+      properties:
+        haxballToken:
+          minLength: 1
+          type: string
+        launchConfig:
+          patternProperties:
+            ^(.*)$:
+              anyOf:
+                - type: string
+                - type: number
+                - type: boolean
+                - type: "null"
+          type: object
+        programId:
+          format: uuid
+          type: string
+        version:
+          minLength: 1
+          type: string
+      required:
+        - programId
+        - version
+        - haxballToken
+      type: object
+    CreateRoomProgramBody:
+      properties:
+        description:
+          minLength: 1
+          type: string
+        haxballTokenEnvVar:
+          maxLength: 64
+          minLength: 1
+          pattern: ^[A-Z_][A-Z0-9_]*$
+          type: string
+        launchConfigFields:
+          items:
+            $ref: "#/components/schemas/RoomLaunchConfigField"
+          type: array
+        name:
+          maxLength: 64
+          minLength: 1
+          pattern: ^[a-z][a-z0-9-]{0,63}$
+          type: string
+        releaseSource:
+          $ref: "#/components/schemas/RoomProgramReleaseSource"
+        supportsManualLinking:
+          type: boolean
+        title:
+          minLength: 1
+          type: string
+      required:
+        - name
+        - releaseSource
+      type: object
+    CreateRoomProgramVersionBody:
+      properties:
+        artifact:
+          $ref: "#/components/schemas/RoomProgramVersionArtifact"
+        installStrategy:
+          anyOf:
+            - const: none
+              type: string
+            - const: npm-ci
+              type: string
+            - const: npm-install
+              type: string
+        nodeEntrypoint:
+          maxLength: 240
+          minLength: 1
+          type: string
+        version:
+          maxLength: 80
+          minLength: 1
+          type: string
+      required:
+        - version
+        - artifact
+        - nodeEntrypoint
+      type: object
+    CreateRoomProxyEndpointBody:
+      properties:
+        displayName:
+          minLength: 1
+          type: string
+        enabled:
+          type: boolean
+        key:
+          maxLength: 64
+          minLength: 1
+          pattern: ^[a-z][a-z0-9-]{0,63}$
+          type: string
+        outboundIp:
+          minLength: 1
+          type: string
+        proxyUrl:
+          minLength: 1
+          type: string
+      required:
+        - key
+        - displayName
+        - outboundIp
+        - proxyUrl
+      type: object
+    CreateStatEventSchemaBody:
+      properties:
+        definition: {}
+        description:
+          minLength: 1
+          type: string
+        name:
+          maxLength: 64
+          minLength: 1
+          pattern: ^[a-z][a-z0-9-]{0,63}$
+          type: string
+        title:
+          minLength: 1
+          type: string
+      required:
+        - name
+        - definition
+      type: object
+    CreateTokenBody:
+      properties:
+        apiKey:
+          minLength: 1
+          type: string
+      required:
+        - apiKey
+      type: object
+    CreateTokenResponse:
+      properties:
+        token:
+          minLength: 1
+          type: string
+      required:
+        - token
+      type: object
+    DisableMatchStatEventBody:
+      properties:
+        disabled:
+          const: true
+          type: boolean
+      required:
+        - disabled
+      type: object
+    DiscoverRoomProgramVersionsBody:
+      properties:
+        installStrategy:
+          anyOf:
+            - const: none
+              type: string
+            - const: npm-ci
+              type: string
+            - const: npm-install
+              type: string
+        nodeEntrypoint:
+          maxLength: 240
+          minLength: 1
+          type: string
+      required:
+        - nodeEntrypoint
+      type: object
+    DiscoverRoomProgramVersionsResponse:
+      items:
+        $ref: "#/components/schemas/RoomProgramVersion"
+      type: array
+    InternalServerError:
+      properties:
+        error:
+          properties:
+            code:
+              const: INTERNAL_SERVER_ERROR
+              type: string
+            message:
+              type: string
+          required:
+            - code
+            - message
+          type: object
+      required:
+        - error
+      type: object
+    ListAccounts:
+      properties:
+        items:
+          items:
+            $ref: "#/components/schemas/Account"
+          type: array
+        page:
+          $ref: "#/components/schemas/PageInfo"
+      required:
+        - items
+        - page
+      type: object
+    ListMatchStatEvents:
+      properties:
+        items:
+          items:
+            $ref: "#/components/schemas/MatchStatEvent"
+          type: array
+        page:
+          $ref: "#/components/schemas/PageInfo"
+      required:
+        - items
+        - page
+      type: object
+    ListMatches:
+      properties:
+        items:
+          items:
+            $ref: "#/components/schemas/MatchSummary"
+          type: array
+        page:
+          $ref: "#/components/schemas/PageInfo"
+      required:
+        - items
+        - page
+      type: object
+    ListPlayers:
+      properties:
+        items:
+          items:
+            $ref: "#/components/schemas/Player"
+          type: array
+        page:
+          $ref: "#/components/schemas/PageInfo"
+      required:
+        - items
+        - page
+      type: object
+    ListRecordings:
+      properties:
+        items:
+          items:
+            $ref: "#/components/schemas/Recording"
+          type: array
+        page:
+          $ref: "#/components/schemas/PageInfo"
+      required:
+        - items
+        - page
+      type: object
+    ListRoles:
+      properties:
+        items:
+          items:
+            $ref: "#/components/schemas/Role"
+          type: array
+        page:
+          $ref: "#/components/schemas/PageInfo"
+      required:
+        - items
+        - page
+      type: object
+    ListRoomProgramVersions:
+      properties:
+        items:
+          items:
+            $ref: "#/components/schemas/RoomProgramVersion"
+          type: array
+        page:
+          $ref: "#/components/schemas/PageInfo"
+      required:
+        - items
+        - page
+      type: object
+    ListRoomPrograms:
+      properties:
+        items:
+          items:
+            $ref: "#/components/schemas/RoomProgram"
+          type: array
+        page:
+          $ref: "#/components/schemas/PageInfo"
+      required:
+        - items
+        - page
+      type: object
+    ListRoomProxyEndpoints:
+      properties:
+        items:
+          items:
+            $ref: "#/components/schemas/RoomProxyEndpoint"
+          type: array
+        page:
+          $ref: "#/components/schemas/PageInfo"
+      required:
+        - items
+        - page
+      type: object
+    ListRooms:
+      properties:
+        items:
+          items:
+            $ref: "#/components/schemas/CloseRoomResponse"
+          type: array
+        page:
+          $ref: "#/components/schemas/PageInfo"
+      required:
+        - items
+        - page
+      type: object
+    ListStatEventSchemas:
+      properties:
+        items:
+          items:
+            $ref: "#/components/schemas/StatEventSchema"
+          type: array
+        page:
+          $ref: "#/components/schemas/PageInfo"
+      required:
+        - items
+        - page
+      type: object
+    Match:
+      allOf:
+        - $ref: "#/components/schemas/MatchSummary"
+        - properties:
+            events:
+              items:
+                $ref: "#/components/schemas/MatchEvent"
+              type: array
+            participations:
+              items:
+                $ref: "#/components/schemas/MatchStint"
+              type: array
+          required:
+            - events
+            - participations
+          type: object
+      type: object
+    MatchEvent:
+      properties:
+        elapsedSeconds:
+          anyOf:
+            - type: number
+            - type: "null"
+          nullable: true
+        occurredAt:
+          anyOf:
+            - type: string
+            - type: "null"
+          nullable: true
+        player:
+          $ref: "#/components/schemas/Player"
+        roomPlayerId:
+          anyOf:
+            - type: number
+            - type: "null"
+          nullable: true
+        sequence:
+          type: number
+        team:
+          anyOf:
+            - anyOf:
+                - const: spectators
+                  type: string
+                - const: red
+                  type: string
+                - const: blue
+                  type: string
+            - type: "null"
+          nullable: true
+        type:
+          anyOf:
+            - const: player_join
+              type: string
+            - const: player_leave
+              type: string
+            - const: player_team_change
+              type: string
+      required:
+        - sequence
+        - type
+        - player
+        - team
+        - roomPlayerId
+        - occurredAt
+        - elapsedSeconds
+      type: object
+    MatchEventInput:
+      properties:
+        elapsedSeconds:
+          minimum: 0
+          type: number
+        occurredAt:
+          minLength: 1
+          type: string
+        playerId:
+          maxLength: 64
+          minLength: 1
+          type: string
+        roomPlayerId:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - minimum: 0
+              type: integer
+          minimum: 0
+        team:
+          anyOf:
+            - const: spectators
+              type: string
+            - const: red
+              type: string
+            - const: blue
+              type: string
+        type:
+          anyOf:
+            - const: player_join
+              type: string
+            - const: player_leave
+              type: string
+            - const: player_team_change
+              type: string
+      required:
+        - type
+        - playerId
+      type: object
+    MatchMetrics:
+      items:
+        properties:
+          metrics:
+            patternProperties:
+              ^(.*)$: {}
+            type: object
+          player:
+            $ref: "#/components/schemas/Player"
+        required:
+          - player
+          - metrics
+        type: object
+      type: array
+    MatchScore:
+      properties:
+        blue:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - minimum: 0
+              type: integer
+          minimum: 0
+        red:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - minimum: 0
+              type: integer
+          minimum: 0
+      required:
+        - red
+        - blue
+      type: object
+    MatchStatEvent:
+      properties:
+        createdAt:
+          type: string
+        disabled:
+          type: boolean
+        disabledAt:
+          anyOf:
+            - type: string
+            - type: "null"
+          nullable: true
+        id:
+          format: uuid
+          type: string
+        occurredAt:
+          anyOf:
+            - type: string
+            - type: "null"
+          nullable: true
+        player:
+          $ref: "#/components/schemas/Player"
+        sequence:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - minimum: 1
+              type: integer
+          minimum: 1
+        tick:
+          anyOf:
+            - type: number
+            - type: "null"
+          nullable: true
+        type:
+          type: string
+        updatedAt:
+          type: string
+        value: {}
+      required:
+        - id
+        - sequence
+        - type
+        - player
+        - value
+        - occurredAt
+        - tick
+        - disabled
+        - disabledAt
+        - createdAt
+        - updatedAt
+      type: object
+    MatchStint:
+      properties:
+        joinedAt:
+          anyOf:
+            - type: string
+            - type: "null"
+          nullable: true
+        joinedElapsedSeconds:
+          anyOf:
+            - type: number
+            - type: "null"
+          nullable: true
+        leftAt:
+          anyOf:
+            - type: string
+            - type: "null"
+          nullable: true
+        leftElapsedSeconds:
+          anyOf:
+            - type: number
+            - type: "null"
+          nullable: true
+        player:
+          $ref: "#/components/schemas/Player"
+        roomPlayerId:
+          anyOf:
+            - type: number
+            - type: "null"
+          nullable: true
+        team:
+          anyOf:
+            - const: red
+              type: string
+            - const: blue
+              type: string
+      required:
+        - player
+        - team
+        - roomPlayerId
+        - joinedAt
+        - leftAt
+        - joinedElapsedSeconds
+        - leftElapsedSeconds
+      type: object
+    MatchSummary:
+      properties:
+        createdAt:
+          type: string
+        endedAt:
+          anyOf:
+            - type: string
+            - type: "null"
+          nullable: true
+        id:
+          maxLength: 8
+          minLength: 8
+          pattern: ^[a-z2-9]{8}$
+          type: string
+        initiatedAt:
+          anyOf:
+            - type: string
+            - type: "null"
+          nullable: true
+        recording:
+          anyOf:
+            - $ref: "#/components/schemas/Recording"
+            - type: "null"
+          nullable: true
+        score:
+          anyOf:
+            - $ref: "#/components/schemas/MatchScore"
+            - type: "null"
+          nullable: true
+        statEventSchema:
+          anyOf:
+            - $ref: "#/components/schemas/StatEventSchemaReference"
+            - type: "null"
+          nullable: true
+        status:
+          anyOf:
+            - const: ongoing
+              type: string
+            - const: completed
+              type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - status
+        - initiatedAt
+        - endedAt
+        - score
+        - recording
+        - statEventSchema
+        - createdAt
+        - updatedAt
+      type: object
+    NotFoundError:
+      properties:
+        error:
+          properties:
+            code:
+              const: NOT_FOUND
+              type: string
+            message:
+              type: string
+          required:
+            - code
+            - message
+          type: object
+      required:
+        - error
+      type: object
+    PageInfo:
+      properties:
+        limit:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - maximum: 100
+              minimum: 1
+              type: integer
+          maximum: 100
+          minimum: 1
+        nextCursor:
+          anyOf:
+            - type: string
+            - type: "null"
+          nullable: true
+      required:
+        - limit
+        - nextCursor
+      type: object
+    Player:
+      properties:
+        account:
+          anyOf:
+            - $ref: "#/components/schemas/PlayerAccount"
+            - type: "null"
+          nullable: true
+        country:
+          anyOf:
+            - type: string
+            - type: "null"
+          nullable: true
+        createdAt:
+          type: string
+        id:
+          type: string
+        name:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - name
+        - country
+        - account
+        - createdAt
+        - updatedAt
+      type: object
+    PlayerAccount:
+      properties:
+        externalId:
+          type: string
+        name:
+          type: string
+        uuid:
+          format: uuid
+          type: string
+      required:
+        - uuid
+        - name
+        - externalId
+      type: object
+    PublishStatEventSchemaVersionBody:
+      properties:
+        definition: {}
+      required:
+        - definition
+      type: object
+    Recording:
+      properties:
+        createdAt:
+          type: string
+        id:
+          maxLength: 64
+          minLength: 7
+          pattern: ^[a-f0-9]+$
+          type: string
+        sizeBytes:
+          type: number
+        url:
+          type: string
+      required:
+        - id
+        - url
+        - sizeBytes
+        - createdAt
+      type: object
+    RemoveRoleResponse:
+      properties:
+        deleted:
+          type: boolean
+      required:
+        - deleted
+      type: object
+    ReportRoomReadyBody:
+      properties:
+        commId:
+          minLength: 32
+          type: string
+        roomLink:
+          minLength: 1
+          type: string
+      required:
+        - commId
+        - roomLink
+      type: object
+    Role:
+      properties:
+        createdAt:
+          type: string
+        isDefault:
+          type: boolean
+        name:
+          type: string
+        title:
+          minLength: 1
+          type: string
+        updatedAt:
+          type: string
+        uuid:
+          format: uuid
+          type: string
+      required:
+        - uuid
+        - name
+        - title
+        - isDefault
+        - createdAt
+        - updatedAt
+      type: object
+    Room:
+      properties:
+        closedAt:
+          anyOf:
+            - type: string
+            - type: "null"
+          nullable: true
+        createdAt:
+          type: string
+        id:
+          format: uuid
+          type: string
+        launchConfig:
+          patternProperties:
+            ^(.*)$:
+              anyOf:
+                - type: string
+                - type: number
+                - type: boolean
+                - type: "null"
+          type: object
+        program:
+          $ref: "#/components/schemas/RoomResponseProgramSummary"
+        proxyEndpoint:
+          anyOf:
+            - $ref: "#/components/schemas/RoomResponseProxyEndpointSummary"
+            - type: "null"
+          nullable: true
+        public:
+          type: boolean
+        roomLink:
+          anyOf:
+            - type: string
+            - type: "null"
+          nullable: true
+        state:
+          anyOf:
+            - const: provisioning
+              type: string
+            - const: running
+              type: string
+            - const: closed
+              type: string
+        updatedAt:
+          type: string
+        version:
+          $ref: "#/components/schemas/RoomResponseVersionSummary"
+      required:
+        - id
+        - program
+        - version
+        - state
+        - roomLink
+        - launchConfig
+        - public
+        - proxyEndpoint
+        - createdAt
+        - updatedAt
+        - closedAt
+      type: object
+    RoomLaunchConfigField:
+      properties:
+        defaultValue:
+          anyOf:
+            - type: string
+            - type: number
+            - type: boolean
+            - type: "null"
+        description:
+          minLength: 1
+          type: string
+        displayName:
+          maxLength: 80
+          minLength: 1
+          type: string
+        enumValues:
+          items:
+            minLength: 1
+            type: string
+          minItems: 1
+          type: array
+        envVar:
+          maxLength: 64
+          minLength: 1
+          pattern: ^[A-Z_][A-Z0-9_]*$
+          type: string
+        key:
+          maxLength: 64
+          minLength: 1
+          pattern: ^[a-z][A-Za-z0-9]{0,63}$
+          type: string
+        maximum:
+          type: number
+        minimum:
+          type: number
+        required:
+          type: boolean
+        secret:
+          default: false
+          type: boolean
+        valueType:
+          anyOf:
+            - const: string
+              type: string
+            - const: number
+              type: string
+            - const: boolean
+              type: string
+      required:
+        - key
+        - displayName
+        - valueType
+        - required
+        - secret
+        - envVar
+      type: object
+    RoomProgram:
+      properties:
+        createdAt:
+          type: string
+        description:
+          anyOf:
+            - type: string
+            - type: "null"
+          nullable: true
+        haxballTokenEnvVar:
+          maxLength: 64
+          minLength: 1
+          pattern: ^[A-Z_][A-Z0-9_]*$
+          type: string
+        id:
+          format: uuid
+          type: string
+        launchConfigFields:
+          items:
+            $ref: "#/components/schemas/RoomLaunchConfigField"
+          type: array
+        name:
+          maxLength: 64
+          minLength: 1
+          pattern: ^[a-z][a-z0-9-]{0,63}$
+          type: string
+        releaseSource:
+          $ref: "#/components/schemas/RoomProgramReleaseSource"
+        supportsManualLinking:
+          type: boolean
+        title:
+          anyOf:
+            - type: string
+            - type: "null"
+          nullable: true
+        updatedAt:
+          type: string
+      required:
+        - id
+        - name
+        - title
+        - description
+        - releaseSource
+        - launchConfigFields
+        - supportsManualLinking
+        - haxballTokenEnvVar
+        - createdAt
+        - updatedAt
+      type: object
+    RoomProgramReleaseSource:
+      properties:
+        assetPattern:
+          maxLength: 200
+          minLength: 1
+          type: string
+        owner:
+          maxLength: 80
+          minLength: 1
+          type: string
+        repo:
+          maxLength: 100
+          minLength: 1
+          type: string
+      required:
+        - owner
+        - repo
+        - assetPattern
+      type: object
+    RoomProgramVersion:
+      properties:
+        artifact:
+          $ref: "#/components/schemas/RoomProgramVersionArtifact"
+        createdAt:
+          type: string
+        id:
+          format: uuid
+          type: string
+        installStrategy:
+          anyOf:
+            - const: none
+              type: string
+            - const: npm-ci
+              type: string
+            - const: npm-install
+              type: string
+        nodeEntrypoint:
+          minLength: 1
+          type: string
+        programId:
+          format: uuid
+          type: string
+        updatedAt:
+          type: string
+        version:
+          minLength: 1
+          type: string
+      required:
+        - id
+        - programId
+        - version
+        - artifact
+        - nodeEntrypoint
+        - installStrategy
+        - createdAt
+        - updatedAt
+      type: object
+    RoomProgramVersionArtifact:
+      properties:
+        assetName:
+          minLength: 1
+          type: string
+        assetUrl:
+          minLength: 1
+          type: string
+        checksumSha256:
+          maxLength: 64
+          minLength: 64
+          type: string
+        publishedAt:
+          minLength: 1
+          type: string
+        releaseId:
+          minLength: 1
+          type: string
+        tagName:
+          minLength: 1
+          type: string
+      required:
+        - releaseId
+        - tagName
+        - assetName
+        - assetUrl
+        - publishedAt
+      type: object
+    RoomProxyEndpoint:
+      properties:
+        createdAt:
+          type: string
+        displayName:
+          type: string
+        enabled:
+          type: boolean
+        id:
+          format: uuid
+          type: string
+        key:
+          maxLength: 64
+          minLength: 1
+          pattern: ^[a-z][a-z0-9-]{0,63}$
+          type: string
+        outboundIp:
+          type: string
+        proxyUrl:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - key
+        - displayName
+        - outboundIp
+        - proxyUrl
+        - enabled
+        - createdAt
+        - updatedAt
+      type: object
+    RoomResponseProgramSummary:
+      properties:
+        id:
+          format: uuid
+          type: string
+        name:
+          type: string
+        title:
+          anyOf:
+            - type: string
+            - type: "null"
+          nullable: true
+      required:
+        - id
+        - name
+        - title
+      type: object
+    RoomResponseProxyEndpointSummary:
+      properties:
+        displayName:
+          type: string
+        id:
+          format: uuid
+          type: string
+        key:
+          type: string
+        outboundIp:
+          type: string
+        proxyUrl:
+          type: string
+      required:
+        - id
+        - key
+        - displayName
+        - outboundIp
+        - proxyUrl
+      type: object
+    RoomResponseVersionSummary:
+      properties:
+        id:
+          format: uuid
+          type: string
+        version:
+          type: string
+      required:
+        - id
+        - version
+      type: object
+    StatEventSchema:
+      properties:
+        createdAt:
+          type: string
+        definition: {}
+        description:
+          anyOf:
+            - type: string
+            - type: "null"
+          nullable: true
+        id:
+          format: uuid
+          type: string
+        isLatest:
+          type: boolean
+        name:
+          maxLength: 64
+          minLength: 1
+          pattern: ^[a-z][a-z0-9-]{0,63}$
+          type: string
+        title:
+          anyOf:
+            - type: string
+            - type: "null"
+          nullable: true
+        updatedAt:
+          type: string
+        version:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - minimum: 1
+              type: integer
+          minimum: 1
+      required:
+        - id
+        - name
+        - title
+        - description
+        - version
+        - isLatest
+        - definition
+        - createdAt
+        - updatedAt
+      type: object
+    StatEventSchemaReference:
+      properties:
+        id:
+          format: uuid
+          type: string
+        version:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - minimum: 1
+              type: integer
+          minimum: 1
+      required:
+        - id
+        - version
+      type: object
+    UnauthorizedError:
+      properties:
+        error:
+          properties:
+            code:
+              const: UNAUTHORIZED
+              type: string
+            message:
+              type: string
+          required:
+            - code
+            - message
+          type: object
+      required:
+        - error
+      type: object
+    UpdateAccountBody:
+      properties:
+        externalId:
+          pattern: ^[0-9]{17,20}$
+          type: string
+        name:
+          maxLength: 25
+          minLength: 1
+          pattern: .*[A-Za-z0-9].*
+          type: string
+        password:
+          maxLength: 19
+          minLength: 4
+          type: string
+        roleUuid:
+          format: uuid
+          type: string
+      type: object
+    UpdateMatchBody:
+      properties:
+        endedAt:
+          minLength: 1
+          type: string
+        events:
+          items:
+            $ref: "#/components/schemas/MatchEventInput"
+          type: array
+        initiatedAt:
+          minLength: 1
+          type: string
+        score:
+          properties:
+            blue:
+              anyOf:
+                - default: 0
+                  format: integer
+                  type: string
+                - minimum: 0
+                  type: integer
+              minimum: 0
+            red:
+              anyOf:
+                - default: 0
+                  format: integer
+                  type: string
+                - minimum: 0
+                  type: integer
+              minimum: 0
+          required:
+            - red
+            - blue
+          type: object
+        statEventSchema:
+          properties:
+            id:
+              format: uuid
+              type: string
+            version:
+              anyOf:
+                - default: 0
+                  format: integer
+                  type: string
+                - minimum: 1
+                  type: integer
+              minimum: 1
+          required:
+            - id
+            - version
+          type: object
+        status:
+          anyOf:
+            - const: ongoing
+              type: string
+            - const: completed
+              type: string
+      type: object
+    UpdateRoomProgramBody:
+      properties:
+        description:
+          anyOf:
+            - minLength: 1
+              type: string
+            - type: "null"
+          nullable: true
+        haxballTokenEnvVar:
+          maxLength: 64
+          minLength: 1
+          pattern: ^[A-Z_][A-Z0-9_]*$
+          type: string
+        launchConfigFields:
+          items:
+            $ref: "#/components/schemas/RoomLaunchConfigField"
+          type: array
+        releaseSource:
+          properties:
+            assetPattern:
+              maxLength: 200
+              minLength: 1
+              type: string
+            owner:
+              maxLength: 80
+              minLength: 1
+              type: string
+            repo:
+              maxLength: 100
+              minLength: 1
+              type: string
+          required:
+            - owner
+            - repo
+            - assetPattern
+          type: object
+        supportsManualLinking:
+          type: boolean
+        title:
+          anyOf:
+            - minLength: 1
+              type: string
+            - type: "null"
+          nullable: true
+      type: object
+    UpdateRoomProxyEndpointBody:
+      properties:
+        displayName:
+          minLength: 1
+          type: string
+        enabled:
+          type: boolean
+        outboundIp:
+          minLength: 1
+          type: string
+        proxyUrl:
+          minLength: 1
+          type: string
+      type: object
+    UpdateStatEventSchemaBody:
+      properties:
+        definition: {}
+      required:
+        - definition
+      type: object
+  securitySchemes:
+    bearerAuth:
+      bearerFormat: JWT
+      scheme: bearer
+      type: http
+info:
+  description: Development documentation
+  title: Backend API
+  version: 0.1.0
+openapi: 3.0.3
+paths:
+  /api/accounts:
+    get:
+      operationId: getApiAccounts
+      parameters:
+        - in: query
+          name: limit
+          required: false
+          schema:
+            anyOf:
+              - default: 0
+                format: integer
+                type: string
+              - maximum: 100
+                minimum: 1
+                type: integer
+            maximum: 100
+            minimum: 1
+        - in: query
+          name: cursor
+          required: false
+          schema:
+            minLength: 1
+            type: string
+      responses:
+        "200":
+          $ref: ListAccounts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListAccounts"
+        "400":
+          $ref: BadRequestOrValidationError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+        "401":
+          $ref: "#/components/schemas/UnauthorizedError"
+        "500":
+          $ref: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      summary: List accounts
+      tags:
+        - Accounts
+    post:
+      operationId: postApiAccounts
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAccountBody"
+        required: true
+      responses:
+        "201":
+          $ref: Account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Account"
+        "400":
+          $ref: BadRequestOrValidationError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+        "401":
+          $ref: "#/components/schemas/UnauthorizedError"
+        "500":
+          $ref: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      summary: Create an account
+      tags:
+        - Accounts
+  /api/accounts/confirm:
+    post:
+      operationId: postApiAccountsConfirm
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfirmAccountBody"
+        required: true
+      responses:
+        "200":
+          $ref: ConfirmAccountResponse
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfirmAccountResponse"
+        "400":
+          $ref: BadRequestOrValidationError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+        "401":
+          $ref: "#/components/schemas/UnauthorizedError"
+        "500":
+          $ref: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      summary: Confirm an account
+      tags:
+        - Accounts
+  /api/accounts/{uuid}:
+    get:
+      operationId: getApiAccountsByUuid
+      parameters:
+        - in: path
+          name: uuid
+          required: true
+          schema:
+            format: uuid
+            type: string
+      responses:
+        "200":
+          $ref: Account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Account"
+        "400":
+          $ref: BadRequestOrValidationError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+        "401":
+          $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          $ref: NotFoundError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+        "500":
+          $ref: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      summary: Get an account
+      tags:
+        - Accounts
+    patch:
+      operationId: patchApiAccountsByUuid
+      parameters:
+        - in: path
+          name: uuid
+          required: true
+          schema:
+            format: uuid
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateAccountBody"
+        required: true
+      responses:
+        "200":
+          $ref: Account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Account"
+        "400":
+          $ref: BadRequestOrValidationError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+        "401":
+          $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          $ref: NotFoundError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+        "500":
+          $ref: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      summary: Update an account
+      tags:
+        - Accounts
+  /api/matches:
+    get:
+      operationId: getApiMatches
+      parameters:
+        - in: query
+          name: limit
+          required: false
+          schema:
+            anyOf:
+              - default: 0
+                format: integer
+                type: string
+              - maximum: 100
+                minimum: 1
+                type: integer
+            maximum: 100
+            minimum: 1
+        - in: query
+          name: cursor
+          required: false
+          schema:
+            minLength: 1
+            type: string
+      responses:
+        "200":
+          $ref: ListMatches
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListMatches"
+        "400":
+          $ref: BadRequestOrValidationError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+        "401":
+          $ref: "#/components/schemas/UnauthorizedError"
+        "500":
+          $ref: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      summary: List matches
+      tags:
+        - Matches
+    post:
+      operationId: postApiMatches
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMatchBody"
+        required: true
+      responses:
+        "201":
+          $ref: Match
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Match"
+        "400":
+          $ref: BadRequestOrValidationError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+        "401":
+          $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          $ref: NotFoundError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+        "500":
+          $ref: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      summary: Create a match
+      tags:
+        - Matches
+  /api/matches/{id}:
+    get:
+      operationId: getApiMatchesById
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            maxLength: 8
+            minLength: 8
+            pattern: ^[a-z2-9]{8}$
+            type: string
+      responses:
+        "200":
+          $ref: Match
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Match"
+        "400":
+          $ref: BadRequestOrValidationError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+        "401":
+          $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          $ref: NotFoundError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+        "500":
+          $ref: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      summary: Get a match
+      tags:
+        - Matches
+    patch:
+      operationId: patchApiMatchesById
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            maxLength: 8
+            minLength: 8
+            pattern: ^[a-z2-9]{8}$
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateMatchBody"
+        required: true
+      responses:
+        "200":
+          $ref: Match
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Match"
+        "400":
+          $ref: BadRequestOrValidationError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+        "401":
+          $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          $ref: NotFoundError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+        "500":
+          $ref: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      summary: Update a match
+      tags:
+        - Matches
+  /api/matches/{id}/events:
+    post:
+      operationId: postApiMatchesByIdEvents
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            maxLength: 8
+            minLength: 8
+            pattern: ^[a-z2-9]{8}$
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AppendMatchEventsBody"
+        required: true
+      responses:
+        "200":
+          $ref: Match
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Match"
+        "400":
+          $ref: BadRequestOrValidationError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+        "401":
+          $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          $ref: NotFoundError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+        "500":
+          $ref: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      summary: Append match player events
+      tags:
+        - Matches
+  /api/matches/{id}/metrics:
+    get:
+      operationId: getApiMatchesByIdMetrics
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            maxLength: 8
+            minLength: 8
+            pattern: ^[a-z2-9]{8}$
+            type: string
+      responses:
+        "200":
+          $ref: MatchMetrics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MatchMetrics"
+        "400":
+          $ref: BadRequestOrValidationError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+        "401":
+          $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          $ref: NotFoundError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+        "500":
+          $ref: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      summary: Get match metrics
+      tags:
+        - Match Metrics
+  /api/matches/{id}/recording:
+    patch:
+      operationId: patchApiMatchesByIdRecording
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            maxLength: 8
+            minLength: 8
+            pattern: ^[a-z2-9]{8}$
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssociateMatchRecordingBody"
+        required: true
+      responses:
+        "200":
+          $ref: Match
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Match"
+        "400":
+          $ref: BadRequestOrValidationError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+        "401":
+          $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          $ref: NotFoundError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+        "500":
+          $ref: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      summary: Associate a match recording
+      tags:
+        - Matches
+  /api/matches/{id}/stat-events:
+    get:
+      operationId: getApiMatchesByIdStat-events
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            maxLength: 8
+            minLength: 8
+            pattern: ^[a-z2-9]{8}$
+            type: string
+        - in: query
+          name: limit
+          required: false
+          schema:
+            anyOf:
+              - default: 0
+                format: integer
+                type: string
+              - maximum: 100
+                minimum: 1
+                type: integer
+            maximum: 100
+            minimum: 1
+        - in: query
+          name: cursor
+          required: false
+          schema:
+            minLength: 1
+            type: string
+      responses:
+        "200":
+          $ref: ListMatchStatEvents
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListMatchStatEvents"
+        "400":
+          $ref: BadRequestOrValidationError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+        "401":
+          $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          $ref: NotFoundError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+        "500":
+          $ref: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      summary: List match stat events
+      tags:
+        - Match Stat Events
+    post:
+      operationId: postApiMatchesByIdStat-events
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            maxLength: 8
+            minLength: 8
+            pattern: ^[a-z2-9]{8}$
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddMatchStatEventBody"
+        required: true
+      responses:
+        "201":
+          $ref: MatchStatEvent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MatchStatEvent"
+        "400":
+          $ref: BadRequestOrValidationError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+        "401":
+          $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          $ref: NotFoundError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+        "500":
+          $ref: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      summary: Add match stat event
+      tags:
+        - Match Stat Events
+  /api/matches/{id}/stat-events/{eventId}:
+    patch:
+      operationId: patchApiMatchesByIdStat-eventsByEventId
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            maxLength: 8
+            minLength: 8
+            pattern: ^[a-z2-9]{8}$
+            type: string
+        - in: path
+          name: eventId
+          required: true
+          schema:
+            format: uuid
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DisableMatchStatEventBody"
+        required: true
+      responses:
+        "200":
+          $ref: MatchStatEvent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MatchStatEvent"
+        "400":
+          $ref: BadRequestOrValidationError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+        "401":
+          $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          $ref: NotFoundError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+        "500":
+          $ref: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      summary: Disable match stat event
+      tags:
+        - Match Stat Events
+  /api/players:
+    get:
+      operationId: getApiPlayers
+      parameters:
+        - in: query
+          name: limit
+          required: false
+          schema:
+            anyOf:
+              - default: 0
+                format: integer
+                type: string
+              - maximum: 100
+                minimum: 1
+                type: integer
+            maximum: 100
+            minimum: 1
+        - in: query
+          name: cursor
+          required: false
+          schema:
+            minLength: 1
+            type: string
+      responses:
+        "200":
+          $ref: ListPlayers
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListPlayers"
+        "400":
+          $ref: BadRequestOrValidationError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+        "401":
+          $ref: "#/components/schemas/UnauthorizedError"
+        "500":
+          $ref: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      summary: List players
+      tags:
+        - Players
+    post:
+      operationId: postApiPlayers
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePlayerBody"
+        required: true
+      responses:
+        "201":
+          $ref: Player
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Player"
+        "400":
+          $ref: BadRequestOrValidationError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+        "401":
+          $ref: "#/components/schemas/UnauthorizedError"
+        "500":
+          $ref: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      summary: Add a player
+      tags:
+        - Players
+  /api/players/{externalId}:
+    get:
+      operationId: getApiPlayersByExternalId
+      parameters:
+        - in: path
+          name: externalId
+          required: true
+          schema:
+            maxLength: 64
+            minLength: 1
+            type: string
+      responses:
+        "200":
+          $ref: Player
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Player"
+        "400":
+          $ref: BadRequestOrValidationError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+        "401":
+          $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          $ref: NotFoundError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+        "500":
+          $ref: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      summary: Get a player
+      tags:
+        - Players
+  /api/players/{externalId}/account:
+    patch:
+      operationId: patchApiPlayersByExternalIdAccount
+      parameters:
+        - in: path
+          name: externalId
+          required: true
+          schema:
+            maxLength: 64
+            minLength: 1
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssociatePlayerAccountBody"
+        required: true
+      responses:
+        "200":
+          $ref: Player
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Player"
+        "400":
+          $ref: BadRequestOrValidationError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+        "401":
+          $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          $ref: NotFoundError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+        "500":
+          $ref: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      summary: Associate a player with an account
+      tags:
+        - Players
+  /api/recs:
+    get:
+      operationId: getApiRecs
+      parameters:
+        - in: query
+          name: limit
+          required: false
+          schema:
+            anyOf:
+              - default: 0
+                format: integer
+                type: string
+              - maximum: 100
+                minimum: 1
+                type: integer
+            maximum: 100
+            minimum: 1
+        - in: query
+          name: cursor
+          required: false
+          schema:
+            minLength: 1
+            type: string
+      responses:
+        "200":
+          $ref: ListRecordings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListRecordings"
+        "400":
+          $ref: BadRequestOrValidationError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+        "401":
+          $ref: "#/components/schemas/UnauthorizedError"
+        "500":
+          $ref: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      summary: List recordings
+      tags:
+        - Recordings
+    post:
+      operationId: postApiRecs
+      parameters: []
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/CreateRecordingBody"
+        required: true
+      responses:
+        "200":
+          $ref: Recording
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Recording"
+        "201":
+          $ref: Recording
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Recording"
+        "400":
+          $ref: BadRequestOrValidationError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+        "401":
+          $ref: "#/components/schemas/UnauthorizedError"
+        "500":
+          $ref: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      summary: Save a recording
+      tags:
+        - Recordings
+  /api/recs/{id}:
+    get:
+      operationId: getApiRecsById
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            maxLength: 64
+            minLength: 7
+            pattern: ^[a-f0-9]+$
+            type: string
+      responses:
+        "200":
+          $ref: Recording
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Recording"
+        "400":
+          $ref: BadRequestOrValidationError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+        "401":
+          $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          $ref: NotFoundError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+        "500":
+          $ref: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      summary: Get a recording
+      tags:
+        - Recordings
+  /api/roles:
+    get:
+      operationId: getApiRoles
+      parameters:
+        - in: query
+          name: limit
+          required: false
+          schema:
+            anyOf:
+              - default: 0
+                format: integer
+                type: string
+              - maximum: 100
+                minimum: 1
+                type: integer
+            maximum: 100
+            minimum: 1
+        - in: query
+          name: cursor
+          required: false
+          schema:
+            minLength: 1
+            type: string
+      responses:
+        "200":
+          $ref: ListRoles
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListRoles"
+        "400":
+          $ref: BadRequestOrValidationError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+        "401":
+          $ref: "#/components/schemas/UnauthorizedError"
+        "500":
+          $ref: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      summary: List roles
+      tags:
+        - Roles
+    post:
+      operationId: postApiRoles
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRoleBody"
+        required: true
+      responses:
+        "201":
+          $ref: Role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Role"
+        "400":
+          $ref: BadRequestOrValidationError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+        "401":
+          $ref: "#/components/schemas/UnauthorizedError"
+        "500":
+          $ref: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      summary: Create a role
+      tags:
+        - Roles
+  /api/roles/{uuid}:
+    delete:
+      operationId: deleteApiRolesByUuid
+      parameters:
+        - in: path
+          name: uuid
+          required: true
+          schema:
+            format: uuid
+            type: string
+      responses:
+        "200":
+          $ref: RemoveRoleResponse
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RemoveRoleResponse"
+        "400":
+          $ref: BadRequestOrValidationError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+        "401":
+          $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          $ref: NotFoundError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+        "500":
+          $ref: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      summary: Remove a role
+      tags:
+        - Roles
+    get:
+      operationId: getApiRolesByUuid
+      parameters:
+        - in: path
+          name: uuid
+          required: true
+          schema:
+            format: uuid
+            type: string
+      responses:
+        "200":
+          $ref: Role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Role"
+        "400":
+          $ref: BadRequestOrValidationError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+        "401":
+          $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          $ref: NotFoundError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+        "500":
+          $ref: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      summary: Get a role
+      tags:
+        - Roles
+  /api/room-programs:
+    get:
+      operationId: getApiRoom-programs
+      parameters:
+        - in: query
+          name: limit
+          required: false
+          schema:
+            anyOf:
+              - default: 0
+                format: integer
+                type: string
+              - maximum: 100
+                minimum: 1
+                type: integer
+            maximum: 100
+            minimum: 1
+        - in: query
+          name: cursor
+          required: false
+          schema:
+            minLength: 1
+            type: string
+      responses:
+        "200":
+          $ref: ListRoomPrograms
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListRoomPrograms"
+        "400":
+          $ref: BadRequestOrValidationError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+        "401":
+          $ref: "#/components/schemas/UnauthorizedError"
+        "500":
+          $ref: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      summary: List room programs
+      tags:
+        - Rooms
+    post:
+      operationId: postApiRoom-programs
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRoomProgramBody"
+        required: true
+      responses:
+        "201":
+          $ref: RoomProgram
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoomProgram"
+        "400":
+          $ref: BadRequestOrValidationError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+        "401":
+          $ref: "#/components/schemas/UnauthorizedError"
+        "500":
+          $ref: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      summary: Create room program
+      tags:
+        - Rooms
+  /api/room-programs/{id}:
+    get:
+      operationId: getApiRoom-programsById
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+      responses:
+        "200":
+          $ref: RoomProgram
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoomProgram"
+        "400":
+          $ref: BadRequestOrValidationError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+        "401":
+          $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          $ref: NotFoundError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+        "500":
+          $ref: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      summary: Get room program
+      tags:
+        - Rooms
+    patch:
+      operationId: patchApiRoom-programsById
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateRoomProgramBody"
+        required: true
+      responses:
+        "200":
+          $ref: RoomProgram
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoomProgram"
+        "400":
+          $ref: BadRequestOrValidationError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+        "401":
+          $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          $ref: NotFoundError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+        "500":
+          $ref: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      summary: Update room program
+      tags:
+        - Rooms
+  /api/room-programs/{id}/versions:
+    get:
+      operationId: getApiRoom-programsByIdVersions
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+        - in: query
+          name: limit
+          required: false
+          schema:
+            anyOf:
+              - default: 0
+                format: integer
+                type: string
+              - maximum: 100
+                minimum: 1
+                type: integer
+            maximum: 100
+            minimum: 1
+        - in: query
+          name: cursor
+          required: false
+          schema:
+            minLength: 1
+            type: string
+      responses:
+        "200":
+          $ref: ListRoomProgramVersions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListRoomProgramVersions"
+        "400":
+          $ref: BadRequestOrValidationError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+        "401":
+          $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          $ref: NotFoundError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+        "500":
+          $ref: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      summary: List room program versions
+      tags:
+        - Rooms
+    post:
+      operationId: postApiRoom-programsByIdVersions
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRoomProgramVersionBody"
+        required: true
+      responses:
+        "201":
+          $ref: RoomProgramVersion
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoomProgramVersion"
+        "400":
+          $ref: BadRequestOrValidationError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+        "401":
+          $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          $ref: NotFoundError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+        "500":
+          $ref: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      summary: Create room program version
+      tags:
+        - Rooms
+  /api/room-programs/{id}/versions/discover:
+    post:
+      operationId: postApiRoom-programsByIdVersionsDiscover
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DiscoverRoomProgramVersionsBody"
+        required: true
+      responses:
+        "201":
+          $ref: DiscoverRoomProgramVersionsResponse
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DiscoverRoomProgramVersionsResponse"
+        "400":
+          $ref: BadRequestOrValidationError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+        "401":
+          $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          $ref: NotFoundError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+        "500":
+          $ref: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      summary: Discover room program versions from GitHub Releases
+      tags:
+        - Rooms
+  /api/room-proxy-endpoints:
+    get:
+      operationId: getApiRoom-proxy-endpoints
+      parameters:
+        - in: query
+          name: limit
+          required: false
+          schema:
+            anyOf:
+              - default: 0
+                format: integer
+                type: string
+              - maximum: 100
+                minimum: 1
+                type: integer
+            maximum: 100
+            minimum: 1
+        - in: query
+          name: cursor
+          required: false
+          schema:
+            minLength: 1
+            type: string
+      responses:
+        "200":
+          $ref: ListRoomProxyEndpoints
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListRoomProxyEndpoints"
+        "400":
+          $ref: BadRequestOrValidationError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+        "401":
+          $ref: "#/components/schemas/UnauthorizedError"
+        "500":
+          $ref: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      summary: List room proxy endpoints
+      tags:
+        - Rooms
+    post:
+      operationId: postApiRoom-proxy-endpoints
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRoomProxyEndpointBody"
+        required: true
+      responses:
+        "201":
+          $ref: RoomProxyEndpoint
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoomProxyEndpoint"
+        "400":
+          $ref: BadRequestOrValidationError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+        "401":
+          $ref: "#/components/schemas/UnauthorizedError"
+        "500":
+          $ref: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      summary: Create room proxy endpoint
+      tags:
+        - Rooms
+  /api/room-proxy-endpoints/{id}:
+    patch:
+      operationId: patchApiRoom-proxy-endpointsById
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateRoomProxyEndpointBody"
+        required: true
+      responses:
+        "200":
+          $ref: RoomProxyEndpoint
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoomProxyEndpoint"
+        "400":
+          $ref: BadRequestOrValidationError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+        "401":
+          $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          $ref: NotFoundError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+        "500":
+          $ref: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      summary: Update room proxy endpoint
+      tags:
+        - Rooms
+  /api/rooms:
+    get:
+      operationId: getApiRooms
+      parameters:
+        - in: query
+          name: limit
+          required: false
+          schema:
+            anyOf:
+              - default: 0
+                format: integer
+                type: string
+              - maximum: 100
+                minimum: 1
+                type: integer
+            maximum: 100
+            minimum: 1
+        - in: query
+          name: cursor
+          required: false
+          schema:
+            minLength: 1
+            type: string
+        - in: query
+          name: state
+          required: false
+          schema:
+            anyOf:
+              - const: open
+                type: string
+              - const: provisioning
+                type: string
+              - const: running
+                type: string
+              - const: closed
+                type: string
+              - const: all
+                type: string
+      responses:
+        "200":
+          $ref: ListRooms
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListRooms"
+        "400":
+          $ref: BadRequestOrValidationError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+        "401":
+          $ref: "#/components/schemas/UnauthorizedError"
+        "500":
+          $ref: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      summary: List room instances
+      tags:
+        - Rooms
+    post:
+      operationId: postApiRooms
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRoomBody"
+        required: true
+      responses:
+        "201":
+          $ref: Room
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Room"
+        "400":
+          $ref: BadRequestOrValidationError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+        "401":
+          $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          $ref: NotFoundError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+        "500":
+          $ref: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      summary: Launch room instance
+      tags:
+        - Rooms
+  /api/rooms/{id}:
+    get:
+      operationId: getApiRoomsById
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+      responses:
+        "200":
+          $ref: Room
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Room"
+        "400":
+          $ref: BadRequestOrValidationError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+        "401":
+          $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          $ref: NotFoundError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+        "500":
+          $ref: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      summary: Get room instance
+      tags:
+        - Rooms
+  /api/rooms/{id}/close:
+    post:
+      operationId: postApiRoomsByIdClose
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+      responses:
+        "200":
+          $ref: CloseRoomResponse
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CloseRoomResponse"
+        "400":
+          $ref: BadRequestOrValidationError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+        "401":
+          $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          $ref: NotFoundError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+        "500":
+          $ref: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      summary: Close room instance
+      tags:
+        - Rooms
+  /api/rooms/{id}/ready:
+    post:
+      operationId: postApiRoomsByIdReady
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReportRoomReadyBody"
+        required: true
+      responses:
+        "200":
+          $ref: Room
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Room"
+        "400":
+          $ref: BadRequestOrValidationError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+        "401":
+          $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          $ref: NotFoundError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+        "500":
+          $ref: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      summary: Report room ready for manual linking
+      tags:
+        - Rooms
+  /api/stat-event-schemas:
+    get:
+      operationId: getApiStat-event-schemas
+      parameters:
+        - in: query
+          name: limit
+          required: false
+          schema:
+            anyOf:
+              - default: 0
+                format: integer
+                type: string
+              - maximum: 100
+                minimum: 1
+                type: integer
+            maximum: 100
+            minimum: 1
+        - in: query
+          name: cursor
+          required: false
+          schema:
+            minLength: 1
+            type: string
+      responses:
+        "200":
+          $ref: ListStatEventSchemas
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListStatEventSchemas"
+        "400":
+          $ref: BadRequestOrValidationError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+        "401":
+          $ref: "#/components/schemas/UnauthorizedError"
+        "500":
+          $ref: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      summary: List stat event schemas
+      tags:
+        - Stat Event Schemas
+    post:
+      operationId: postApiStat-event-schemas
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateStatEventSchemaBody"
+        required: true
+      responses:
+        "201":
+          $ref: StatEventSchema
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatEventSchema"
+        "400":
+          $ref: BadRequestOrValidationError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+        "401":
+          $ref: "#/components/schemas/UnauthorizedError"
+        "500":
+          $ref: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      summary: Create stat event schema
+      tags:
+        - Stat Event Schemas
+  /api/stat-event-schemas/{id}:
+    get:
+      operationId: getApiStat-event-schemasById
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+      responses:
+        "200":
+          $ref: StatEventSchema
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatEventSchema"
+        "400":
+          $ref: BadRequestOrValidationError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+        "401":
+          $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          $ref: NotFoundError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+        "500":
+          $ref: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      summary: Get latest stat event schema
+      tags:
+        - Stat Event Schemas
+  /api/stat-event-schemas/{id}/versions:
+    post:
+      operationId: postApiStat-event-schemasByIdVersions
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PublishStatEventSchemaVersionBody"
+        required: true
+      responses:
+        "201":
+          $ref: StatEventSchema
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatEventSchema"
+        "400":
+          $ref: BadRequestOrValidationError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+        "401":
+          $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          $ref: NotFoundError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+        "500":
+          $ref: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      summary: Publish stat event schema version
+      tags:
+        - Stat Event Schemas
+  /api/stat-event-schemas/{id}/versions/{version}:
+    get:
+      operationId: getApiStat-event-schemasByIdVersionsByVersion
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+        - in: path
+          name: version
+          required: true
+          schema:
+            anyOf:
+              - default: 0
+                format: integer
+                type: string
+              - minimum: 1
+                type: integer
+            minimum: 1
+      responses:
+        "200":
+          $ref: StatEventSchema
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatEventSchema"
+        "400":
+          $ref: BadRequestOrValidationError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+        "401":
+          $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          $ref: NotFoundError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+        "500":
+          $ref: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      summary: Get stat event schema version
+      tags:
+        - Stat Event Schemas
+    patch:
+      operationId: patchApiStat-event-schemasByIdVersionsByVersion
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+        - in: path
+          name: version
+          required: true
+          schema:
+            anyOf:
+              - default: 0
+                format: integer
+                type: string
+              - minimum: 1
+                type: integer
+            minimum: 1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateStatEventSchemaBody"
+        required: true
+      responses:
+        "200":
+          $ref: StatEventSchema
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatEventSchema"
+        "400":
+          $ref: BadRequestOrValidationError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+        "401":
+          $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          $ref: NotFoundError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+        "500":
+          $ref: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      summary: Update stat event schema version
+      tags:
+        - Stat Event Schemas
+  /auth:
+    post:
+      operationId: postAuth
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTokenBody"
+        required: true
+      responses:
+        "200":
+          $ref: CreateTokenResponse
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateTokenResponse"
+        "400":
+          $ref: BadRequestOrValidationError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+        "401":
+          $ref: UnauthorizedError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+        "500":
+          $ref: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      security: []
+      summary: Create a JWT
+      tags:
+        - Auth
+  /health:
+    get:
+      operationId: getHealth
+      responses:
+        "200": {}
+      security: []
+      tags:
+        - System
+security:
+  - bearerAuth: []

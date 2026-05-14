@@ -1,12 +1,11 @@
-import { Elysia } from "elysia";
+import { Elysia, t } from "elysia";
 import {
   addMatchStatEvent,
   addMatchStatEventBodySchema
 } from "@/features/match-stat-events/add-match-stat-event";
 import {
   disableMatchStatEvent,
-  disableMatchStatEventBodySchema,
-  disableMatchStatEventResponseSchema
+  disableMatchStatEventBodySchema
 } from "@/features/match-stat-events/disable-match-stat-event";
 import {
   getMatchMetrics,
@@ -39,8 +38,19 @@ import {
 } from "@/features/matches/list-matches";
 import {
   matchPublicIdParamsSchema,
-  matchResponseSchema
+  matchPlayerEventInputSchema,
+  matchPlayerEventResponseSchema,
+  matchPlayerStintResponseSchema,
+  matchResponseSchema,
+  matchScoreSchema,
+  matchSummaryResponseSchema
 } from "@/features/matches/match.contract";
+import {
+  playerAccountResponseSchema,
+  playerResponseSchema
+} from "@/features/players/player.contract";
+import { recordingResponseSchema } from "@/features/recordings/recording.contract";
+import { statEventSchemaReferenceSchema } from "@/features/stat-event-schemas/stat-event-schema.contract";
 import {
   updateMatch,
   updateMatchBodySchema
@@ -55,10 +65,34 @@ export const matchRoutes = new Elysia({
   name: "match-routes",
   prefix: "/matches"
 })
+  .model({
+    BadRequestError: badRequestErrorResponseSchema,
+    NotFoundError: notFoundErrorResponseSchema,
+    PlayerAccount: playerAccountResponseSchema,
+    Player: playerResponseSchema,
+    Recording: recordingResponseSchema,
+    StatEventSchemaReference: statEventSchemaReferenceSchema,
+    MatchScore: matchScoreSchema,
+    MatchEventInput: matchPlayerEventInputSchema,
+    MatchEvent: matchPlayerEventResponseSchema,
+    MatchStint: matchPlayerStintResponseSchema,
+    MatchSummary: matchSummaryResponseSchema,
+    AddMatchStatEventBody: addMatchStatEventBodySchema,
+    AppendMatchEventsBody: appendMatchEventsBodySchema,
+    AssociateMatchRecordingBody: associateMatchRecordingBodySchema,
+    CreateMatchBody: createMatchBodySchema,
+    DisableMatchStatEventBody: disableMatchStatEventBodySchema,
+    ListMatches: listMatchesResponseSchema,
+    ListMatchStatEvents: listMatchStatEventsResponseSchema,
+    Match: matchResponseSchema,
+    MatchMetrics: matchMetricsResponseSchema,
+    MatchStatEvent: matchStatEventResponseSchema,
+    UpdateMatchBody: updateMatchBodySchema
+  })
   .get("", ({ query }) => listMatches(query), {
     query: paginationQuerySchema,
     response: {
-      200: listMatchesResponseSchema
+      200: t.Ref("ListMatches")
     },
     detail: {
       tags: ["Matches"],
@@ -68,8 +102,8 @@ export const matchRoutes = new Elysia({
   .get("/:id", ({ params }) => getMatch(params.id), {
     params: matchPublicIdParamsSchema,
     response: {
-      200: matchResponseSchema,
-      404: notFoundErrorResponseSchema
+      200: t.Ref("Match"),
+      404: t.Ref("NotFoundError")
     },
     detail: {
       tags: ["Matches"],
@@ -86,11 +120,11 @@ export const matchRoutes = new Elysia({
       return match;
     },
     {
-      body: createMatchBodySchema,
+      body: t.Ref("CreateMatchBody"),
       response: {
-        201: matchResponseSchema,
-        400: badRequestErrorResponseSchema,
-        404: notFoundErrorResponseSchema
+        201: t.Ref("Match"),
+        400: t.Ref("BadRequestError"),
+        404: t.Ref("NotFoundError")
       },
       detail: {
         tags: ["Matches"],
@@ -99,12 +133,12 @@ export const matchRoutes = new Elysia({
     }
   )
   .patch("/:id", ({ body, params }) => updateMatch(params.id, body), {
-    body: updateMatchBodySchema,
+    body: t.Ref("UpdateMatchBody"),
     params: matchPublicIdParamsSchema,
     response: {
-      200: matchResponseSchema,
-      400: badRequestErrorResponseSchema,
-      404: notFoundErrorResponseSchema
+      200: t.Ref("Match"),
+      400: t.Ref("BadRequestError"),
+      404: t.Ref("NotFoundError")
     },
     detail: {
       tags: ["Matches"],
@@ -115,12 +149,12 @@ export const matchRoutes = new Elysia({
     "/:id/events",
     ({ body, params }) => appendMatchEvents(params.id, body),
     {
-      body: appendMatchEventsBodySchema,
+      body: t.Ref("AppendMatchEventsBody"),
       params: matchPublicIdParamsSchema,
       response: {
-        200: matchResponseSchema,
-        400: badRequestErrorResponseSchema,
-        404: notFoundErrorResponseSchema
+        200: t.Ref("Match"),
+        400: t.Ref("BadRequestError"),
+        404: t.Ref("NotFoundError")
       },
       detail: {
         tags: ["Matches"],
@@ -135,9 +169,9 @@ export const matchRoutes = new Elysia({
       params: matchPublicIdParamsSchema,
       query: paginationQuerySchema,
       response: {
-        200: listMatchStatEventsResponseSchema,
-        400: badRequestErrorResponseSchema,
-        404: notFoundErrorResponseSchema
+        200: t.Ref("ListMatchStatEvents"),
+        400: t.Ref("BadRequestError"),
+        404: t.Ref("NotFoundError")
       },
       detail: {
         tags: ["Match Stat Events"],
@@ -155,12 +189,12 @@ export const matchRoutes = new Elysia({
       return event;
     },
     {
-      body: addMatchStatEventBodySchema,
+      body: t.Ref("AddMatchStatEventBody"),
       params: matchPublicIdParamsSchema,
       response: {
-        201: matchStatEventResponseSchema,
-        400: badRequestErrorResponseSchema,
-        404: notFoundErrorResponseSchema
+        201: t.Ref("MatchStatEvent"),
+        400: t.Ref("BadRequestError"),
+        404: t.Ref("NotFoundError")
       },
       detail: {
         tags: ["Match Stat Events"],
@@ -172,12 +206,12 @@ export const matchRoutes = new Elysia({
     "/:id/stat-events/:eventId",
     ({ params }) => disableMatchStatEvent(params.id, params.eventId),
     {
-      body: disableMatchStatEventBodySchema,
+      body: t.Ref("DisableMatchStatEventBody"),
       params: matchStatEventIdParamsSchema,
       response: {
-        200: disableMatchStatEventResponseSchema,
-        400: badRequestErrorResponseSchema,
-        404: notFoundErrorResponseSchema
+        200: t.Ref("MatchStatEvent"),
+        400: t.Ref("BadRequestError"),
+        404: t.Ref("NotFoundError")
       },
       detail: {
         tags: ["Match Stat Events"],
@@ -188,9 +222,9 @@ export const matchRoutes = new Elysia({
   .get("/:id/metrics", ({ params }) => getMatchMetrics(params.id), {
     params: matchPublicIdParamsSchema,
     response: {
-      200: matchMetricsResponseSchema,
-      400: badRequestErrorResponseSchema,
-      404: notFoundErrorResponseSchema
+      200: t.Ref("MatchMetrics"),
+      400: t.Ref("BadRequestError"),
+      404: t.Ref("NotFoundError")
     },
     detail: {
       tags: ["Match Metrics"],
@@ -201,12 +235,12 @@ export const matchRoutes = new Elysia({
     "/:id/recording",
     ({ body, params }) => associateMatchRecording(params.id, body),
     {
-      body: associateMatchRecordingBodySchema,
+      body: t.Ref("AssociateMatchRecordingBody"),
       params: matchPublicIdParamsSchema,
       response: {
-        200: matchResponseSchema,
-        400: badRequestErrorResponseSchema,
-        404: notFoundErrorResponseSchema
+        200: t.Ref("Match"),
+        400: t.Ref("BadRequestError"),
+        404: t.Ref("NotFoundError")
       },
       detail: {
         tags: ["Matches"],

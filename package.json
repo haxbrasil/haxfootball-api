@@ -16,6 +16,8 @@
     "test:e2e": "bun run test:e2e:boundaries && bash scripts/test-e2e.sh",
     "test:e2e:boundaries": "bun scripts/check-e2e-boundaries.ts",
     "test:internal": "bun test test/internal",
+    "openapi:generate": "bun scripts/generate-openapi.ts",
+    "openapi:check": "tmp_dir=$(mktemp -d); trap 'rm -rf \"$tmp_dir\"' EXIT; bun scripts/generate-openapi.ts \"$tmp_dir/openapi.yaml\" && diff -u openapi.yaml \"$tmp_dir/openapi.yaml\"",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -32,6 +34,7 @@
     "@types/bun": "^1.2.0",
     "better-sqlite3": "^12.10.0",
     "drizzle-kit": "~0.31.4",
-    "typescript": "^5.8.0"
+    "typescript": "^5.8.0",
+    "yaml": "^2.9.0"
   }
 }

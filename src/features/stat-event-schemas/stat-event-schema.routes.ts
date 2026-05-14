@@ -1,8 +1,7 @@
-import { Elysia } from "elysia";
+import { Elysia, t } from "elysia";
 import {
   createStatEventSchema,
-  createStatEventSchemaBodySchema,
-  createStatEventSchemaResponseSchema
+  createStatEventSchemaBodySchema
 } from "@/features/stat-event-schemas/create-stat-event-schema";
 import {
   getLatestStatEventSchema,
@@ -14,8 +13,7 @@ import {
 } from "@/features/stat-event-schemas/list-stat-event-schemas";
 import {
   publishStatEventSchemaVersion,
-  publishStatEventSchemaVersionBodySchema,
-  publishStatEventSchemaVersionResponseSchema
+  publishStatEventSchemaVersionBodySchema
 } from "@/features/stat-event-schemas/publish-stat-event-schema-version";
 import {
   statEventSchemaIdParamsSchema,
@@ -24,8 +22,7 @@ import {
 } from "@/features/stat-event-schemas/stat-event-schema.contract";
 import {
   updateStatEventSchema,
-  updateStatEventSchemaBodySchema,
-  updateStatEventSchemaResponseSchema
+  updateStatEventSchemaBodySchema
 } from "@/features/stat-event-schemas/update-stat-event-schema";
 import {
   badRequestErrorResponseSchema,
@@ -37,10 +34,19 @@ export const statEventSchemaRoutes = new Elysia({
   name: "stat-event-schema-routes",
   prefix: "/stat-event-schemas"
 })
+  .model({
+    BadRequestError: badRequestErrorResponseSchema,
+    CreateStatEventSchemaBody: createStatEventSchemaBodySchema,
+    ListStatEventSchemas: listStatEventSchemasResponseSchema,
+    NotFoundError: notFoundErrorResponseSchema,
+    PublishStatEventSchemaVersionBody: publishStatEventSchemaVersionBodySchema,
+    StatEventSchema: statEventSchemaResponseSchema,
+    UpdateStatEventSchemaBody: updateStatEventSchemaBodySchema
+  })
   .get("", ({ query }) => listStatEventSchemas(query), {
     query: paginationQuerySchema,
     response: {
-      200: listStatEventSchemasResponseSchema
+      200: t.Ref("ListStatEventSchemas")
     },
     detail: {
       tags: ["Stat Event Schemas"],
@@ -50,8 +56,8 @@ export const statEventSchemaRoutes = new Elysia({
   .get("/:id", ({ params }) => getLatestStatEventSchema(params.id), {
     params: statEventSchemaIdParamsSchema,
     response: {
-      200: statEventSchemaResponseSchema,
-      404: notFoundErrorResponseSchema
+      200: t.Ref("StatEventSchema"),
+      404: t.Ref("NotFoundError")
     },
     detail: {
       tags: ["Stat Event Schemas"],
@@ -64,8 +70,8 @@ export const statEventSchemaRoutes = new Elysia({
     {
       params: statEventSchemaVersionParamsSchema,
       response: {
-        200: statEventSchemaResponseSchema,
-        404: notFoundErrorResponseSchema
+        200: t.Ref("StatEventSchema"),
+        404: t.Ref("NotFoundError")
       },
       detail: {
         tags: ["Stat Event Schemas"],
@@ -81,10 +87,10 @@ export const statEventSchemaRoutes = new Elysia({
       return createStatEventSchema(body);
     },
     {
-      body: createStatEventSchemaBodySchema,
+      body: t.Ref("CreateStatEventSchemaBody"),
       response: {
-        201: createStatEventSchemaResponseSchema,
-        400: badRequestErrorResponseSchema
+        201: t.Ref("StatEventSchema"),
+        400: t.Ref("BadRequestError")
       },
       detail: {
         tags: ["Stat Event Schemas"],
@@ -97,12 +103,12 @@ export const statEventSchemaRoutes = new Elysia({
     ({ body, params }) =>
       updateStatEventSchema(params.id, params.version, body),
     {
-      body: updateStatEventSchemaBodySchema,
+      body: t.Ref("UpdateStatEventSchemaBody"),
       params: statEventSchemaVersionParamsSchema,
       response: {
-        200: updateStatEventSchemaResponseSchema,
-        400: badRequestErrorResponseSchema,
-        404: notFoundErrorResponseSchema
+        200: t.Ref("StatEventSchema"),
+        400: t.Ref("BadRequestError"),
+        404: t.Ref("NotFoundError")
       },
       detail: {
         tags: ["Stat Event Schemas"],
@@ -118,12 +124,12 @@ export const statEventSchemaRoutes = new Elysia({
       return publishStatEventSchemaVersion(params.id, body);
     },
     {
-      body: publishStatEventSchemaVersionBodySchema,
+      body: t.Ref("PublishStatEventSchemaVersionBody"),
       params: statEventSchemaIdParamsSchema,
       response: {
-        201: publishStatEventSchemaVersionResponseSchema,
-        400: badRequestErrorResponseSchema,
-        404: notFoundErrorResponseSchema
+        201: t.Ref("StatEventSchema"),
+        400: t.Ref("BadRequestError"),
+        404: t.Ref("NotFoundError")
       },
       detail: {
         tags: ["Stat Event Schemas"],

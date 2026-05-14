@@ -1,4 +1,4 @@
-import { Elysia } from "elysia";
+import { Elysia, t } from "elysia";
 import { createRole, createRoleBodySchema } from "@/features/roles/create-role";
 import { getRole } from "@/features/roles/get-role";
 import {
@@ -20,10 +20,17 @@ export const roleRoutes = new Elysia({
   name: "role-routes",
   prefix: "/roles"
 })
+  .model({
+    CreateRoleBody: createRoleBodySchema,
+    ListRoles: listRolesResponseSchema,
+    NotFoundError: notFoundErrorResponseSchema,
+    RemoveRoleResponse: removeRoleResponseSchema,
+    Role: roleResponseSchema
+  })
   .get("", ({ query }) => listRoles(query), {
     query: paginationQuerySchema,
     response: {
-      200: listRolesResponseSchema
+      200: t.Ref("ListRoles")
     },
     detail: {
       tags: ["Roles"],
@@ -33,8 +40,8 @@ export const roleRoutes = new Elysia({
   .get("/:uuid", ({ params }) => getRole(params.uuid), {
     params: roleUuidParamsSchema,
     response: {
-      200: roleResponseSchema,
-      404: notFoundErrorResponseSchema
+      200: t.Ref("Role"),
+      404: t.Ref("NotFoundError")
     },
     detail: {
       tags: ["Roles"],
@@ -49,9 +56,9 @@ export const roleRoutes = new Elysia({
       return createRole(body);
     },
     {
-      body: createRoleBodySchema,
+      body: t.Ref("CreateRoleBody"),
       response: {
-        201: roleResponseSchema
+        201: t.Ref("Role")
       },
       detail: {
         tags: ["Roles"],
@@ -62,8 +69,8 @@ export const roleRoutes = new Elysia({
   .delete("/:uuid", ({ params }) => removeRole(params.uuid), {
     params: roleUuidParamsSchema,
     response: {
-      200: removeRoleResponseSchema,
-      404: notFoundErrorResponseSchema
+      200: t.Ref("RemoveRoleResponse"),
+      404: t.Ref("NotFoundError")
     },
     detail: {
       tags: ["Roles"],

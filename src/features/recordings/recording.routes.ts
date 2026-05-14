@@ -1,4 +1,4 @@
-import { Elysia } from "elysia";
+import { Elysia, t } from "elysia";
 import {
   createRecording,
   createRecordingBodySchema
@@ -22,10 +22,17 @@ export const recordingRoutes = new Elysia({
   name: "recording-routes",
   prefix: "/recs"
 })
+  .model({
+    BadRequestError: badRequestErrorResponseSchema,
+    CreateRecordingBody: createRecordingBodySchema,
+    ListRecordings: listRecordingsResponseSchema,
+    NotFoundError: notFoundErrorResponseSchema,
+    Recording: recordingResponseSchema
+  })
   .get("", ({ query }) => listRecordings(query), {
     query: paginationQuerySchema,
     response: {
-      200: listRecordingsResponseSchema
+      200: t.Ref("ListRecordings")
     },
     detail: {
       tags: ["Recordings"],
@@ -35,8 +42,8 @@ export const recordingRoutes = new Elysia({
   .get("/:id", ({ params }) => getRecording(params.id), {
     params: recordingPublicIdParamsSchema,
     response: {
-      200: recordingResponseSchema,
-      404: notFoundErrorResponseSchema
+      200: t.Ref("Recording"),
+      404: t.Ref("NotFoundError")
     },
     detail: {
       tags: ["Recordings"],
@@ -53,11 +60,11 @@ export const recordingRoutes = new Elysia({
       return result.recording;
     },
     {
-      body: createRecordingBodySchema,
+      body: t.Ref("CreateRecordingBody"),
       response: {
-        200: recordingResponseSchema,
-        201: recordingResponseSchema,
-        400: badRequestErrorResponseSchema
+        200: t.Ref("Recording"),
+        201: t.Ref("Recording"),
+        400: t.Ref("BadRequestError")
       },
       detail: {
         tags: ["Recordings"],
