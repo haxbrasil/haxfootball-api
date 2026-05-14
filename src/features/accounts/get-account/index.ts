@@ -7,6 +7,7 @@ import {
 } from "@/features/accounts/account.contract";
 import { accounts } from "@/features/accounts/account.db";
 import { roles } from "@/features/roles/role.db";
+import { roleWithPermissions } from "@/features/roles/role.persistence";
 
 export async function getAccount(uuid: string): Promise<AccountResponse> {
   const [row] = await db
@@ -22,5 +23,8 @@ export async function getAccount(uuid: string): Promise<AccountResponse> {
     throw notFound("Account not found");
   }
 
-  return toAccountResponse(row);
+  return toAccountResponse({
+    account: row.account,
+    role: await roleWithPermissions(row.role)
+  });
 }

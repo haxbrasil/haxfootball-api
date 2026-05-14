@@ -64,6 +64,13 @@
       "when": 1778452484965,
       "tag": "0008_silent_mandroid",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1778727735909,
+      "tag": "0009_rapid_silvermane",
+      "breakpoints": true
     }
   ]
 }

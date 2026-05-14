@@ -5,14 +5,17 @@ import { badRequest } from "@/shared/http/errors";
 import {
   type RoleResponse,
   roleNameSchema,
+  rolePermissionsSchema,
   roleTitleSchema,
   toRoleResponse
 } from "@/features/roles/role.contract";
-import { roles } from "@/features/roles/role.db";
+import { rolePermissions, roles } from "@/features/roles/role.db";
+import { roleWithPermissions } from "@/features/roles/role.persistence";
 
 export const createRoleBodySchema = t.Object({
   name: roleNameSchema,
-  title: roleTitleSchema
+  title: roleTitleSchema,
+  permissions: t.Optional(rolePermissionsSchema)
 });
 
 export type CreateRoleInput = Static<typeof createRoleBodySchema>;
@@ -29,13 +32,28 @@ export async function createRole(
     throw badRequest("Role name already exists");
   }
 
-  const [role] = await db
-    .insert(roles)
-    .values({
-      name: input.name,
-      title: input.title
-    })
-    .returning();
+  const permissions = input.permissions ?? [];
 
-  return toRoleResponse(role);
+  const role = await db.transaction(async (tx) => {
+    const [createdRole] = await tx
+      .insert(roles)
+      .values({
+        name: input.name,
+        title: input.title
+      })
+      .returning();
+
+    if (permissions.length > 0) {
+      await tx.insert(rolePermissions).values(
+        permissions.map((permission) => ({
+          roleId: createdRole.id,
+          permission
+        }))
+      );
+    }
+
+    return createdRole;
+  });
+
+  return toRoleResponse(await roleWithPermissions(role));
 }

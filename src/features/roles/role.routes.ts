@@ -13,6 +13,7 @@ import {
   roleResponseSchema,
   roleUuidParamsSchema
 } from "@/features/roles/role.contract";
+import { updateRole, updateRoleBodySchema } from "@/features/roles/update-role";
 import { notFoundErrorResponseSchema } from "@/shared/http/errors";
 import { paginationQuerySchema } from "@lib";
 
@@ -25,7 +26,8 @@ export const roleRoutes = new Elysia({
     ListRoles: listRolesResponseSchema,
     NotFoundError: notFoundErrorResponseSchema,
     RemoveRoleResponse: removeRoleResponseSchema,
-    Role: roleResponseSchema
+    Role: roleResponseSchema,
+    UpdateRoleBody: updateRoleBodySchema
   })
   .get("", ({ query }) => listRoles(query), {
     query: paginationQuerySchema,
@@ -66,6 +68,18 @@ export const roleRoutes = new Elysia({
       }
     }
   )
+  .patch("/:uuid", ({ body, params }) => updateRole(params.uuid, body), {
+    body: t.Ref("UpdateRoleBody"),
+    params: roleUuidParamsSchema,
+    response: {
+      200: t.Ref("Role"),
+      404: t.Ref("NotFoundError")
+    },
+    detail: {
+      tags: ["Roles"],
+      summary: "Update a role"
+    }
+  })
   .delete("/:uuid", ({ params }) => removeRole(params.uuid), {
     params: roleUuidParamsSchema,
     response: {

@@ -1,6 +1,6 @@
 import { type Static, t } from "elysia";
-import type { Role } from "@/features/roles/role.db";
 import {
+  type RoleWithPermissions,
   roleResponseSchema,
   toRoleResponse
 } from "@/features/roles/role.contract";
@@ -34,7 +34,7 @@ export type AccountResponse = Static<typeof accountResponseSchema>;
 
 export type AccountWithRole = {
   account: Account;
-  role: Role;
+  role: RoleWithPermissions;
 };
 
 export function toAccountResponse({

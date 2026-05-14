@@ -7,6 +7,7 @@ import {
 } from "@/features/accounts/account.contract";
 import { accounts } from "@/features/accounts/account.db";
 import { roles } from "@/features/roles/role.db";
+import { rolesWithPermissions } from "@/features/roles/role.persistence";
 import {
   cursorAfter,
   cursorSort,
@@ -36,9 +37,17 @@ export async function listAccounts(
     .limit(pageLimit(query));
 
   const page = pageItems(rows, query, (row) => row.account.id);
+  const pageRoles = await rolesWithPermissions(
+    page.items.map((row) => row.role)
+  );
 
   return {
-    items: page.items.map(toAccountResponse),
+    items: page.items.map((row, index) =>
+      toAccountResponse({
+        account: row.account,
+        role: pageRoles[index]
+      })
+    ),
     page: page.page
   };
 }

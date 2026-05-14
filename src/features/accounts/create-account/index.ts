@@ -50,7 +50,7 @@ export async function createAccount(
       name: input.name,
       passwordHash: await password.hash(input.password),
       externalId: input.externalId,
-      roleId: role.id
+      roleId: role.role.id
     })
     .returning();
 

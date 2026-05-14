@@ -8,6 +8,7 @@ import {
 type RoleResponse = {
   uuid: string;
   name: string;
+  title: string;
   permissions: string[];
   isDefault: boolean;
   createdAt: string;
@@ -20,7 +21,8 @@ describe("roles", () => {
       method: "POST",
       body: {
         name: "coach",
-        title: "Coach"
+        title: "Coach",
+        permissions: ["rooms:create", "admin:ban"]
       }
     });
 
@@ -32,6 +34,7 @@ describe("roles", () => {
       uuid: expect.any(String),
       name: "coach",
       title: "Coach",
+      permissions: ["rooms:create", "admin:ban"],
       isDefault: false,
       createdAt: expect.any(String),
       updatedAt: expect.any(String)
@@ -44,7 +47,8 @@ describe("roles", () => {
       method: "POST",
       body: {
         name: "manager",
-        title: "Manager"
+        title: "Manager",
+        permissions: ["rooms:moderate"]
       }
     });
 
@@ -62,6 +66,7 @@ describe("roles", () => {
       expect.objectContaining({
         name: "default",
         title: "Default",
+        permissions: [],
         isDefault: true
       })
     );
@@ -127,6 +132,61 @@ describe("roles", () => {
 
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual(role);
+  });
+
+  it("updates a role", async () => {
+    const createResponse = await request("/api/roles", {
+      method: "POST",
+      body: {
+        name: "editor",
+        title: "Editor",
+        permissions: ["matches:create"]
+      }
+    });
+
+    expect(createResponse.status).toBe(201);
+
+    const role: RoleResponse = await createResponse.json();
+    const updateResponse = await request(`/api/roles/${role.uuid}`, {
+      method: "PATCH",
+      body: {
+        title: "Match Editor",
+        permissions: ["matches:create", "matches:update"]
+      }
+    });
+
+    expect(updateResponse.status).toBe(200);
+
+    const updated: RoleResponse = await updateResponse.json();
+
+    expect(updated).toMatchObject({
+      uuid: role.uuid,
+      name: "editor",
+      title: "Match Editor",
+      permissions: ["matches:create", "matches:update"],
+      isDefault: false
+    });
+    expect(new Date(updated.updatedAt).getTime()).toBeGreaterThanOrEqual(
+      new Date(role.updatedAt).getTime()
+    );
+
+    const getResponse = await request(`/api/roles/${role.uuid}`);
+
+    expect(getResponse.status).toBe(200);
+    expect(await getResponse.json()).toEqual(updated);
+
+    const clearResponse = await request(`/api/roles/${role.uuid}`, {
+      method: "PATCH",
+      body: {
+        permissions: []
+      }
+    });
+
+    expect(clearResponse.status).toBe(200);
+    expect(await clearResponse.json()).toMatchObject({
+      uuid: role.uuid,
+      permissions: []
+    });
   });
 
   it("returns 404 when a role does not exist", async () => {
@@ -237,6 +297,7 @@ describe("roles", () => {
       role: {
         name: "default",
         title: "Default",
+        permissions: [],
         isDefault: true
       }
     });
@@ -263,6 +324,34 @@ describe("roles", () => {
       error: {
         code: "BAD_REQUEST",
         message: "Default role cannot be removed"
+      }
+    });
+  });
+
+  it("does not update the default role name", async () => {
+    const listResponse = await request("/api/roles");
+
+    expect(listResponse.status).toBe(200);
+
+    const roles = await paginatedItems<RoleResponse>(listResponse);
+    const defaultRole = roles.find((role) => role.isDefault);
+
+    if (!defaultRole) {
+      throw new Error("Expected default role to exist");
+    }
+
+    const response = await request(`/api/roles/${defaultRole.uuid}`, {
+      method: "PATCH",
+      body: {
+        name: "default-renamed"
+      }
+    });
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({
+      error: {
+        code: "BAD_REQUEST",
+        message: "Default role name cannot be changed"
       }
     });
   });
@@ -318,16 +407,24 @@ describe("roles", () => {
       method: "POST",
       body: {
         name: "Invalid Role",
-        title: ""
+        title: "",
+        permissions: ["Invalid Permission"]
       }
     });
     const invalidGetResponse = await request("/api/roles/not-a-uuid");
+    const invalidPatchResponse = await request("/api/roles/not-a-uuid", {
+      method: "PATCH",
+      body: {
+        permissions: ["rooms:create"]
+      }
+    });
     const invalidDeleteResponse = await request("/api/roles/not-a-uuid", {
       method: "DELETE"
     });
 
     expect(invalidBodyResponse.status).toBe(400);
     expect(invalidGetResponse.status).toBe(400);
+    expect(invalidPatchResponse.status).toBe(400);
     expect(invalidDeleteResponse.status).toBe(400);
     expect(await invalidBodyResponse.json()).toMatchObject({
       error: {
@@ -339,7 +436,30 @@ describe("roles", () => {
         code: "VALIDATION_ERROR"
       }
     });
+    expect(await invalidPatchResponse.json()).toMatchObject({
+      error: {
+        code: "VALIDATION_ERROR"
+      }
+    });
     expect(await invalidDeleteResponse.json()).toMatchObject({
+      error: {
+        code: "VALIDATION_ERROR"
+      }
+    });
+  });
+
+  it("rejects duplicate role permissions", async () => {
+    const response = await request("/api/roles", {
+      method: "POST",
+      body: {
+        name: "duplicate-permissions",
+        title: "Duplicate Permissions",
+        permissions: ["rooms:create", "rooms:create"]
+      }
+    });
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({
       error: {
         code: "VALIDATION_ERROR"
       }

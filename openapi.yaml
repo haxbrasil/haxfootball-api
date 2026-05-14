@@ -307,6 +307,15 @@ components:
           minLength: 1
           pattern: ^[a-z0-9-]+$
           type: string
+        permissions:
+          default: []
+          items:
+            maxLength: 100
+            minLength: 1
+            pattern: ^[a-z][a-z0-9-]*:[a-z][a-z0-9-]*$
+            type: string
+          type: array
+          uniqueItems: true
         title:
           minLength: 1
           type: string
@@ -1051,6 +1060,15 @@ components:
           type: boolean
         name:
           type: string
+        permissions:
+          default: []
+          items:
+            maxLength: 100
+            minLength: 1
+            pattern: ^[a-z][a-z0-9-]*:[a-z][a-z0-9-]*$
+            type: string
+          type: array
+          uniqueItems: true
         title:
           minLength: 1
           type: string
@@ -1063,6 +1081,7 @@ components:
         - uuid
         - name
         - title
+        - permissions
         - isDefault
         - createdAt
         - updatedAt
@@ -1551,6 +1570,26 @@ components:
               type: string
             - const: completed
               type: string
+      type: object
+    UpdateRoleBody:
+      properties:
+        name:
+          maxLength: 25
+          minLength: 1
+          pattern: ^[a-z0-9-]+$
+          type: string
+        permissions:
+          default: []
+          items:
+            maxLength: 100
+            minLength: 1
+            pattern: ^[a-z][a-z0-9-]*:[a-z][a-z0-9-]*$
+            type: string
+          type: array
+          uniqueItems: true
+        title:
+          minLength: 1
+          type: string
       type: object
     UpdateRoomProgramBody:
       properties:
@@ -2755,6 +2794,51 @@ paths:
               schema:
                 $ref: "#/components/schemas/InternalServerError"
       summary: Get a role
+      tags:
+        - Roles
+    patch:
+      operationId: patchApiRolesByUuid
+      parameters:
+        - in: path
+          name: uuid
+          required: true
+          schema:
+            format: uuid
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateRoleBody"
+        required: true
+      responses:
+        "200":
+          $ref: Role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Role"
+        "400":
+          $ref: BadRequestOrValidationError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+        "401":
+          $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          $ref: NotFoundError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+        "500":
+          $ref: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      summary: Update a role
       tags:
         - Roles
   /api/room-programs:

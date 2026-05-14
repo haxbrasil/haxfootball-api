@@ -5,6 +5,7 @@ import {
   toRoleResponse
 } from "@/features/roles/role.contract";
 import { roles } from "@/features/roles/role.db";
+import { rolesWithPermissions } from "@/features/roles/role.persistence";
 import {
   cursorAfter,
   cursorSort,
@@ -29,9 +30,10 @@ export async function listRoles(
     .limit(pageLimit(query));
 
   const page = pageItems(rows, query, (role) => role.id);
+  const items = await rolesWithPermissions(page.items);
 
   return {
-    items: page.items.map(toRoleResponse),
+    items: items.map(toRoleResponse),
     page: page.page
   };
 }

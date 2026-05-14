@@ -6,6 +6,7 @@ import {
   toRoleResponse
 } from "@/features/roles/role.contract";
 import { roles } from "@/features/roles/role.db";
+import { roleWithPermissions } from "@/features/roles/role.persistence";
 
 export async function getRole(uuid: string): Promise<RoleResponse> {
   const [role] = await db.select().from(roles).where(eq(roles.uuid, uuid));
@@ -14,5 +15,5 @@ export async function getRole(uuid: string): Promise<RoleResponse> {
     throw notFound("Role not found");
   }
 
-  return toRoleResponse(role);
+  return toRoleResponse(await roleWithPermissions(role));
 }

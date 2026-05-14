@@ -4,7 +4,11 @@ import { db } from "@/db/client";
 import { accounts } from "@/features/accounts/account.db";
 import { badRequest, notFound } from "@/shared/http/errors";
 import { getDefaultRole } from "@/features/roles/get-default-role";
-import { defaultRoleName, roles } from "@/features/roles/role.db";
+import {
+  defaultRoleName,
+  rolePermissions,
+  roles
+} from "@/features/roles/role.db";
 
 export const removeRoleResponseSchema = t.Object({
   deleted: t.Boolean()
@@ -29,10 +33,12 @@ export async function removeRole(uuid: string): Promise<RemoveRoleResult> {
     await tx
       .update(accounts)
       .set({
-        roleId: defaultRole.id,
+        roleId: defaultRole.role.id,
         updatedAt: new Date().toISOString()
       })
       .where(eq(accounts.roleId, role.id));
+
+    await tx.delete(rolePermissions).where(eq(rolePermissions.roleId, role.id));
 
     await tx.delete(roles).where(eq(roles.id, role.id));
   });

@@ -23,6 +23,7 @@ describe("accounts", () => {
       role: {
         name: "default",
         title: "Default",
+        permissions: [],
         isDefault: true
       },
       createdAt: expect.any(String),
@@ -179,7 +180,8 @@ describe("accounts", () => {
       method: "POST",
       body: {
         name: "captain",
-        title: "Captain"
+        title: "Captain",
+        permissions: ["rooms:create", "matches:create"]
       }
     });
 

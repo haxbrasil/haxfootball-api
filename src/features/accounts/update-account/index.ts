@@ -12,6 +12,7 @@ import {
   toAccountResponse
 } from "@/features/accounts/account.contract";
 import { accounts } from "@/features/accounts/account.db";
+import { roleWithPermissions } from "@/features/roles/role.persistence";
 
 export const updateAccountBodySchema = t.Partial(
   t.Object({
@@ -66,5 +67,8 @@ export async function updateAccount(
     .innerJoin(roles, eq(accounts.roleId, roles.id))
     .where(eq(accounts.id, account.id));
 
-  return toAccountResponse(row);
+  return toAccountResponse({
+    account: row.account,
+    role: await roleWithPermissions(row.role)
+  });
 }

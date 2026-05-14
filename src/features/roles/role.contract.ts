@@ -11,10 +11,22 @@ export const roleTitleSchema = t.String({
   minLength: 1
 });
 
+export const accountPermissionSchema = t.String({
+  minLength: 1,
+  maxLength: 100,
+  pattern: "^[a-z][a-z0-9-]*:[a-z][a-z0-9-]*$"
+});
+
+export const rolePermissionsSchema = t.Array(accountPermissionSchema, {
+  default: [],
+  uniqueItems: true
+});
+
 export const roleResponseSchema = t.Object({
   uuid: t.String({ format: "uuid" }),
   name: t.String(),
   title: t.String({ minLength: 1 }),
+  permissions: rolePermissionsSchema,
   isDefault: t.Boolean(),
   createdAt: t.String(),
   updatedAt: t.String()
@@ -22,11 +34,20 @@ export const roleResponseSchema = t.Object({
 
 export type RoleResponse = Static<typeof roleResponseSchema>;
 
-export function toRoleResponse(role: Role): RoleResponse {
+export type RoleWithPermissions = {
+  role: Role;
+  permissions: string[];
+};
+
+export function toRoleResponse({
+  role,
+  permissions
+}: RoleWithPermissions): RoleResponse {
   return {
     uuid: role.uuid,
     name: role.name,
     title: role.title,
+    permissions,
     isDefault: role.name === defaultRoleName,
     createdAt: role.createdAt,
     updatedAt: role.updatedAt
