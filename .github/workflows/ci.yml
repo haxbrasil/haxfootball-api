@@ -89,7 +89,7 @@ jobs:
 
       - name: Verify production health
         run: |
-          curl --retry 10 --retry-delay 3 --retry-all-errors -fsS http://152.67.59.41/health
+          curl --retry 10 --retry-delay 3 --retry-all-errors -fsS https://api.bfl.haxbrasil.com/health
 
       - name: Print service logs on failure
         if: failure()
