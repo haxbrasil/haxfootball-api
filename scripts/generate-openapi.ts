@@ -1,7 +1,6 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { stringify } from "yaml";
-import { normalizeOpenApiDocument } from "./openapi-normalize";
 
 const outputPath = Bun.argv[2] ?? "openapi.yaml";
 
@@ -18,7 +17,7 @@ if (!response.ok) {
   throw new Error(`OpenAPI generation failed: ${response.status}`);
 }
 
-const openApiDocument = normalizeOpenApiDocument(await response.json());
+const openApiDocument = await response.json();
 const output = stringify(openApiDocument, {
   lineWidth: 0,
   sortMapEntries: true
