@@ -1277,7 +1277,9 @@ describe("rooms", () => {
       ROOM_SESSION_TOKEN: "launch-only-token",
       ROOM_E2E_ENV_OUT: envPath,
       __ROOM_API_URL: "http://0.0.0.0:3000/api",
-      __ROOM_API_JWT: expect.any(String)
+      __ROOM_API_JWT: expect.any(String),
+      __ROOM_ID: room.id,
+      __ROOM_COMM_ID: expect.any(String)
     });
     expect(capturedEnv.ROOM_TOKEN).toBeUndefined();
     expect(capturedEnv.ROOM_API_URL).toBeUndefined();
@@ -1484,7 +1486,9 @@ describe("rooms", () => {
       ROOM_API_JWT: expect.any(String),
       ROOM_COMM_ID: expect.any(String),
       __ROOM_API_URL: "http://0.0.0.0:3000/api",
-      __ROOM_API_JWT: expect.any(String)
+      __ROOM_API_JWT: expect.any(String),
+      __ROOM_ID: room.id,
+      __ROOM_COMM_ID: commId
     });
     expect(capturedEnv.ROOM_NAME).toBeUndefined();
     expect(capturedEnv.ROOM_TOKEN).toBe("manual-token");

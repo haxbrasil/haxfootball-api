@@ -58,12 +58,14 @@ export async function createRoom(
     assignedProxy: proxyEndpoint
   });
   const commId = crypto.randomUUID() + crypto.randomUUID();
+  const roomUuid = crypto.randomUUID();
   const roomApiJwt = await signRoomJwt();
   const environment = buildEffectiveRoomEnvironment({
     program,
     fields: program.launchConfigFields,
     environmentValues: configResolution.environmentValues,
     haxballToken: input.haxballToken,
+    roomId: roomUuid,
     roomApiUrl: roomApiUrl(),
     roomApiJwt,
     commId
@@ -71,7 +73,7 @@ export async function createRoom(
   const [room] = await db
     .insert(roomInstances)
     .values({
-      uuid: crypto.randomUUID(),
+      uuid: roomUuid,
       programId: program.id,
       versionId: version.id,
       proxyEndpointId: proxyEndpoint?.id ?? null,

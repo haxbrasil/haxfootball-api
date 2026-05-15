@@ -28,6 +28,7 @@ export type BuildEffectiveRoomEnvironmentInput = {
   fields: RoomLaunchConfigField[];
   environmentValues: RoomLaunchConfig;
   haxballToken: string;
+  roomId: string;
   roomApiUrl: string;
   roomApiJwt: string;
   commId: string;
@@ -142,6 +143,8 @@ export function buildEffectiveRoomEnvironment(
   const environment: EffectiveRoomEnvironment = {
     __ROOM_API_URL: input.roomApiUrl,
     __ROOM_API_JWT: input.roomApiJwt,
+    __ROOM_ID: input.roomId,
+    __ROOM_COMM_ID: input.commId,
     [input.program.haxballTokenEnvVar]: input.haxballToken
   };
 
