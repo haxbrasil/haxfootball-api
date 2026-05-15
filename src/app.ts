@@ -14,6 +14,7 @@ import { recordingRoutes } from "@/features/recordings/recording.routes";
 import { roleRoutes } from "@/features/roles/role.routes";
 import { reconcileOpenRooms } from "@/features/rooms/reconcile-rooms";
 import { roomRoutes } from "@/features/rooms/room.routes";
+import { sessionRoutes } from "@/features/sessions/session.routes";
 import { statEventSchemaRoutes } from "@/features/stat-event-schemas/stat-event-schema.routes";
 import { withJwtGuard } from "@/guards/jwt.guard";
 import { withCommonErrorResponses } from "@/plugins/common-error-responses";
@@ -69,6 +70,7 @@ app
       .use(permissionRoutes)
       .use(roleRoutes)
       .use(playerRoutes)
+      .use(sessionRoutes)
       .use(matchRoutes)
       .use(recordingRoutes)
       .use(roomRoutes)

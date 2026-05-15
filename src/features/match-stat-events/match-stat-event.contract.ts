@@ -1,5 +1,6 @@
 import { type Static, t } from "elysia";
 import type { MatchStatEvent } from "@/features/match-stat-events/match-stat-event.db";
+import type { Account } from "@/features/accounts/account.db";
 import {
   playerResponseSchema,
   toPlayerResponse
@@ -59,6 +60,7 @@ export type MatchMetricsResponse = Static<typeof matchMetricsResponseSchema>;
 
 export type MatchStatEventRow = MatchStatEvent & {
   player: Player;
+  account: Account | null;
 };
 
 export function toMatchStatEventResponse(
@@ -68,7 +70,7 @@ export function toMatchStatEventResponse(
     id: row.uuid,
     sequence: row.sequence,
     type: row.type,
-    player: toPlayerResponse({ player: row.player, account: null }),
+    player: toPlayerResponse({ player: row.player, account: row.account }),
     value: row.value,
     occurredAt: row.occurredAt,
     tick: row.tick,

@@ -104,7 +104,17 @@ describe("stat event schemas", () => {
   });
 
   it("rejects breaking direct updates and publishes a new version", async () => {
-    const schema = await createSchema();
+    const schemaResponse = await request("/api/stat-event-schemas", {
+      method: "POST",
+      body: {
+        name: uniqueName("schema"),
+        definition: baseDefinition()
+      }
+    });
+
+    expect(schemaResponse.status).toBe(201);
+
+    const schema: StatEventSchemaResponse = await schemaResponse.json();
     const breakingDefinition = {
       events: [baseDefinition().events[0]]
     };
@@ -231,7 +241,17 @@ describe("stat event schemas", () => {
   });
 
   it("allows additive latest updates and rejects updates to old versions", async () => {
-    const schema = await createSchema();
+    const schemaResponse = await request("/api/stat-event-schemas", {
+      method: "POST",
+      body: {
+        name: uniqueName("schema"),
+        definition: baseDefinition()
+      }
+    });
+
+    expect(schemaResponse.status).toBe(201);
+
+    const schema: StatEventSchemaResponse = await schemaResponse.json();
     const additiveDefinition = {
       ...baseDefinition(),
       events: [
@@ -304,9 +324,46 @@ describe("stat event schemas", () => {
   });
 
   it("keeps old matches bound to their original schema version", async () => {
-    const schema = await createSchema();
-    const player = await createPlayer("version-bound");
-    const oldMatch = await createMatch(schema);
+    const schemaResponse = await request("/api/stat-event-schemas", {
+      method: "POST",
+      body: {
+        name: uniqueName("schema"),
+        definition: baseDefinition()
+      }
+    });
+    const playerResponse = await request("/api/players", {
+      method: "POST",
+      body: {
+        externalId: `version-bound-${crypto.randomUUID()}`,
+        name: "version-bound"
+      }
+    });
+
+    expect(schemaResponse.status).toBe(201);
+    expect(playerResponse.status).toBe(201);
+
+    const schema: StatEventSchemaResponse = await schemaResponse.json();
+    const player: PlayerResponse = await playerResponse.json();
+    const oldMatchResponse = await request("/api/matches", {
+      method: "POST",
+      body: {
+        status: "ongoing",
+        statEventSchema: {
+          id: schema.id,
+          version: schema.version
+        }
+      }
+    });
+
+    expect(oldMatchResponse.status).toBe(201);
+
+    const oldMatch: MatchResponse = await oldMatchResponse.json();
+
+    expect(oldMatch.statEventSchema).toEqual({
+      id: schema.id,
+      version: schema.version
+    });
+
     const publishResponse = await request(
       `/api/stat-event-schemas/${schema.id}/versions`,
       {
@@ -322,21 +379,52 @@ describe("stat event schemas", () => {
     expect(publishResponse.status).toBe(201);
 
     const nextVersion: StatEventSchemaResponse = await publishResponse.json();
-    const oldMatchAssistResponse = await addStatEvent(oldMatch.id, {
-      type: "assist",
-      playerId: player.id,
-      value: {
-        amount: 1
+    const oldMatchAssistResponse = await request(
+      `/api/matches/${oldMatch.id}/stat-events`,
+      {
+        method: "POST",
+        body: {
+          type: "assist",
+          playerId: player.id,
+          value: {
+            amount: 1
+          }
+        }
+      }
+    );
+    const newMatchResponse = await request("/api/matches", {
+      method: "POST",
+      body: {
+        status: "ongoing",
+        statEventSchema: {
+          id: nextVersion.id,
+          version: nextVersion.version
+        }
       }
     });
-    const newMatch = await createMatch(nextVersion);
-    const newMatchAssistResponse = await addStatEvent(newMatch.id, {
-      type: "assist",
-      playerId: player.id,
-      value: {
-        amount: 1
-      }
+
+    expect(newMatchResponse.status).toBe(201);
+
+    const newMatch: MatchResponse = await newMatchResponse.json();
+
+    expect(newMatch.statEventSchema).toEqual({
+      id: nextVersion.id,
+      version: nextVersion.version
     });
+
+    const newMatchAssistResponse = await request(
+      `/api/matches/${newMatch.id}/stat-events`,
+      {
+        method: "POST",
+        body: {
+          type: "assist",
+          playerId: player.id,
+          value: {
+            amount: 1
+          }
+        }
+      }
+    );
 
     expect(oldMatchAssistResponse.status).toBe(201);
     expect(newMatchAssistResponse.status).toBe(400);
@@ -345,29 +433,88 @@ describe("stat event schemas", () => {
 
 describe("match stat events", () => {
   it("adds stat events to a schema-bound ongoing match and derives metrics", async () => {
-    const schema = await createSchema();
-    const firstPlayer = await createPlayer("stats-first");
-    const secondPlayer = await createPlayer("stats-second");
-    const match = await createMatch(schema);
-
-    const firstGoalResponse = await addStatEvent(match.id, {
-      type: "goal",
-      playerId: firstPlayer.id,
-      value: 3,
-      occurredAt: "2026-05-10T12:01:00.000Z",
-      tick: 120
-    });
-    const assistResponse = await addStatEvent(match.id, {
-      type: "assist",
-      playerId: firstPlayer.id,
-      value: {
-        amount: 2
+    const schemaResponse = await request("/api/stat-event-schemas", {
+      method: "POST",
+      body: {
+        name: uniqueName("schema"),
+        definition: baseDefinition()
       }
     });
-    const noteResponse = await addStatEvent(match.id, {
-      type: "note",
-      playerId: secondPlayer.id,
-      value: "saved"
+    const firstPlayerResponse = await request("/api/players", {
+      method: "POST",
+      body: {
+        externalId: `stats-first-${crypto.randomUUID()}`,
+        name: "stats-first"
+      }
+    });
+    const secondPlayerResponse = await request("/api/players", {
+      method: "POST",
+      body: {
+        externalId: `stats-second-${crypto.randomUUID()}`,
+        name: "stats-second"
+      }
+    });
+
+    expect(schemaResponse.status).toBe(201);
+    expect(firstPlayerResponse.status).toBe(201);
+    expect(secondPlayerResponse.status).toBe(201);
+
+    const schema: StatEventSchemaResponse = await schemaResponse.json();
+    const firstPlayer: PlayerResponse = await firstPlayerResponse.json();
+    const secondPlayer: PlayerResponse = await secondPlayerResponse.json();
+    const matchResponse = await request("/api/matches", {
+      method: "POST",
+      body: {
+        status: "ongoing",
+        statEventSchema: {
+          id: schema.id,
+          version: schema.version
+        }
+      }
+    });
+
+    expect(matchResponse.status).toBe(201);
+
+    const match: MatchResponse = await matchResponse.json();
+
+    expect(match.statEventSchema).toEqual({
+      id: schema.id,
+      version: schema.version
+    });
+
+    const firstGoalResponse = await request(
+      `/api/matches/${match.id}/stat-events`,
+      {
+        method: "POST",
+        body: {
+          type: "goal",
+          playerId: firstPlayer.id,
+          value: 3,
+          occurredAt: "2026-05-10T12:01:00.000Z",
+          tick: 120
+        }
+      }
+    );
+    const assistResponse = await request(
+      `/api/matches/${match.id}/stat-events`,
+      {
+        method: "POST",
+        body: {
+          type: "assist",
+          playerId: firstPlayer.id,
+          value: {
+            amount: 2
+          }
+        }
+      }
+    );
+    const noteResponse = await request(`/api/matches/${match.id}/stat-events`, {
+      method: "POST",
+      body: {
+        type: "note",
+        playerId: secondPlayer.id,
+        value: "saved"
+      }
     });
 
     expect(firstGoalResponse.status).toBe(201);
@@ -416,18 +563,61 @@ describe("match stat events", () => {
   });
 
   it("disables stat events only after completion and excludes them from metrics", async () => {
-    const schema = await createSchema();
-    const player = await createPlayer("disable-stat");
-    const match = await createMatch(schema);
-    const addResponse = await addStatEvent(match.id, {
-      type: "goal",
-      playerId: player.id,
-      value: 5
+    const schemaResponse = await request("/api/stat-event-schemas", {
+      method: "POST",
+      body: {
+        name: uniqueName("schema"),
+        definition: baseDefinition()
+      }
     });
-    const keptResponse = await addStatEvent(match.id, {
-      type: "goal",
-      playerId: player.id,
-      value: 2
+    const playerResponse = await request("/api/players", {
+      method: "POST",
+      body: {
+        externalId: `disable-stat-${crypto.randomUUID()}`,
+        name: "disable-stat"
+      }
+    });
+
+    expect(schemaResponse.status).toBe(201);
+    expect(playerResponse.status).toBe(201);
+
+    const schema: StatEventSchemaResponse = await schemaResponse.json();
+    const player: PlayerResponse = await playerResponse.json();
+    const matchResponse = await request("/api/matches", {
+      method: "POST",
+      body: {
+        status: "ongoing",
+        statEventSchema: {
+          id: schema.id,
+          version: schema.version
+        }
+      }
+    });
+
+    expect(matchResponse.status).toBe(201);
+
+    const match: MatchResponse = await matchResponse.json();
+
+    expect(match.statEventSchema).toEqual({
+      id: schema.id,
+      version: schema.version
+    });
+
+    const addResponse = await request(`/api/matches/${match.id}/stat-events`, {
+      method: "POST",
+      body: {
+        type: "goal",
+        playerId: player.id,
+        value: 5
+      }
+    });
+    const keptResponse = await request(`/api/matches/${match.id}/stat-events`, {
+      method: "POST",
+      body: {
+        type: "goal",
+        playerId: player.id,
+        value: 2
+      }
     });
 
     expect(addResponse.status).toBe(201);
@@ -529,8 +719,26 @@ describe("match stat events", () => {
   });
 
   it("rejects invalid stat event writes", async () => {
-    const schema = await createSchema();
-    const player = await createPlayer("invalid-stat");
+    const schemaResponse = await request("/api/stat-event-schemas", {
+      method: "POST",
+      body: {
+        name: uniqueName("schema"),
+        definition: baseDefinition()
+      }
+    });
+    const playerResponse = await request("/api/players", {
+      method: "POST",
+      body: {
+        externalId: `invalid-stat-${crypto.randomUUID()}`,
+        name: "invalid-stat"
+      }
+    });
+
+    expect(schemaResponse.status).toBe(201);
+    expect(playerResponse.status).toBe(201);
+
+    const schema: StatEventSchemaResponse = await schemaResponse.json();
+    const player: PlayerResponse = await playerResponse.json();
     const unboundMatchResponse = await request("/api/matches", {
       method: "POST",
       body: {
@@ -541,11 +749,17 @@ describe("match stat events", () => {
     expect(unboundMatchResponse.status).toBe(201);
 
     const unboundMatch: MatchResponse = await unboundMatchResponse.json();
-    const unboundResponse = await addStatEvent(unboundMatch.id, {
-      type: "goal",
-      playerId: player.id,
-      value: 1
-    });
+    const unboundResponse = await request(
+      `/api/matches/${unboundMatch.id}/stat-events`,
+      {
+        method: "POST",
+        body: {
+          type: "goal",
+          playerId: player.id,
+          value: 1
+        }
+      }
+    );
 
     expect(unboundResponse.status).toBe(400);
     expect(await unboundResponse.json()).toEqual({
@@ -555,22 +769,59 @@ describe("match stat events", () => {
       }
     });
 
-    const match = await createMatch(schema);
-    const unknownTypeResponse = await addStatEvent(match.id, {
-      type: "steal",
-      playerId: player.id,
-      value: 1
+    const matchResponse = await request("/api/matches", {
+      method: "POST",
+      body: {
+        status: "ongoing",
+        statEventSchema: {
+          id: schema.id,
+          version: schema.version
+        }
+      }
     });
-    const invalidValueResponse = await addStatEvent(match.id, {
-      type: "goal",
-      playerId: player.id,
-      value: "one"
+
+    expect(matchResponse.status).toBe(201);
+
+    const match: MatchResponse = await matchResponse.json();
+
+    expect(match.statEventSchema).toEqual({
+      id: schema.id,
+      version: schema.version
     });
-    const unknownPlayerResponse = await addStatEvent(match.id, {
-      type: "goal",
-      playerId: "missing-player",
-      value: 1
-    });
+
+    const unknownTypeResponse = await request(
+      `/api/matches/${match.id}/stat-events`,
+      {
+        method: "POST",
+        body: {
+          type: "steal",
+          playerId: player.id,
+          value: 1
+        }
+      }
+    );
+    const invalidValueResponse = await request(
+      `/api/matches/${match.id}/stat-events`,
+      {
+        method: "POST",
+        body: {
+          type: "goal",
+          playerId: player.id,
+          value: "one"
+        }
+      }
+    );
+    const unknownPlayerResponse = await request(
+      `/api/matches/${match.id}/stat-events`,
+      {
+        method: "POST",
+        body: {
+          type: "goal",
+          playerId: "missing-player",
+          value: 1
+        }
+      }
+    );
 
     expect(unknownTypeResponse.status).toBe(400);
     expect(invalidValueResponse.status).toBe(400);
@@ -578,7 +829,7 @@ describe("match stat events", () => {
   });
 
   it("validates stat event value schema constraints", async () => {
-    const schema = await createSchemaFromDefinition({
+    const schemaDefinition = {
       events: [
         {
           type: "text-value",
@@ -635,9 +886,47 @@ describe("match stat events", () => {
           }
         }
       ]
+    };
+    const schemaResponse = await request("/api/stat-event-schemas", {
+      method: "POST",
+      body: {
+        name: uniqueName("schema"),
+        definition: schemaDefinition
+      }
     });
-    const player = await createPlayer("value-schema");
-    const match = await createMatch(schema);
+    const playerResponse = await request("/api/players", {
+      method: "POST",
+      body: {
+        externalId: `value-schema-${crypto.randomUUID()}`,
+        name: "value-schema"
+      }
+    });
+
+    expect(schemaResponse.status).toBe(201);
+    expect(playerResponse.status).toBe(201);
+
+    const schema: StatEventSchemaResponse = await schemaResponse.json();
+    const player: PlayerResponse = await playerResponse.json();
+    const matchResponse = await request("/api/matches", {
+      method: "POST",
+      body: {
+        status: "ongoing",
+        statEventSchema: {
+          id: schema.id,
+          version: schema.version
+        }
+      }
+    });
+
+    expect(matchResponse.status).toBe(201);
+
+    const match: MatchResponse = await matchResponse.json();
+
+    expect(match.statEventSchema).toEqual({
+      id: schema.id,
+      version: schema.version
+    });
+
     const validInputs = [
       {
         type: "text-value",
@@ -669,9 +958,12 @@ describe("match stat events", () => {
     ];
 
     for (const input of validInputs) {
-      const response = await addStatEvent(match.id, {
-        ...input,
-        playerId: player.id
+      const response = await request(`/api/matches/${match.id}/stat-events`, {
+        method: "POST",
+        body: {
+          ...input,
+          playerId: player.id
+        }
       });
 
       expect(response.status).toBe(201);
@@ -705,9 +997,12 @@ describe("match stat events", () => {
     ];
 
     for (const input of invalidInputs) {
-      const response = await addStatEvent(match.id, {
-        ...input,
-        playerId: player.id
+      const response = await request(`/api/matches/${match.id}/stat-events`, {
+        method: "POST",
+        body: {
+          ...input,
+          playerId: player.id
+        }
       });
 
       expect(response.status).toBe(400);
@@ -721,7 +1016,7 @@ describe("match stat events", () => {
   });
 
   it("evaluates metric expression operators", async () => {
-    const schema = await createSchemaFromDefinition({
+    const schemaDefinition = {
       events: [
         {
           type: "number-sample",
@@ -864,19 +1159,69 @@ describe("match stat events", () => {
           }
         }
       ]
+    };
+    const schemaResponse = await request("/api/stat-event-schemas", {
+      method: "POST",
+      body: {
+        name: uniqueName("schema"),
+        definition: schemaDefinition
+      }
     });
-    const player = await createPlayer("operator-metrics");
-    const match = await createMatch(schema);
-    const firstResponse = await addStatEvent(match.id, {
-      type: "number-sample",
-      playerId: player.id,
-      value: 2
+    const playerResponse = await request("/api/players", {
+      method: "POST",
+      body: {
+        externalId: `operator-metrics-${crypto.randomUUID()}`,
+        name: "operator-metrics"
+      }
     });
-    const secondResponse = await addStatEvent(match.id, {
-      type: "number-sample",
-      playerId: player.id,
-      value: 3
+
+    expect(schemaResponse.status).toBe(201);
+    expect(playerResponse.status).toBe(201);
+
+    const schema: StatEventSchemaResponse = await schemaResponse.json();
+    const player: PlayerResponse = await playerResponse.json();
+    const matchResponse = await request("/api/matches", {
+      method: "POST",
+      body: {
+        status: "ongoing",
+        statEventSchema: {
+          id: schema.id,
+          version: schema.version
+        }
+      }
     });
+
+    expect(matchResponse.status).toBe(201);
+
+    const match: MatchResponse = await matchResponse.json();
+
+    expect(match.statEventSchema).toEqual({
+      id: schema.id,
+      version: schema.version
+    });
+
+    const firstResponse = await request(
+      `/api/matches/${match.id}/stat-events`,
+      {
+        method: "POST",
+        body: {
+          type: "number-sample",
+          playerId: player.id,
+          value: 2
+        }
+      }
+    );
+    const secondResponse = await request(
+      `/api/matches/${match.id}/stat-events`,
+      {
+        method: "POST",
+        body: {
+          type: "number-sample",
+          playerId: player.id,
+          value: 3
+        }
+      }
+    );
 
     expect(firstResponse.status).toBe(201);
     expect(secondResponse.status).toBe(201);
@@ -909,8 +1254,26 @@ describe("match stat events", () => {
   });
 
   it("assigns a schema to an existing match before stat events exist", async () => {
-    const schema = await createSchema();
-    const player = await createPlayer("late-schema");
+    const schemaResponse = await request("/api/stat-event-schemas", {
+      method: "POST",
+      body: {
+        name: uniqueName("schema"),
+        definition: baseDefinition()
+      }
+    });
+    const playerResponse = await request("/api/players", {
+      method: "POST",
+      body: {
+        externalId: `late-schema-${crypto.randomUUID()}`,
+        name: "late-schema"
+      }
+    });
+
+    expect(schemaResponse.status).toBe(201);
+    expect(playerResponse.status).toBe(201);
+
+    const schema: StatEventSchemaResponse = await schemaResponse.json();
+    const player: PlayerResponse = await playerResponse.json();
     const createResponse = await request("/api/matches", {
       method: "POST",
       body: {
@@ -940,11 +1303,17 @@ describe("match stat events", () => {
       version: schema.version
     });
 
-    const eventResponse = await addStatEvent(updatedMatch.id, {
-      type: "goal",
-      playerId: player.id,
-      value: 1
-    });
+    const eventResponse = await request(
+      `/api/matches/${updatedMatch.id}/stat-events`,
+      {
+        method: "POST",
+        body: {
+          type: "goal",
+          playerId: player.id,
+          value: 1
+        }
+      }
+    );
 
     expect(eventResponse.status).toBe(201);
   });
@@ -960,7 +1329,17 @@ describe("match stat events", () => {
         }
       }
     });
-    const schema = await createSchema();
+    const schemaResponse = await request("/api/stat-event-schemas", {
+      method: "POST",
+      body: {
+        name: uniqueName("schema"),
+        definition: baseDefinition()
+      }
+    });
+
+    expect(schemaResponse.status).toBe(201);
+
+    const schema: StatEventSchemaResponse = await schemaResponse.json();
     const unknownVersionResponse = await request("/api/matches", {
       method: "POST",
       body: {
@@ -977,17 +1356,59 @@ describe("match stat events", () => {
   });
 
   it("does not allow changing a match schema after stat events exist", async () => {
-    const schema = await createSchema();
-    const player = await createPlayer("schema-lock");
-    const match = await createMatch(schema);
+    const schemaResponse = await request("/api/stat-event-schemas", {
+      method: "POST",
+      body: {
+        name: uniqueName("schema"),
+        definition: baseDefinition()
+      }
+    });
+    const playerResponse = await request("/api/players", {
+      method: "POST",
+      body: {
+        externalId: `schema-lock-${crypto.randomUUID()}`,
+        name: "schema-lock"
+      }
+    });
 
-    expect(
-      await addStatEvent(match.id, {
-        type: "goal",
-        playerId: player.id,
-        value: 1
-      })
-    ).toHaveProperty("status", 201);
+    expect(schemaResponse.status).toBe(201);
+    expect(playerResponse.status).toBe(201);
+
+    const schema: StatEventSchemaResponse = await schemaResponse.json();
+    const player: PlayerResponse = await playerResponse.json();
+    const matchResponse = await request("/api/matches", {
+      method: "POST",
+      body: {
+        status: "ongoing",
+        statEventSchema: {
+          id: schema.id,
+          version: schema.version
+        }
+      }
+    });
+
+    expect(matchResponse.status).toBe(201);
+
+    const match: MatchResponse = await matchResponse.json();
+
+    expect(match.statEventSchema).toEqual({
+      id: schema.id,
+      version: schema.version
+    });
+
+    const eventResponse = await request(
+      `/api/matches/${match.id}/stat-events`,
+      {
+        method: "POST",
+        body: {
+          type: "goal",
+          playerId: player.id,
+          value: 1
+        }
+      }
+    );
+
+    expect(eventResponse.status).toBe(201);
 
     const publishResponse = await request(
       `/api/stat-event-schemas/${schema.id}/versions`,
@@ -1120,83 +1541,6 @@ function baseDefinition() {
       }
     ]
   };
-}
-
-async function createSchema(): Promise<StatEventSchemaResponse> {
-  return createSchemaFromDefinition(baseDefinition());
-}
-
-async function createSchemaFromDefinition(
-  definition: unknown
-): Promise<StatEventSchemaResponse> {
-  const response = await request("/api/stat-event-schemas", {
-    method: "POST",
-    body: {
-      name: uniqueName("schema"),
-      definition
-    }
-  });
-
-  expect(response.status).toBe(201);
-
-  return response.json();
-}
-
-async function createPlayer(label: string): Promise<PlayerResponse> {
-  const suffix = crypto.randomUUID();
-  const response = await request("/api/players", {
-    method: "POST",
-    body: {
-      externalId: `${label}-${suffix}`,
-      name: label.slice(0, 25)
-    }
-  });
-
-  expect(response.status).toBe(201);
-
-  return response.json();
-}
-
-async function createMatch(
-  schema: StatEventSchemaResponse
-): Promise<MatchResponse> {
-  const response = await request("/api/matches", {
-    method: "POST",
-    body: {
-      status: "ongoing",
-      statEventSchema: {
-        id: schema.id,
-        version: schema.version
-      }
-    }
-  });
-
-  expect(response.status).toBe(201);
-
-  const match: MatchResponse = await response.json();
-
-  expect(match.statEventSchema).toEqual({
-    id: schema.id,
-    version: schema.version
-  });
-
-  return match;
-}
-
-async function addStatEvent(
-  matchId: string,
-  body: {
-    type: string;
-    playerId: string;
-    value: unknown;
-    occurredAt?: string;
-    tick?: number;
-  }
-) {
-  return request(`/api/matches/${matchId}/stat-events`, {
-    method: "POST",
-    body
-  });
 }
 
 function uniqueName(prefix: string): string {

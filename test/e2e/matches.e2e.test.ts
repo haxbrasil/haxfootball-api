@@ -228,8 +228,26 @@ describe("matches", () => {
   });
 
   it("stores player events and exposes consolidated participation stints", async () => {
-    const firstPlayer = await createPlayer("switcher");
-    const secondPlayer = await createPlayer("receiver");
+    const firstPlayerResponse = await request("/api/players", {
+      method: "POST",
+      body: {
+        externalId: `switcher-${crypto.randomUUID()}`,
+        name: "switcher"
+      }
+    });
+    const secondPlayerResponse = await request("/api/players", {
+      method: "POST",
+      body: {
+        externalId: `receiver-${crypto.randomUUID()}`,
+        name: "receiver"
+      }
+    });
+
+    expect(firstPlayerResponse.status).toBe(201);
+    expect(secondPlayerResponse.status).toBe(201);
+
+    const firstPlayer: PlayerResponse = await firstPlayerResponse.json();
+    const secondPlayer: PlayerResponse = await secondPlayerResponse.json();
     const createResponse = await request("/api/matches", {
       method: "POST",
       body: {
@@ -318,7 +336,17 @@ describe("matches", () => {
   });
 
   it("closes a field stint when a player moves to spectators", async () => {
-    const player = await createPlayer("spectator-switch");
+    const playerResponse = await request("/api/players", {
+      method: "POST",
+      body: {
+        externalId: `spectator-switch-${crypto.randomUUID()}`,
+        name: "spectator-switch"
+      }
+    });
+
+    expect(playerResponse.status).toBe(201);
+
+    const player: PlayerResponse = await playerResponse.json();
     const response = await request("/api/matches", {
       method: "POST",
       body: {
@@ -368,7 +396,17 @@ describe("matches", () => {
   });
 
   it("keeps distinct room-player stints separate for the same player", async () => {
-    const player = await createPlayer("multi-room-id");
+    const playerResponse = await request("/api/players", {
+      method: "POST",
+      body: {
+        externalId: `multi-room-id-${crypto.randomUUID()}`,
+        name: "multi-room-id"
+      }
+    });
+
+    expect(playerResponse.status).toBe(201);
+
+    const player: PlayerResponse = await playerResponse.json();
     const response = await request("/api/matches", {
       method: "POST",
       body: {
@@ -422,7 +460,17 @@ describe("matches", () => {
   });
 
   it("closes all active stints for a player when leave has no room player ID", async () => {
-    const player = await createPlayer("leave-all");
+    const playerResponse = await request("/api/players", {
+      method: "POST",
+      body: {
+        externalId: `leave-all-${crypto.randomUUID()}`,
+        name: "leave-all"
+      }
+    });
+
+    expect(playerResponse.status).toBe(201);
+
+    const player: PlayerResponse = await playerResponse.json();
     const response = await request("/api/matches", {
       method: "POST",
       body: {
@@ -475,7 +523,17 @@ describe("matches", () => {
   });
 
   it("creates a new stint when a player rejoins after leaving", async () => {
-    const player = await createPlayer("rejoin");
+    const playerResponse = await request("/api/players", {
+      method: "POST",
+      body: {
+        externalId: `rejoin-${crypto.randomUUID()}`,
+        name: "rejoin"
+      }
+    });
+
+    expect(playerResponse.status).toBe(201);
+
+    const player: PlayerResponse = await playerResponse.json();
     const response = await request("/api/matches", {
       method: "POST",
       body: {
@@ -535,7 +593,17 @@ describe("matches", () => {
   });
 
   it("appends events only while a match is ongoing", async () => {
-    const player = await createPlayer("append");
+    const playerResponse = await request("/api/players", {
+      method: "POST",
+      body: {
+        externalId: `append-${crypto.randomUUID()}`,
+        name: "append"
+      }
+    });
+
+    expect(playerResponse.status).toBe(201);
+
+    const player: PlayerResponse = await playerResponse.json();
     const createResponse = await request("/api/matches", {
       method: "POST",
       body: {
@@ -610,7 +678,17 @@ describe("matches", () => {
   });
 
   it("continues event sequences and recomputes stints when appending events", async () => {
-    const player = await createPlayer("append-close");
+    const playerResponse = await request("/api/players", {
+      method: "POST",
+      body: {
+        externalId: `append-close-${crypto.randomUUID()}`,
+        name: "append-close"
+      }
+    });
+
+    expect(playerResponse.status).toBe(201);
+
+    const player: PlayerResponse = await playerResponse.json();
     const createResponse = await request("/api/matches", {
       method: "POST",
       body: {
@@ -665,8 +743,26 @@ describe("matches", () => {
   });
 
   it("replaces events and recomputes stints when updating an ongoing match", async () => {
-    const firstPlayer = await createPlayer("replace-first");
-    const secondPlayer = await createPlayer("replace-second");
+    const firstPlayerResponse = await request("/api/players", {
+      method: "POST",
+      body: {
+        externalId: `replace-first-${crypto.randomUUID()}`,
+        name: "replace-first"
+      }
+    });
+    const secondPlayerResponse = await request("/api/players", {
+      method: "POST",
+      body: {
+        externalId: `replace-second-${crypto.randomUUID()}`,
+        name: "replace-second"
+      }
+    });
+
+    expect(firstPlayerResponse.status).toBe(201);
+    expect(secondPlayerResponse.status).toBe(201);
+
+    const firstPlayer: PlayerResponse = await firstPlayerResponse.json();
+    const secondPlayer: PlayerResponse = await secondPlayerResponse.json();
     const createResponse = await request("/api/matches", {
       method: "POST",
       body: {
@@ -728,7 +824,17 @@ describe("matches", () => {
   });
 
   it("rejects invalid player events", async () => {
-    const player = await createPlayer("invalid-event");
+    const playerResponse = await request("/api/players", {
+      method: "POST",
+      body: {
+        externalId: `invalid-event-${crypto.randomUUID()}`,
+        name: "invalid-event"
+      }
+    });
+
+    expect(playerResponse.status).toBe(201);
+
+    const player: PlayerResponse = await playerResponse.json();
     const createResponse = await request("/api/matches", {
       method: "POST",
       body: {
@@ -864,7 +970,17 @@ describe("matches", () => {
   });
 
   it("associates a recording with a match once", async () => {
-    const recording = await createRecording();
+    const formData = new FormData();
+    formData.set("file", recordingFile());
+
+    const recordingResponse = await request("/api/recs", {
+      method: "POST",
+      body: formData
+    });
+
+    expect([200, 201]).toContain(recordingResponse.status);
+
+    const recording: RecordingResponse = await recordingResponse.json();
     const createResponse = await request("/api/matches", {
       method: "POST",
       body: {
@@ -1027,32 +1143,3 @@ describe("matches", () => {
     expect(recordingResponse.status).toBe(404);
   });
 });
-
-async function createPlayer(label: string): Promise<PlayerResponse> {
-  const suffix = crypto.randomUUID();
-  const response = await request("/api/players", {
-    method: "POST",
-    body: {
-      externalId: `${label}-${suffix}`,
-      name: label.slice(0, 25)
-    }
-  });
-
-  expect(response.status).toBe(201);
-
-  return response.json();
-}
-
-async function createRecording(): Promise<RecordingResponse> {
-  const formData = new FormData();
-  formData.set("file", recordingFile());
-
-  const response = await request("/api/recs", {
-    method: "POST",
-    body: formData
-  });
-
-  expect([200, 201]).toContain(response.status);
-
-  return response.json();
-}

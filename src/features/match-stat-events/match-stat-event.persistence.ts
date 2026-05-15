@@ -1,5 +1,6 @@
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/db/client";
+import { accounts } from "@/features/accounts/account.db";
 import type {
   MatchStatEventInput,
   MatchStatEventRow
@@ -77,12 +78,16 @@ export async function addMatchStatEvent(
     throw badRequest("Stat event value does not match the schema");
   }
 
-  const [player] = await db
-    .select()
+  const [playerRow] = await db
+    .select({
+      player: players,
+      account: accounts
+    })
     .from(players)
+    .leftJoin(accounts, eq(players.accountId, accounts.id))
     .where(eq(players.externalId, input.playerId));
 
-  if (!player) {
+  if (!playerRow) {
     throw notFound("Player not found");
   }
 
@@ -94,7 +99,7 @@ export async function addMatchStatEvent(
       schemaVersionId: schemaVersion.id,
       sequence: await nextMatchStatEventSequence(match.id),
       type: input.type,
-      playerId: player.id,
+      playerId: playerRow.player.id,
       value: input.value,
       occurredAt: input.occurredAt ?? null,
       tick: input.tick ?? null
@@ -103,7 +108,8 @@ export async function addMatchStatEvent(
 
   return {
     ...row,
-    player
+    player: playerRow.player,
+    account: playerRow.account
   };
 }
 
@@ -135,10 +141,12 @@ export async function listMatchStatEventsByMatchId(
       disabledAt: matchStatEvents.disabledAt,
       createdAt: matchStatEvents.createdAt,
       updatedAt: matchStatEvents.updatedAt,
-      player: players
+      player: players,
+      account: accounts
     })
     .from(matchStatEvents)
     .innerJoin(players, eq(matchStatEvents.playerId, players.id))
+    .leftJoin(accounts, eq(players.accountId, accounts.id))
     .where(
       and(
         eq(matchStatEvents.matchId, matchId),
@@ -185,18 +193,23 @@ export async function disableMatchStatEvent(
         .where(eq(matchStatEvents.id, existingEvent.id))
         .returning();
 
-  const [player] = await db
-    .select()
+  const [playerRow] = await db
+    .select({
+      player: players,
+      account: accounts
+    })
     .from(players)
+    .leftJoin(accounts, eq(players.accountId, accounts.id))
     .where(eq(players.id, event.playerId));
 
-  if (!player) {
+  if (!playerRow) {
     throw notFound("Player not found");
   }
 
   return {
     ...event,
-    player
+    player: playerRow.player,
+    account: playerRow.account
   };
 }
 

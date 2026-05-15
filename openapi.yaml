@@ -186,6 +186,43 @@ components:
       required:
         - valid
       type: object
+    ConfirmSessionBody:
+      allOf:
+        - $ref: "#/components/schemas/ResolveSessionBody"
+        - properties:
+            password:
+              maxLength: 19
+              minLength: 4
+              type: string
+          required:
+            - password
+          type: object
+      type: object
+    ConfirmSessionResponse:
+      anyOf:
+        - properties:
+            valid:
+              const: false
+              type: boolean
+          required:
+            - valid
+          type: object
+        - properties:
+            account:
+              $ref: "#/components/schemas/SessionAccount"
+            canonicalName:
+              type: string
+            playerId:
+              type: string
+            valid:
+              const: true
+              type: boolean
+          required:
+            - valid
+            - playerId
+            - account
+            - canonicalName
+          type: object
     CreateAccountBody:
       properties:
         externalId:
@@ -1093,6 +1130,90 @@ components:
         - commId
         - roomLink
       type: object
+    ResolveSessionBody:
+      properties:
+        auth:
+          anyOf:
+            - maxLength: 256
+              minLength: 1
+              type: string
+            - type: "null"
+          nullable: true
+        conn:
+          anyOf:
+            - maxLength: 256
+              minLength: 1
+              type: string
+            - type: "null"
+          nullable: true
+        name:
+          maxLength: 25
+          minLength: 1
+          pattern: .*[A-Za-z0-9].*
+          type: string
+        roomId:
+          maxLength: 64
+          minLength: 1
+          type: string
+        roomPlayerId:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - minimum: 0
+              type: integer
+          minimum: 0
+      required:
+        - roomId
+        - roomPlayerId
+        - name
+        - auth
+        - conn
+      type: object
+    ResolveSessionResponse:
+      anyOf:
+        - properties:
+            account:
+              type: "null"
+            playerId:
+              type: string
+            status:
+              const: guest
+              type: string
+          required:
+            - status
+            - playerId
+            - account
+          type: object
+        - properties:
+            account:
+              $ref: "#/components/schemas/SessionAccount"
+            canonicalName:
+              type: string
+            playerId:
+              type: string
+            status:
+              const: signed_in
+              type: string
+          required:
+            - status
+            - playerId
+            - account
+            - canonicalName
+          type: object
+        - properties:
+            account:
+              $ref: "#/components/schemas/SessionAccount"
+            playerId:
+              type: string
+            status:
+              const: password_required
+              type: string
+          required:
+            - status
+            - playerId
+            - account
+          type: object
     Role:
       properties:
         createdAt:
@@ -1450,6 +1571,20 @@ components:
       required:
         - id
         - version
+      type: object
+    SessionAccount:
+      properties:
+        externalId:
+          type: string
+        name:
+          type: string
+        uuid:
+          format: uuid
+          type: string
+      required:
+        - uuid
+        - name
+        - externalId
       type: object
     StatEventSchema:
       properties:
@@ -3934,6 +4069,80 @@ paths:
       summary: Report room ready for manual linking
       tags:
         - Rooms
+  /api/sessions/confirm:
+    post:
+      operationId: postApiSessionsConfirm
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfirmSessionBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfirmSessionResponse"
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Confirm room player session
+      tags:
+        - Sessions
+  /api/sessions/resolve:
+    post:
+      operationId: postApiSessionsResolve
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResolveSessionBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResolveSessionResponse"
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Resolve room player session
+      tags:
+        - Sessions
   /api/stat-event-schemas:
     get:
       operationId: getApiStat-event-schemas

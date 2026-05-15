@@ -23,6 +23,7 @@ import type {
   StatEventSchemaFamily,
   StatEventSchemaVersion
 } from "@/features/stat-event-schemas/stat-event-schema.db";
+import type { Account } from "@/features/accounts/account.db";
 import { paginatedResponseSchema } from "@lib";
 
 export const matchStatusSchema = t.Union([
@@ -126,6 +127,7 @@ export type MatchResponse = Static<typeof matchResponseSchema>;
 
 type PlayerRow = {
   player: Player;
+  account: Account | null;
 };
 
 export type MatchSummaryRow = {
@@ -170,14 +172,20 @@ export function toMatchResponse(row: MatchDetailRow): MatchResponse {
     events: row.events.map((event) => ({
       sequence: event.sequence,
       type: event.type,
-      player: toPlayerResponse({ player: event.player, account: null }),
+      player: toPlayerResponse({
+        player: event.player,
+        account: event.account
+      }),
       team: event.team,
       roomPlayerId: event.roomPlayerId,
       occurredAt: event.occurredAt,
       elapsedSeconds: event.elapsedSeconds
     })),
     participations: row.stints.map((stint) => ({
-      player: toPlayerResponse({ player: stint.player, account: null }),
+      player: toPlayerResponse({
+        player: stint.player,
+        account: stint.account
+      }),
       team: stint.team,
       roomPlayerId: stint.roomPlayerId,
       joinedAt: stint.joinedAt,

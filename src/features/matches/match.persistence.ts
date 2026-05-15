@@ -1,5 +1,6 @@
 import { asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db/client";
+import { accounts } from "@/features/accounts/account.db";
 import { matchStatEvents } from "@/features/match-stat-events/match-stat-event.db";
 import { deriveMatchStints } from "@/features/matches/match-stints.service";
 import type {
@@ -321,10 +322,12 @@ async function listMatchEvents(matchId: number) {
       occurredAt: matchPlayerEvents.occurredAt,
       elapsedSeconds: matchPlayerEvents.elapsedSeconds,
       createdAt: matchPlayerEvents.createdAt,
-      player: players
+      player: players,
+      account: accounts
     })
     .from(matchPlayerEvents)
     .innerJoin(players, eq(matchPlayerEvents.playerId, players.id))
+    .leftJoin(accounts, eq(players.accountId, accounts.id))
     .where(eq(matchPlayerEvents.matchId, matchId))
     .orderBy(asc(matchPlayerEvents.sequence));
 }
@@ -342,10 +345,12 @@ async function listMatchStints(matchId: number) {
       joinedElapsedSeconds: matchPlayerStints.joinedElapsedSeconds,
       leftElapsedSeconds: matchPlayerStints.leftElapsedSeconds,
       createdAt: matchPlayerStints.createdAt,
-      player: players
+      player: players,
+      account: accounts
     })
     .from(matchPlayerStints)
     .innerJoin(players, eq(matchPlayerStints.playerId, players.id))
+    .leftJoin(accounts, eq(players.accountId, accounts.id))
     .where(eq(matchPlayerStints.matchId, matchId))
     .orderBy(asc(matchPlayerStints.id));
 }

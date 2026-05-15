@@ -35,6 +35,9 @@ export async function createPlayer(
     .insert(players)
     .values({
       externalId: input.externalId,
+      identityKey: `player:${input.externalId}`,
+      roomId: input.externalId,
+      roomPlayerId: 0,
       name: input.name,
       country: input.country
     })

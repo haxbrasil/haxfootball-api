@@ -11,6 +11,7 @@ import { evaluateJsonExpression, type JsonObject } from "@lib";
 
 type PlayerMetricState = {
   player: MatchStatEventRow["player"];
+  account: MatchStatEventRow["account"];
   metrics: JsonObject;
 };
 
@@ -56,7 +57,7 @@ export function deriveMatchMetrics(
   }
 
   return states.map((state) => ({
-    player: toPlayerResponse({ player: state.player, account: null }),
+    player: toPlayerResponse({ player: state.player, account: state.account }),
     metrics: state.metrics
   }));
 }
@@ -88,6 +89,7 @@ function getPlayerMetricState(
 
   const state = {
     player: event.player,
+    account: event.account,
     metrics: {}
   };
 

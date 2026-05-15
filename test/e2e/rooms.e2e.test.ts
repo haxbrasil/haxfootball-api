@@ -218,31 +218,42 @@ afterAll(async () => {
 
 describe("rooms", () => {
   it("creates, lists, gets, and updates room programs", async () => {
-    const alpha = await createProgram({
-      name: uniqueName("alpha"),
-      title: "Alpha program",
-      description: "First room program",
-      haxballTokenEnvVar: "ROOM_ALPHA_TOKEN"
+    const alphaCreateResponse = await request("/api/room-programs", {
+      method: "POST",
+      body: roomProgramBody({
+        name: uniqueName("alpha"),
+        title: "Alpha program",
+        description: "First room program",
+        haxballTokenEnvVar: "ROOM_ALPHA_TOKEN"
+      })
     });
-    const zeta = await createProgram({
-      name: uniqueName("zeta"),
-      title: "Zeta program",
-      description: "Second room program",
-      supportsManualLinking: true,
-      haxballTokenEnvVar: "ROOM_ZETA_TOKEN",
-      launchConfigFields: [
-        {
-          key: "arenaName",
-          displayName: "Arena name",
-          valueType: "string",
-          required: false,
-          defaultValue: "academy",
-          secret: false,
-          envVar: "ARENA_NAME"
-        }
-      ]
+    const zetaCreateResponse = await request("/api/room-programs", {
+      method: "POST",
+      body: roomProgramBody({
+        name: uniqueName("zeta"),
+        title: "Zeta program",
+        description: "Second room program",
+        supportsManualLinking: true,
+        haxballTokenEnvVar: "ROOM_ZETA_TOKEN",
+        launchConfigFields: [
+          {
+            key: "arenaName",
+            displayName: "Arena name",
+            valueType: "string",
+            required: false,
+            defaultValue: "academy",
+            secret: false,
+            envVar: "ARENA_NAME"
+          }
+        ]
+      })
     });
 
+    expect(alphaCreateResponse.status).toBe(201);
+    expect(zetaCreateResponse.status).toBe(201);
+
+    const alpha: RoomProgramResponse = await alphaCreateResponse.json();
+    const zeta: RoomProgramResponse = await zetaCreateResponse.json();
     const listResponse = await request("/api/room-programs");
     const getResponse = await request(`/api/room-programs/${zeta.id}`);
     const updateResponse = await request(`/api/room-programs/${alpha.id}`, {
@@ -388,15 +399,26 @@ describe("rooms", () => {
   });
 
   it("creates, lists, updates, and validates room proxy endpoints", async () => {
-    const alpha = await createProxy({
-      key: "proxy-alpha",
-      outboundIp: "10.0.0.181"
+    const alphaCreateResponse = await request("/api/room-proxy-endpoints", {
+      method: "POST",
+      body: roomProxyBody({
+        key: "proxy-alpha",
+        outboundIp: "10.0.0.181"
+      })
     });
-    const zeta = await createProxy({
-      key: "proxy-zeta",
-      outboundIp: "10.0.0.131"
+    const zetaCreateResponse = await request("/api/room-proxy-endpoints", {
+      method: "POST",
+      body: roomProxyBody({
+        key: "proxy-zeta",
+        outboundIp: "10.0.0.131"
+      })
     });
 
+    expect(alphaCreateResponse.status).toBe(201);
+    expect(zetaCreateResponse.status).toBe(201);
+
+    const alpha: RoomProxyResponse = await alphaCreateResponse.json();
+    const zeta: RoomProxyResponse = await zetaCreateResponse.json();
     const listResponse = await request("/api/room-proxy-endpoints");
     const updateResponse = await request(
       `/api/room-proxy-endpoints/${alpha.id}`,
@@ -623,38 +645,65 @@ describe("rooms", () => {
       }
     });
 
-    const program = await createProgram({
-      releaseSource: {
-        owner: "haxbrasil",
-        repo: "empty-room",
-        assetPattern: "room-{tag}.tgz"
-      },
-      launchConfigFields: [
-        {
-          key: "mode",
-          displayName: "Mode",
-          valueType: "string",
-          required: true,
-          enumValues: ["arcade", "league"],
-          secret: false,
-          envVar: "ROOM_MODE"
+    const programResponse = await request("/api/room-programs", {
+      method: "POST",
+      body: roomProgramBody({
+        releaseSource: {
+          owner: "haxbrasil",
+          repo: "empty-room",
+          assetPattern: "room-{tag}.tgz"
         },
-        {
-          key: "players",
-          displayName: "Players",
-          valueType: "number",
-          required: false,
-          defaultValue: 8,
-          minimum: 2,
-          maximum: 10,
-          secret: false,
-          envVar: "ROOM_PLAYERS"
-        }
-      ]
+        launchConfigFields: [
+          {
+            key: "mode",
+            displayName: "Mode",
+            valueType: "string",
+            required: true,
+            enumValues: ["arcade", "league"],
+            secret: false,
+            envVar: "ROOM_MODE"
+          },
+          {
+            key: "players",
+            displayName: "Players",
+            valueType: "number",
+            required: false,
+            defaultValue: 8,
+            minimum: 2,
+            maximum: 10,
+            secret: false,
+            envVar: "ROOM_PLAYERS"
+          }
+        ]
+      })
     });
-    const version = await createVersion(program.id, "v1.0.0", {
-      installStrategy: undefined
+
+    expect(programResponse.status).toBe(201);
+
+    const program: RoomProgramResponse = await programResponse.json();
+    const versionResponse = await request(
+      `/api/room-programs/${program.id}/versions`,
+      {
+        method: "POST",
+        body: roomVersionBody("v1.0.0", {
+          installStrategy: undefined
+        })
+      }
+    );
+
+    expect(versionResponse.status).toBe(201);
+
+    const version: RoomVersionResponse = await versionResponse.json();
+
+    const defaultVersionProgramResponse = await request("/api/room-programs", {
+      method: "POST",
+      body: roomProgramBody()
     });
+
+    expect(defaultVersionProgramResponse.status).toBe(201);
+
+    const defaultVersionProgram: RoomProgramResponse =
+      await defaultVersionProgramResponse.json();
 
     expect(version).toMatchObject({
       programId: program.id,
@@ -666,7 +715,6 @@ describe("rooms", () => {
       nodeEntrypoint: "dist/server.js",
       installStrategy: "none"
     });
-    const defaultVersionProgram = await createProgram();
     const defaultVersionResponse = await request(
       `/api/room-programs/${defaultVersionProgram.id}/versions`,
       {
@@ -840,24 +888,39 @@ describe("rooms", () => {
   });
 
   it("discovers GitHub releases, skips missing or unstable releases, and respects the launch cache", async () => {
-    const program = await createProgram({
-      releaseSource: {
-        owner: "haxbrasil",
-        repo: "test-room",
-        assetPattern: "room-{tag}.tgz"
-      },
-      launchConfigFields: [
-        {
-          key: "envCapture",
-          displayName: "Environment capture",
-          valueType: "string",
-          required: true,
-          secret: true,
-          envVar: "ROOM_E2E_ENV_OUT"
-        }
-      ]
+    const programResponse = await request("/api/room-programs", {
+      method: "POST",
+      body: roomProgramBody({
+        releaseSource: {
+          owner: "haxbrasil",
+          repo: "test-room",
+          assetPattern: "room-{tag}.tgz"
+        },
+        launchConfigFields: [
+          {
+            key: "envCapture",
+            displayName: "Environment capture",
+            valueType: "string",
+            required: true,
+            secret: true,
+            envVar: "ROOM_E2E_ENV_OUT"
+          }
+        ]
+      })
     });
-    await createVersion(program.id, "v1.0.0");
+
+    expect(programResponse.status).toBe(201);
+
+    const program: RoomProgramResponse = await programResponse.json();
+    const versionResponse = await request(
+      `/api/room-programs/${program.id}/versions`,
+      {
+        method: "POST",
+        body: roomVersionBody("v1.0.0")
+      }
+    );
+
+    expect(versionResponse.status).toBe(201);
 
     const discoverResponse = await request(
       `/api/room-programs/${program.id}/versions/discover`,
@@ -919,24 +982,40 @@ describe("rooms", () => {
     ).toEqual(["v1.0.0", "v2.0.0", "v9.0.0-beta"]);
     expect(repeatedDiscoveredVersions).toEqual([]);
 
-    const latestProgram = await createProgram({
-      releaseSource: {
-        owner: "haxbrasil",
-        repo: "latest-room",
-        assetPattern: "room-{tag}.tgz"
-      },
-      launchConfigFields: [
-        {
-          key: "envCapture",
-          displayName: "Environment capture",
-          valueType: "string",
-          required: true,
-          secret: true,
-          envVar: "ROOM_E2E_ENV_OUT"
-        }
-      ]
+    const latestProgramResponse = await request("/api/room-programs", {
+      method: "POST",
+      body: roomProgramBody({
+        releaseSource: {
+          owner: "haxbrasil",
+          repo: "latest-room",
+          assetPattern: "room-{tag}.tgz"
+        },
+        launchConfigFields: [
+          {
+            key: "envCapture",
+            displayName: "Environment capture",
+            valueType: "string",
+            required: true,
+            secret: true,
+            envVar: "ROOM_E2E_ENV_OUT"
+          }
+        ]
+      })
     });
-    await createVersion(latestProgram.id, "v1.0.0");
+
+    expect(latestProgramResponse.status).toBe(201);
+
+    const latestProgram: RoomProgramResponse =
+      await latestProgramResponse.json();
+    const latestVersionResponse = await request(
+      `/api/room-programs/${latestProgram.id}/versions`,
+      {
+        method: "POST",
+        body: roomVersionBody("v1.0.0")
+      }
+    );
+
+    expect(latestVersionResponse.status).toBe(201);
 
     assetRequests = 0;
 
@@ -987,8 +1066,21 @@ describe("rooms", () => {
       }
     });
     expect(assetRequests).toBe(1);
-    await closeRoom(firstRoom.id);
-    await closeRoom(secondRoom.id);
+    const closeFirstRoomResponse = await request(
+      `/api/rooms/${firstRoom.id}/close`,
+      {
+        method: "POST"
+      }
+    );
+    const closeSecondRoomResponse = await request(
+      `/api/rooms/${secondRoom.id}/close`,
+      {
+        method: "POST"
+      }
+    );
+
+    expect(closeFirstRoomResponse.status).toBe(200);
+    expect(closeSecondRoomResponse.status).toBe(200);
 
     const latestVersionsResponse = await request(
       `/api/room-programs/${latestProgram.id}/versions`
@@ -1001,14 +1093,29 @@ describe("rooms", () => {
       )
     ).toEqual(["v1.0.0", "v2.0.0"]);
 
-    const emptyProgram = await createProgram({
-      releaseSource: {
-        owner: "haxbrasil",
-        repo: "empty-room",
-        assetPattern: "room-{tag}.tgz"
-      }
+    const emptyProgramResponse = await request("/api/room-programs", {
+      method: "POST",
+      body: roomProgramBody({
+        releaseSource: {
+          owner: "haxbrasil",
+          repo: "empty-room",
+          assetPattern: "room-{tag}.tgz"
+        }
+      })
     });
-    await createVersion(emptyProgram.id, "v1.0.0");
+
+    expect(emptyProgramResponse.status).toBe(201);
+
+    const emptyProgram: RoomProgramResponse = await emptyProgramResponse.json();
+    const emptyVersionResponse = await request(
+      `/api/room-programs/${emptyProgram.id}/versions`,
+      {
+        method: "POST",
+        body: roomVersionBody("v1.0.0")
+      }
+    );
+
+    expect(emptyVersionResponse.status).toBe(201);
 
     const emptyLatestResponse = await request("/api/rooms", {
       method: "POST",
@@ -1027,14 +1134,30 @@ describe("rooms", () => {
       }
     });
 
-    const missingAssetProgram = await createProgram({
-      releaseSource: {
-        owner: "haxbrasil",
-        repo: "test-room",
-        assetPattern: "room-{tag}.tgz"
-      }
+    const missingAssetProgramResponse = await request("/api/room-programs", {
+      method: "POST",
+      body: roomProgramBody({
+        releaseSource: {
+          owner: "haxbrasil",
+          repo: "test-room",
+          assetPattern: "room-{tag}.tgz"
+        }
+      })
     });
-    await createVersion(missingAssetProgram.id, "v1.0.0");
+
+    expect(missingAssetProgramResponse.status).toBe(201);
+
+    const missingAssetProgram: RoomProgramResponse =
+      await missingAssetProgramResponse.json();
+    const missingAssetVersionResponse = await request(
+      `/api/room-programs/${missingAssetProgram.id}/versions`,
+      {
+        method: "POST",
+        body: roomVersionBody("v1.0.0")
+      }
+    );
+
+    expect(missingAssetVersionResponse.status).toBe(201);
 
     const missingAssetLatestResponse = await request("/api/rooms", {
       method: "POST",
@@ -1053,13 +1176,21 @@ describe("rooms", () => {
       }
     });
 
-    const noKnownVersionProgram = await createProgram({
-      releaseSource: {
-        owner: "haxbrasil",
-        repo: "single-room",
-        assetPattern: "room-{tag}.tgz"
-      }
+    const noKnownVersionProgramResponse = await request("/api/room-programs", {
+      method: "POST",
+      body: roomProgramBody({
+        releaseSource: {
+          owner: "haxbrasil",
+          repo: "single-room",
+          assetPattern: "room-{tag}.tgz"
+        }
+      })
     });
+
+    expect(noKnownVersionProgramResponse.status).toBe(201);
+
+    const noKnownVersionProgram: RoomProgramResponse =
+      await noKnownVersionProgramResponse.json();
     const noKnownVersionLatestResponse = await request("/api/rooms", {
       method: "POST",
       body: {
@@ -1081,21 +1212,36 @@ describe("rooms", () => {
 
   it("launches rooms with default launch config mapping and custom token env vars", async () => {
     const envPath = fixtureEnvPath();
-    const program = await createProgram({
-      supportsManualLinking: false,
-      haxballTokenEnvVar: "ROOM_SESSION_TOKEN",
-      launchConfigFields: [
-        {
-          key: "envCapture",
-          displayName: "Environment capture",
-          valueType: "string",
-          required: true,
-          secret: true,
-          envVar: "ROOM_E2E_ENV_OUT"
-        }
-      ]
+    const programResponse = await request("/api/room-programs", {
+      method: "POST",
+      body: roomProgramBody({
+        supportsManualLinking: false,
+        haxballTokenEnvVar: "ROOM_SESSION_TOKEN",
+        launchConfigFields: [
+          {
+            key: "envCapture",
+            displayName: "Environment capture",
+            valueType: "string",
+            required: true,
+            secret: true,
+            envVar: "ROOM_E2E_ENV_OUT"
+          }
+        ]
+      })
     });
-    await createVersion(program.id, "v1.0.0");
+
+    expect(programResponse.status).toBe(201);
+
+    const program: RoomProgramResponse = await programResponse.json();
+    const versionResponse = await request(
+      `/api/room-programs/${program.id}/versions`,
+      {
+        method: "POST",
+        body: roomVersionBody("v1.0.0")
+      }
+    );
+
+    expect(versionResponse.status).toBe(201);
 
     const launchResponse = await request("/api/rooms", {
       method: "POST",
@@ -1154,52 +1300,71 @@ describe("rooms", () => {
         message: "Room program does not support manual linking"
       }
     });
-    await closeRoom(room.id);
+    const closeResponse = await request(`/api/rooms/${room.id}/close`, {
+      method: "POST"
+    });
+
+    expect(closeResponse.status).toBe(200);
   });
 
   it("passes overridden default launch config mappings and custom defaults", async () => {
     const envPath = fixtureEnvPath();
-    const program = await createProgram({
-      launchConfigFields: [
-        {
-          key: "roomName",
-          displayName: "Room title",
-          valueType: "string",
-          required: false,
-          secret: false,
-          envVar: "ROOM_TITLE"
-        },
-        {
-          key: "roomPublic",
-          displayName: "Visible",
-          valueType: "boolean",
-          required: false,
-          defaultValue: false,
-          secret: false,
-          envVar: "ROOM_IS_PUBLIC"
-        },
-        {
-          key: "maxPlayers",
-          displayName: "Max players",
-          valueType: "number",
-          required: false,
-          defaultValue: 12,
-          minimum: 2,
-          maximum: 30,
-          secret: false,
-          envVar: "MAX_PLAYERS"
-        },
-        {
-          key: "envCapture",
-          displayName: "Environment capture",
-          valueType: "string",
-          required: true,
-          secret: true,
-          envVar: "ROOM_E2E_ENV_OUT"
-        }
-      ]
+    const programResponse = await request("/api/room-programs", {
+      method: "POST",
+      body: roomProgramBody({
+        launchConfigFields: [
+          {
+            key: "roomName",
+            displayName: "Room title",
+            valueType: "string",
+            required: false,
+            secret: false,
+            envVar: "ROOM_TITLE"
+          },
+          {
+            key: "roomPublic",
+            displayName: "Visible",
+            valueType: "boolean",
+            required: false,
+            defaultValue: false,
+            secret: false,
+            envVar: "ROOM_IS_PUBLIC"
+          },
+          {
+            key: "maxPlayers",
+            displayName: "Max players",
+            valueType: "number",
+            required: false,
+            defaultValue: 12,
+            minimum: 2,
+            maximum: 30,
+            secret: false,
+            envVar: "MAX_PLAYERS"
+          },
+          {
+            key: "envCapture",
+            displayName: "Environment capture",
+            valueType: "string",
+            required: true,
+            secret: true,
+            envVar: "ROOM_E2E_ENV_OUT"
+          }
+        ]
+      })
     });
-    await createVersion(program.id, "v1.0.0");
+
+    expect(programResponse.status).toBe(201);
+
+    const program: RoomProgramResponse = await programResponse.json();
+    const versionResponse = await request(
+      `/api/room-programs/${program.id}/versions`,
+      {
+        method: "POST",
+        body: roomVersionBody("v1.0.0")
+      }
+    );
+
+    expect(versionResponse.status).toBe(201);
 
     const launchResponse = await request("/api/rooms", {
       method: "POST",
@@ -1235,34 +1400,53 @@ describe("rooms", () => {
     });
     expect(capturedEnv.ROOM_NAME).toBeUndefined();
     expect(capturedEnv.ROOM_PUBLIC).toBeUndefined();
-    await closeRoom(room.id);
+    const closeResponse = await request(`/api/rooms/${room.id}/close`, {
+      method: "POST"
+    });
+
+    expect(closeResponse.status).toBe(200);
   });
 
   it("launches manual-link rooms and reports readiness only with the matching comm ID", async () => {
     const envPath = fixtureEnvPath();
-    const program = await createProgram({
-      supportsManualLinking: true,
-      launchConfigFields: [
-        {
-          key: "envCapture",
-          displayName: "Environment capture",
-          valueType: "string",
-          required: true,
-          secret: true,
-          envVar: "ROOM_E2E_ENV_OUT"
-        },
-        {
-          key: "autoLink",
-          displayName: "Automatic link",
-          valueType: "string",
-          required: false,
-          defaultValue: "0",
-          secret: false,
-          envVar: "AUTO_LINK"
-        }
-      ]
+    const programResponse = await request("/api/room-programs", {
+      method: "POST",
+      body: roomProgramBody({
+        supportsManualLinking: true,
+        launchConfigFields: [
+          {
+            key: "envCapture",
+            displayName: "Environment capture",
+            valueType: "string",
+            required: true,
+            secret: true,
+            envVar: "ROOM_E2E_ENV_OUT"
+          },
+          {
+            key: "autoLink",
+            displayName: "Automatic link",
+            valueType: "string",
+            required: false,
+            defaultValue: "0",
+            secret: false,
+            envVar: "AUTO_LINK"
+          }
+        ]
+      })
     });
-    await createVersion(program.id, "v1.0.0");
+
+    expect(programResponse.status).toBe(201);
+
+    const program: RoomProgramResponse = await programResponse.json();
+    const versionResponse = await request(
+      `/api/room-programs/${program.id}/versions`,
+      {
+        method: "POST",
+        body: roomVersionBody("v1.0.0")
+      }
+    );
+
+    expect(versionResponse.status).toBe(201);
 
     const launchResponse = await request("/api/rooms", {
       method: "POST",
@@ -1369,95 +1553,160 @@ describe("rooms", () => {
     expect(JSON.stringify(readyRoom)).not.toContain("manual-token");
     expect(JSON.stringify(readyRoom)).not.toContain(String(commId));
     expect(JSON.stringify(readyRoom)).not.toContain(roomApiJwt);
-    await closeRoom(room.id);
+    const closeResponse = await request(`/api/rooms/${room.id}/close`, {
+      method: "POST"
+    });
+
+    expect(closeResponse.status).toBe(200);
   });
 
   it("tracks runtime lifecycle for delayed links, no links, exits, and close signals", async () => {
-    await disableAllProxyEndpoints();
+    const proxyEndpointsResponse = await request("/api/room-proxy-endpoints");
 
-    const program = await createProgram({
-      launchConfigFields: [
+    expect(proxyEndpointsResponse.status).toBe(200);
+
+    for (const endpoint of await paginatedItems<RoomProxyResponse>(
+      proxyEndpointsResponse
+    )) {
+      const disableResponse = await request(
+        `/api/room-proxy-endpoints/${endpoint.id}`,
         {
-          key: "envCapture",
-          displayName: "Environment capture",
-          valueType: "string",
-          required: true,
-          secret: true,
-          envVar: "ROOM_E2E_ENV_OUT"
-        },
-        {
-          key: "autoLink",
-          displayName: "Automatic link",
-          valueType: "string",
-          required: false,
-          secret: false,
-          envVar: "AUTO_LINK"
-        },
-        {
-          key: "autoLinkDelay",
-          displayName: "Automatic link delay",
-          valueType: "number",
-          required: false,
-          secret: false,
-          envVar: "AUTO_LINK_DELAY_MS"
-        },
-        {
-          key: "exitAfterEnvCapture",
-          displayName: "Exit after env capture",
-          valueType: "boolean",
-          required: false,
-          secret: false,
-          envVar: "EXIT_AFTER_ENV_CAPTURE"
-        },
-        {
-          key: "sigtermOut",
-          displayName: "SIGTERM output",
-          valueType: "string",
-          required: false,
-          secret: true,
-          envVar: "SIGTERM_OUT"
+          method: "PATCH",
+          body: {
+            enabled: false
+          }
         }
-      ]
-    });
-    await createVersion(program.id, "v1.0.0");
+      );
 
-    const delayedRoom = await launchRoom({
-      programId: program.id,
-      launchConfig: {
-        envCapture: fixtureEnvPath(),
-        autoLinkDelay: 100
-      }
+      expect(disableResponse.status).toBe(200);
+    }
+
+    const programResponse = await request("/api/room-programs", {
+      method: "POST",
+      body: roomProgramBody({
+        launchConfigFields: [
+          {
+            key: "envCapture",
+            displayName: "Environment capture",
+            valueType: "string",
+            required: true,
+            secret: true,
+            envVar: "ROOM_E2E_ENV_OUT"
+          },
+          {
+            key: "autoLink",
+            displayName: "Automatic link",
+            valueType: "string",
+            required: false,
+            secret: false,
+            envVar: "AUTO_LINK"
+          },
+          {
+            key: "autoLinkDelay",
+            displayName: "Automatic link delay",
+            valueType: "number",
+            required: false,
+            secret: false,
+            envVar: "AUTO_LINK_DELAY_MS"
+          },
+          {
+            key: "exitAfterEnvCapture",
+            displayName: "Exit after env capture",
+            valueType: "boolean",
+            required: false,
+            secret: false,
+            envVar: "EXIT_AFTER_ENV_CAPTURE"
+          },
+          {
+            key: "sigtermOut",
+            displayName: "SIGTERM output",
+            valueType: "string",
+            required: false,
+            secret: true,
+            envVar: "SIGTERM_OUT"
+          }
+        ]
+      })
     });
-    const reconciledLinkRoom = await launchRoom({
-      programId: program.id,
-      launchConfig: {
-        envCapture: fixtureEnvPath(),
-        autoLinkDelay: 800
+
+    expect(programResponse.status).toBe(201);
+
+    const program: RoomProgramResponse = await programResponse.json();
+    const versionResponse = await request(
+      `/api/room-programs/${program.id}/versions`,
+      {
+        method: "POST",
+        body: roomVersionBody("v1.0.0")
       }
+    );
+
+    expect(versionResponse.status).toBe(201);
+
+    const delayedRoomResponse = await request("/api/rooms", {
+      method: "POST",
+      body: roomLaunchBody({
+        programId: program.id,
+        launchConfig: {
+          envCapture: fixtureEnvPath(),
+          autoLinkDelay: 100
+        }
+      })
     });
-    const noLinkRoom = await launchRoom({
-      programId: program.id,
-      launchConfig: {
-        envCapture: fixtureEnvPath(),
-        autoLink: "0"
-      }
+    const reconciledLinkRoomResponse = await request("/api/rooms", {
+      method: "POST",
+      body: roomLaunchBody({
+        programId: program.id,
+        launchConfig: {
+          envCapture: fixtureEnvPath(),
+          autoLinkDelay: 800
+        }
+      })
     });
-    const exitedRoom = await launchRoom({
-      programId: program.id,
-      launchConfig: {
-        envCapture: fixtureEnvPath(),
-        autoLink: "0",
-        exitAfterEnvCapture: true
-      }
+    const noLinkRoomResponse = await request("/api/rooms", {
+      method: "POST",
+      body: roomLaunchBody({
+        programId: program.id,
+        launchConfig: {
+          envCapture: fixtureEnvPath(),
+          autoLink: "0"
+        }
+      })
+    });
+    const exitedRoomResponse = await request("/api/rooms", {
+      method: "POST",
+      body: roomLaunchBody({
+        programId: program.id,
+        launchConfig: {
+          envCapture: fixtureEnvPath(),
+          autoLink: "0",
+          exitAfterEnvCapture: true
+        }
+      })
     });
     const sigtermPath = join(fixtureRoot, `${crypto.randomUUID()}.sigterm`);
-    const signalRoom = await launchRoom({
-      programId: program.id,
-      launchConfig: {
-        envCapture: fixtureEnvPath(),
-        sigtermOut: sigtermPath
-      }
+    const signalRoomResponse = await request("/api/rooms", {
+      method: "POST",
+      body: roomLaunchBody({
+        programId: program.id,
+        launchConfig: {
+          envCapture: fixtureEnvPath(),
+          sigtermOut: sigtermPath
+        }
+      })
     });
+
+    expect(delayedRoomResponse.status).toBe(201);
+    expect(reconciledLinkRoomResponse.status).toBe(201);
+    expect(noLinkRoomResponse.status).toBe(201);
+    expect(exitedRoomResponse.status).toBe(201);
+    expect(signalRoomResponse.status).toBe(201);
+
+    const delayedRoom: RoomLaunchResponse = await delayedRoomResponse.json();
+    const reconciledLinkRoom: RoomLaunchResponse =
+      await reconciledLinkRoomResponse.json();
+    const noLinkRoom: RoomLaunchResponse = await noLinkRoomResponse.json();
+    const exitedRoom: RoomLaunchResponse = await exitedRoomResponse.json();
+    const signalRoom: RoomLaunchResponse = await signalRoomResponse.json();
 
     expect(delayedRoom).toMatchObject({
       state: "running",
@@ -1476,14 +1725,50 @@ describe("rooms", () => {
       roomLink: null
     });
 
-    const reconciledExitedRoom = await waitForRoomState(
-      exitedRoom.id,
-      "closed"
-    );
-    const reconciledRunningRoom = await waitForRoomState(
-      reconciledLinkRoom.id,
-      "running"
-    );
+    let reconciledExitedRoom: RoomLaunchResponse | undefined;
+
+    for (let attempt = 0; attempt < 40; attempt += 1) {
+      const response = await request(`/api/rooms/${exitedRoom.id}`);
+
+      expect(response.status).toBe(200);
+
+      const room = (await response.json()) as RoomLaunchResponse;
+
+      if (room.state === "closed") {
+        reconciledExitedRoom = room;
+        break;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+
+    if (!reconciledExitedRoom) {
+      throw new Error(`Room ${exitedRoom.id} did not reach state closed`);
+    }
+
+    let reconciledRunningRoom: RoomLaunchResponse | undefined;
+
+    for (let attempt = 0; attempt < 40; attempt += 1) {
+      const response = await request(`/api/rooms/${reconciledLinkRoom.id}`);
+
+      expect(response.status).toBe(200);
+
+      const room = (await response.json()) as RoomLaunchResponse;
+
+      if (room.state === "running") {
+        reconciledRunningRoom = room;
+        break;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+
+    if (!reconciledRunningRoom) {
+      throw new Error(
+        `Room ${reconciledLinkRoom.id} did not reach state running`
+      );
+    }
+
     const signalCloseResponse = await request(
       `/api/rooms/${signalRoom.id}/close`,
       {
@@ -1505,69 +1790,166 @@ describe("rooms", () => {
     });
     await waitForFile(sigtermPath);
 
-    await closeRoom(delayedRoom.id);
-    await closeRoom(reconciledLinkRoom.id);
-    await closeRoom(noLinkRoom.id);
+    const delayedCloseResponse = await request(
+      `/api/rooms/${delayedRoom.id}/close`,
+      {
+        method: "POST"
+      }
+    );
+    const reconciledLinkCloseResponse = await request(
+      `/api/rooms/${reconciledLinkRoom.id}/close`,
+      {
+        method: "POST"
+      }
+    );
+    const noLinkCloseResponse = await request(
+      `/api/rooms/${noLinkRoom.id}/close`,
+      {
+        method: "POST"
+      }
+    );
+
+    expect(delayedCloseResponse.status).toBe(200);
+    expect(reconciledLinkCloseResponse.status).toBe(200);
+    expect(noLinkCloseResponse.status).toBe(200);
   });
 
   it("assigns proxies by capacity, preserves public slots, and honors explicit overrides", async () => {
-    const program = await createProgram({
-      launchConfigFields: [
-        {
-          key: "envCapture",
-          displayName: "Environment capture",
-          valueType: "string",
-          required: true,
-          secret: true,
-          envVar: "ROOM_E2E_ENV_OUT"
-        }
-      ]
+    const programResponse = await request("/api/room-programs", {
+      method: "POST",
+      body: roomProgramBody({
+        launchConfigFields: [
+          {
+            key: "envCapture",
+            displayName: "Environment capture",
+            valueType: "string",
+            required: true,
+            secret: true,
+            envVar: "ROOM_E2E_ENV_OUT"
+          }
+        ]
+      })
     });
-    await createVersion(program.id, "v1.0.0");
-    await disableAllProxyEndpoints();
 
-    const noProxyRoom = await launchRoom({
-      programId: program.id,
-      launchConfig: {
-        envCapture: fixtureEnvPath()
+    expect(programResponse.status).toBe(201);
+
+    const program: RoomProgramResponse = await programResponse.json();
+    const versionResponse = await request(
+      `/api/room-programs/${program.id}/versions`,
+      {
+        method: "POST",
+        body: roomVersionBody("v1.0.0")
       }
+    );
+    const proxyEndpointsResponse = await request("/api/room-proxy-endpoints");
+
+    expect(versionResponse.status).toBe(201);
+    expect(proxyEndpointsResponse.status).toBe(200);
+
+    for (const endpoint of await paginatedItems<RoomProxyResponse>(
+      proxyEndpointsResponse
+    )) {
+      const disableResponse = await request(
+        `/api/room-proxy-endpoints/${endpoint.id}`,
+        {
+          method: "PATCH",
+          body: {
+            enabled: false
+          }
+        }
+      );
+
+      expect(disableResponse.status).toBe(200);
+    }
+
+    const noProxyRoomResponse = await request("/api/rooms", {
+      method: "POST",
+      body: roomLaunchBody({
+        programId: program.id,
+        launchConfig: {
+          envCapture: fixtureEnvPath()
+        }
+      })
     });
+
+    expect(noProxyRoomResponse.status).toBe(201);
+
+    const noProxyRoom: RoomLaunchResponse = await noProxyRoomResponse.json();
 
     expect(noProxyRoom.proxyEndpoint).toBeNull();
     expect(noProxyRoom.launchConfig.proxy).toBeUndefined();
-    await closeRoom(noProxyRoom.id);
+    const noProxyCloseResponse = await request(
+      `/api/rooms/${noProxyRoom.id}/close`,
+      {
+        method: "POST"
+      }
+    );
 
-    const proxyAlpha = await createProxy({
-      key: "proxy-alpha-capacity",
-      outboundIp: "10.0.0.241"
+    expect(noProxyCloseResponse.status).toBe(200);
+
+    const proxyAlphaResponse = await request("/api/room-proxy-endpoints", {
+      method: "POST",
+      body: roomProxyBody({
+        key: "proxy-alpha-capacity",
+        outboundIp: "10.0.0.241"
+      })
     });
-    const proxyBeta = await createProxy({
-      key: "proxy-beta-capacity",
-      outboundIp: "10.0.0.242"
+    const proxyBetaResponse = await request("/api/room-proxy-endpoints", {
+      method: "POST",
+      body: roomProxyBody({
+        key: "proxy-beta-capacity",
+        outboundIp: "10.0.0.242"
+      })
     });
-    const proxyGamma = await createProxy({
-      key: "proxy-gamma-disabled",
-      outboundIp: "10.0.0.243"
+    const proxyGammaResponse = await request("/api/room-proxy-endpoints", {
+      method: "POST",
+      body: roomProxyBody({
+        key: "proxy-gamma-disabled",
+        outboundIp: "10.0.0.243"
+      })
     });
+
+    expect(proxyAlphaResponse.status).toBe(201);
+    expect(proxyBetaResponse.status).toBe(201);
+    expect(proxyGammaResponse.status).toBe(201);
+
+    const proxyAlpha: RoomProxyResponse = await proxyAlphaResponse.json();
+    const proxyBeta: RoomProxyResponse = await proxyBetaResponse.json();
+    const proxyGamma: RoomProxyResponse = await proxyGammaResponse.json();
 
     const explicitKeyEnvPath = fixtureEnvPath();
-    const explicitKeyRoom = await launchRoom({
-      programId: program.id,
-      launchConfig: {
-        roomPublic: false,
-        proxy: proxyAlpha.key,
-        envCapture: explicitKeyEnvPath
-      }
+    const explicitKeyRoomResponse = await request("/api/rooms", {
+      method: "POST",
+      body: roomLaunchBody({
+        programId: program.id,
+        launchConfig: {
+          roomPublic: false,
+          proxy: proxyAlpha.key,
+          envCapture: explicitKeyEnvPath
+        }
+      })
     });
     const explicitIdEnvPath = fixtureEnvPath();
-    const explicitIdRoom = await launchRoom({
-      programId: program.id,
-      launchConfig: {
-        roomPublic: false,
-        proxy: proxyBeta.id,
-        envCapture: explicitIdEnvPath
-      }
+    const explicitIdRoomResponse = await request("/api/rooms", {
+      method: "POST",
+      body: roomLaunchBody({
+        programId: program.id,
+        launchConfig: {
+          roomPublic: false,
+          proxy: proxyBeta.id,
+          envCapture: explicitIdEnvPath
+        }
+      })
     });
+
+    expect(explicitKeyRoomResponse.status).toBe(201);
+    expect(explicitIdRoomResponse.status).toBe(201);
+
+    const explicitKeyRoom: RoomLaunchResponse =
+      await explicitKeyRoomResponse.json();
+    const explicitIdRoom: RoomLaunchResponse =
+      await explicitIdRoomResponse.json();
+
     const disableGammaResponse = await request(
       `/api/room-proxy-endpoints/${proxyGamma.id}`,
       {
@@ -1615,38 +1997,75 @@ describe("rooms", () => {
         message: "Requested proxy endpoint is not available"
       }
     });
-    await closeRoom(explicitKeyRoom.id);
-    await closeRoom(explicitIdRoom.id);
+    const explicitKeyCloseResponse = await request(
+      `/api/rooms/${explicitKeyRoom.id}/close`,
+      {
+        method: "POST"
+      }
+    );
+    const explicitIdCloseResponse = await request(
+      `/api/rooms/${explicitIdRoom.id}/close`,
+      {
+        method: "POST"
+      }
+    );
 
-    const firstPrivate = await launchRoom({
-      programId: program.id,
-      launchConfig: {
-        roomPublic: false,
-        envCapture: fixtureEnvPath()
-      }
+    expect(explicitKeyCloseResponse.status).toBe(200);
+    expect(explicitIdCloseResponse.status).toBe(200);
+
+    const firstPrivateResponse = await request("/api/rooms", {
+      method: "POST",
+      body: roomLaunchBody({
+        programId: program.id,
+        launchConfig: {
+          roomPublic: false,
+          envCapture: fixtureEnvPath()
+        }
+      })
     });
-    const secondPrivate = await launchRoom({
-      programId: program.id,
-      launchConfig: {
-        roomPublic: false,
-        envCapture: fixtureEnvPath()
-      }
+    const secondPrivateResponse = await request("/api/rooms", {
+      method: "POST",
+      body: roomLaunchBody({
+        programId: program.id,
+        launchConfig: {
+          roomPublic: false,
+          envCapture: fixtureEnvPath()
+        }
+      })
     });
-    const publicRoom = await launchRoom({
-      programId: program.id,
-      launchConfig: {
-        roomPublic: true,
-        envCapture: fixtureEnvPath()
-      }
+    const publicRoomResponse = await request("/api/rooms", {
+      method: "POST",
+      body: roomLaunchBody({
+        programId: program.id,
+        launchConfig: {
+          roomPublic: true,
+          envCapture: fixtureEnvPath()
+        }
+      })
     });
-    const explicitOverride = await launchRoom({
-      programId: program.id,
-      launchConfig: {
-        roomPublic: false,
-        proxy: proxyBeta.proxyUrl,
-        envCapture: fixtureEnvPath()
-      }
+    const explicitOverrideResponse = await request("/api/rooms", {
+      method: "POST",
+      body: roomLaunchBody({
+        programId: program.id,
+        launchConfig: {
+          roomPublic: false,
+          proxy: proxyBeta.proxyUrl,
+          envCapture: fixtureEnvPath()
+        }
+      })
     });
+
+    expect(firstPrivateResponse.status).toBe(201);
+    expect(secondPrivateResponse.status).toBe(201);
+    expect(publicRoomResponse.status).toBe(201);
+    expect(explicitOverrideResponse.status).toBe(201);
+
+    const firstPrivate: RoomLaunchResponse = await firstPrivateResponse.json();
+    const secondPrivate: RoomLaunchResponse =
+      await secondPrivateResponse.json();
+    const publicRoom: RoomLaunchResponse = await publicRoomResponse.json();
+    const explicitOverride: RoomLaunchResponse =
+      await explicitOverrideResponse.json();
 
     expect(firstPrivate.proxyEndpoint).toMatchObject({
       id: proxyAlpha.id,
@@ -1687,57 +2106,121 @@ describe("rooms", () => {
       }
     });
 
-    await closeRoom(firstPrivate.id);
-    await closeRoom(secondPrivate.id);
-    await closeRoom(publicRoom.id);
-    await closeRoom(explicitOverride.id);
+    const firstPrivateCloseResponse = await request(
+      `/api/rooms/${firstPrivate.id}/close`,
+      {
+        method: "POST"
+      }
+    );
+    const secondPrivateCloseResponse = await request(
+      `/api/rooms/${secondPrivate.id}/close`,
+      {
+        method: "POST"
+      }
+    );
+    const publicCloseResponse = await request(
+      `/api/rooms/${publicRoom.id}/close`,
+      {
+        method: "POST"
+      }
+    );
+    const explicitOverrideCloseResponse = await request(
+      `/api/rooms/${explicitOverride.id}/close`,
+      {
+        method: "POST"
+      }
+    );
+
+    expect(firstPrivateCloseResponse.status).toBe(200);
+    expect(secondPrivateCloseResponse.status).toBe(200);
+    expect(publicCloseResponse.status).toBe(200);
+    expect(explicitOverrideCloseResponse.status).toBe(200);
   });
 
   it("lists rooms by lifecycle state and closes them idempotently", async () => {
-    const automaticProgram = await createProgram({
-      launchConfigFields: [
-        {
-          key: "envCapture",
-          displayName: "Environment capture",
-          valueType: "string",
-          required: true,
-          secret: true,
-          envVar: "ROOM_E2E_ENV_OUT"
-        }
-      ]
+    const automaticProgramResponse = await request("/api/room-programs", {
+      method: "POST",
+      body: roomProgramBody({
+        launchConfigFields: [
+          {
+            key: "envCapture",
+            displayName: "Environment capture",
+            valueType: "string",
+            required: true,
+            secret: true,
+            envVar: "ROOM_E2E_ENV_OUT"
+          }
+        ]
+      })
     });
-    await createVersion(automaticProgram.id, "v1.0.0");
 
-    const manualProgram = await createProgram({
-      supportsManualLinking: true,
-      launchConfigFields: [
-        {
-          key: "envCapture",
-          displayName: "Environment capture",
-          valueType: "string",
-          required: true,
-          secret: true,
-          envVar: "ROOM_E2E_ENV_OUT"
-        },
-        {
-          key: "autoLink",
-          displayName: "Automatic link",
-          valueType: "string",
-          required: false,
-          defaultValue: "0",
-          secret: false,
-          envVar: "AUTO_LINK"
-        }
-      ]
-    });
-    await createVersion(manualProgram.id, "v1.0.0");
+    expect(automaticProgramResponse.status).toBe(201);
 
-    const runningRoom = await launchRoom({
-      programId: automaticProgram.id,
-      launchConfig: {
-        envCapture: fixtureEnvPath()
+    const automaticProgram: RoomProgramResponse =
+      await automaticProgramResponse.json();
+    const automaticVersionResponse = await request(
+      `/api/room-programs/${automaticProgram.id}/versions`,
+      {
+        method: "POST",
+        body: roomVersionBody("v1.0.0")
       }
+    );
+
+    expect(automaticVersionResponse.status).toBe(201);
+
+    const manualProgramResponse = await request("/api/room-programs", {
+      method: "POST",
+      body: roomProgramBody({
+        supportsManualLinking: true,
+        launchConfigFields: [
+          {
+            key: "envCapture",
+            displayName: "Environment capture",
+            valueType: "string",
+            required: true,
+            secret: true,
+            envVar: "ROOM_E2E_ENV_OUT"
+          },
+          {
+            key: "autoLink",
+            displayName: "Automatic link",
+            valueType: "string",
+            required: false,
+            defaultValue: "0",
+            secret: false,
+            envVar: "AUTO_LINK"
+          }
+        ]
+      })
     });
+
+    expect(manualProgramResponse.status).toBe(201);
+
+    const manualProgram: RoomProgramResponse =
+      await manualProgramResponse.json();
+    const manualVersionResponse = await request(
+      `/api/room-programs/${manualProgram.id}/versions`,
+      {
+        method: "POST",
+        body: roomVersionBody("v1.0.0")
+      }
+    );
+
+    expect(manualVersionResponse.status).toBe(201);
+
+    const runningRoomResponse = await request("/api/rooms", {
+      method: "POST",
+      body: roomLaunchBody({
+        programId: automaticProgram.id,
+        launchConfig: {
+          envCapture: fixtureEnvPath()
+        }
+      })
+    });
+
+    expect(runningRoomResponse.status).toBe(201);
+
+    const runningRoom: RoomLaunchResponse = await runningRoomResponse.json();
     const provisioningEnvPath = fixtureEnvPath();
     const provisioningLaunchResponse = await request("/api/rooms", {
       method: "POST",
@@ -1960,120 +2443,57 @@ describe("rooms", () => {
   });
 });
 
-async function createProgram(
-  input: CreateRoomProgramInput = {}
-): Promise<RoomProgramResponse> {
-  const response = await request("/api/room-programs", {
-    method: "POST",
-    body: {
-      name: input.name ?? uniqueName("program"),
-      title: input.title ?? "Test program",
-      description: input.description ?? "Test program description",
-      releaseSource: input.releaseSource ?? {
-        owner: "haxbrasil",
-        repo: "test-room",
-        assetPattern: "room-{tag}.tgz"
-      },
-      launchConfigFields: input.launchConfigFields,
-      supportsManualLinking: input.supportsManualLinking ?? false,
-      haxballTokenEnvVar: input.haxballTokenEnvVar
-    }
-  });
-
-  expect(response.status).toBe(201);
-
-  return response.json() as Promise<RoomProgramResponse>;
+function roomProgramBody(input: CreateRoomProgramInput = {}) {
+  return {
+    name: input.name ?? uniqueName("program"),
+    title: input.title ?? "Test program",
+    description: input.description ?? "Test program description",
+    releaseSource: input.releaseSource ?? {
+      owner: "haxbrasil",
+      repo: "test-room",
+      assetPattern: "room-{tag}.tgz"
+    },
+    launchConfigFields: input.launchConfigFields,
+    supportsManualLinking: input.supportsManualLinking ?? false,
+    haxballTokenEnvVar: input.haxballTokenEnvVar
+  };
 }
 
-async function createVersion(
-  programId: string,
+function roomVersionBody(
   version: string,
   input: CreateRoomProgramVersionInput = {}
-): Promise<RoomVersionResponse> {
-  const response = await request(`/api/room-programs/${programId}/versions`, {
-    method: "POST",
-    body: {
-      version,
-      artifact: {
-        releaseId: version,
-        tagName: version,
-        assetName: `room-${version}.tgz`,
-        assetUrl:
-          input.assetUrl ?? `${fixtureBaseUrl}/assets/room-${version}.tgz`,
-        publishedAt: input.publishedAt ?? "2026-05-01T00:00:00Z"
-      },
-      nodeEntrypoint: input.nodeEntrypoint ?? "dist/server.js",
-      installStrategy: input.installStrategy ?? "none"
-    }
-  });
-
-  expect(response.status).toBe(201);
-
-  return response.json() as Promise<RoomVersionResponse>;
+) {
+  return {
+    version,
+    artifact: {
+      releaseId: version,
+      tagName: version,
+      assetName: `room-${version}.tgz`,
+      assetUrl:
+        input.assetUrl ?? `${fixtureBaseUrl}/assets/room-${version}.tgz`,
+      publishedAt: input.publishedAt ?? "2026-05-01T00:00:00Z"
+    },
+    nodeEntrypoint: input.nodeEntrypoint ?? "dist/server.js",
+    installStrategy: input.installStrategy ?? "none"
+  };
 }
 
-async function createProxy(
-  input: CreateRoomProxyInput
-): Promise<RoomProxyResponse> {
-  const response = await request("/api/room-proxy-endpoints", {
-    method: "POST",
-    body: {
-      key: uniqueName(input.key),
-      displayName: input.key,
-      outboundIp: input.outboundIp,
-      proxyUrl: `http://${input.outboundIp}:8888`
-    }
-  });
-
-  expect(response.status).toBe(201);
-
-  return response.json() as Promise<RoomProxyResponse>;
+function roomProxyBody(input: CreateRoomProxyInput) {
+  return {
+    key: uniqueName(input.key),
+    displayName: input.key,
+    outboundIp: input.outboundIp,
+    proxyUrl: `http://${input.outboundIp}:8888`
+  };
 }
 
-async function launchRoom(input: LaunchRoomInput): Promise<RoomLaunchResponse> {
-  const response = await request("/api/rooms", {
-    method: "POST",
-    body: {
-      programId: input.programId,
-      version: "v1.0.0",
-      haxballToken: "token",
-      launchConfig: input.launchConfig
-    }
-  });
-
-  expect(response.status).toBe(201);
-
-  return response.json() as Promise<RoomLaunchResponse>;
-}
-
-async function closeRoom(roomId: string): Promise<void> {
-  const response = await request(`/api/rooms/${roomId}/close`, {
-    method: "POST"
-  });
-
-  expect(response.status).toBe(200);
-}
-
-async function disableAllProxyEndpoints(): Promise<void> {
-  const response = await request("/api/room-proxy-endpoints");
-
-  expect(response.status).toBe(200);
-
-  const endpoints = await paginatedItems<RoomProxyResponse>(response);
-
-  for (const endpoint of endpoints) {
-    const updateResponse = await request(
-      `/api/room-proxy-endpoints/${endpoint.id}`,
-      {
-        method: "PATCH",
-        body: {
-          enabled: false
-        }
-      }
-    );
-
-    expect(updateResponse.status).toBe(200);
-  }
+function roomLaunchBody(input: LaunchRoomInput) {
+  return {
+    programId: input.programId,
+    version: "v1.0.0",
+    haxballToken: "token",
+    launchConfig: input.launchConfig
+  };
 }
 
 function createFixturePackage(): void {
@@ -2151,27 +2571,6 @@ async function readFixtureEnv(path: string): Promise<FixtureEnv> {
   }
 
   throw new Error("Room fixture did not write environment file");
-}
-
-async function waitForRoomState(
-  roomId: string,
-  state: string
-): Promise<RoomLaunchResponse> {
-  for (let attempt = 0; attempt < 40; attempt += 1) {
-    const response = await request(`/api/rooms/${roomId}`);
-
-    expect(response.status).toBe(200);
-
-    const room = (await response.json()) as RoomLaunchResponse;
-
-    if (room.state === state) {
-      return room;
-    }
-
-    await new Promise((resolve) => setTimeout(resolve, 25));
-  }
-
-  throw new Error(`Room ${roomId} did not reach state ${state}`);
 }
 
 async function waitForFile(path: string): Promise<void> {
