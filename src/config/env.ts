@@ -24,6 +24,24 @@ const envSchema = Type.Object({
     default: "https://api.github.com",
     minLength: 1
   }),
+  publicBaseUrl: Type.String({
+    default: "http://localhost:3000",
+    minLength: 1
+  }),
+  roomArtifactStorageDir: Type.String({
+    default: "/tmp/haxfootball-api-room-artifacts",
+    minLength: 1
+  }),
+  roomPublicPolicy: Type.Union(
+    [Type.Literal("default"), Type.Literal("force-private")],
+    {
+      default: "default"
+    }
+  ),
+  roomStaleCloseAfterSeconds: Type.Integer({
+    default: 0,
+    minimum: 0
+  }),
   roomProcessRunner: Type.Union(
     [Type.Literal("bubblewrap"), Type.Literal("node")],
     {
@@ -56,6 +74,10 @@ const envInput = {
   r2SecretAccessKey: Bun.env.R2_SECRET_ACCESS_KEY,
   recordingMaxBytes: Bun.env.RECORDING_MAX_BYTES,
   roomGithubApiBaseUrl: Bun.env.ROOM_GITHUB_API_BASE_URL,
+  publicBaseUrl: Bun.env.PUBLIC_BASE_URL,
+  roomArtifactStorageDir: Bun.env.ROOM_ARTIFACT_STORAGE_DIR,
+  roomPublicPolicy: Bun.env.ROOM_PUBLIC_POLICY,
+  roomStaleCloseAfterSeconds: Bun.env.ROOM_STALE_CLOSE_AFTER_SECONDS,
   roomProcessRunner: Bun.env.ROOM_PROCESS_RUNNER,
   roomNodeBinary: Bun.env.ROOM_NODE_BINARY,
   roomPackageCacheDir: Bun.env.ROOM_PACKAGE_CACHE_DIR,

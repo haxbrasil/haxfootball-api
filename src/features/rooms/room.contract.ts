@@ -6,6 +6,7 @@ import type {
   RoomProgram,
   RoomProgramReleaseSource,
   RoomProgramVersion,
+  RoomProgramVersionAlias,
   RoomProgramVersionArtifact,
   RoomProxyEndpoint
 } from "@/features/rooms/room.db";
@@ -141,6 +142,80 @@ export const createRoomProgramVersionBodySchema = t.Object({
   )
 });
 
+export const roomProgramVersionAliasSchema = t.String({
+  minLength: 1,
+  maxLength: 80,
+  pattern: "^[a-z0-9][a-z0-9-]{0,79}$"
+});
+
+export const roomProgramVersionAliasParamsSchema = t.Object({
+  id: roomUuidSchema,
+  alias: roomProgramVersionAliasSchema
+});
+
+export const upsertRoomProgramVersionAliasBodySchema = t.Object({
+  version: t.String({ minLength: 1, maxLength: 80 })
+});
+
+export const roomProgramVersionAliasResponseSchema = t.Object({
+  id: roomUuidSchema,
+  programId: roomUuidSchema,
+  alias: roomProgramVersionAliasSchema,
+  version: t.Object({
+    id: roomUuidSchema,
+    version: t.String({ minLength: 1 })
+  }),
+  createdAt: t.String(),
+  updatedAt: t.String()
+});
+
+export const listRoomProgramVersionAliasesResponseSchema =
+  paginatedResponseSchema(roomProgramVersionAliasResponseSchema);
+
+export const uploadRoomArtifactBodySchema = t.Object({
+  branch: t.String({
+    minLength: 1,
+    maxLength: 64,
+    pattern: "^[a-z0-9][a-z0-9-]{0,63}$"
+  }),
+  sha: t.String({
+    minLength: 7,
+    maxLength: 40,
+    pattern: "^[a-f0-9]{7,40}$"
+  }),
+  assetName: t.String({
+    minLength: 1,
+    maxLength: 160,
+    pattern: "^[A-Za-z0-9][A-Za-z0-9._-]*\\.tgz$"
+  }),
+  file: t.File()
+});
+
+export const roomArtifactResponseSchema = t.Object({
+  assetName: t.String(),
+  assetUrl: t.String(),
+  checksumSha256: t.String({ minLength: 64, maxLength: 64 }),
+  storageKey: t.String()
+});
+
+export const roomArtifactParamsSchema = t.Object({
+  branch: t.String({
+    minLength: 1,
+    maxLength: 64,
+    pattern: "^[a-z0-9][a-z0-9-]{0,63}$"
+  }),
+  sha: t.String({
+    minLength: 7,
+    maxLength: 40,
+    pattern: "^[a-f0-9]{7,40}$"
+  }),
+  assetName: t.String({
+    minLength: 1,
+    maxLength: 160,
+    pattern: "^[A-Za-z0-9][A-Za-z0-9._-]*\\.tgz$"
+  })
+});
+
 export const discoverRoomProgramVersionsBodySchema = t.Object({
   nodeEntrypoint: t.String({ minLength: 1, maxLength: 240 }),
   installStrategy: t.Optional(
@@ -265,6 +340,16 @@ export type RoomProgramVersionResponse = Static<
 export type CreateRoomProgramVersionInput = Static<
   typeof createRoomProgramVersionBodySchema
 >;
+export type UpsertRoomProgramVersionAliasInput = Static<
+  typeof upsertRoomProgramVersionAliasBodySchema
+>;
+export type RoomProgramVersionAliasResponse = Static<
+  typeof roomProgramVersionAliasResponseSchema
+>;
+export type UploadRoomArtifactInput = Static<
+  typeof uploadRoomArtifactBodySchema
+>;
+export type RoomArtifactResponse = Static<typeof roomArtifactResponseSchema>;
 export type DiscoverRoomProgramVersionsInput = Static<
   typeof discoverRoomProgramVersionsBodySchema
 >;
@@ -340,6 +425,24 @@ export function toRoomProgramVersionResponse(
     installStrategy: version.installStrategy,
     createdAt: version.createdAt,
     updatedAt: version.updatedAt
+  };
+}
+
+export function toRoomProgramVersionAliasResponse(input: {
+  alias: RoomProgramVersionAlias;
+  program: RoomProgram;
+  version: RoomProgramVersion;
+}): RoomProgramVersionAliasResponse {
+  return {
+    id: input.alias.uuid,
+    programId: input.program.uuid,
+    alias: input.alias.alias,
+    version: {
+      id: input.version.uuid,
+      version: input.version.version
+    },
+    createdAt: input.alias.createdAt,
+    updatedAt: input.alias.updatedAt
   };
 }
 

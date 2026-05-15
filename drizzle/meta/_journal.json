@@ -85,6 +85,13 @@
       "when": 1778806032008,
       "tag": "0011_nasty_the_hunter",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1778879399832,
+      "tag": "0012_unusual_nitro",
+      "breakpoints": true
     }
   ]
 }

@@ -7,6 +7,8 @@ Bun.env.R2_ENDPOINT ??= "https://example.r2.cloudflarestorage.com";
 Bun.env.R2_ACCESS_KEY_ID ??= "test-access-key-id";
 Bun.env.R2_SECRET_ACCESS_KEY ??= "test-secret-access-key";
 Bun.env.R2_PUBLIC_BASE_URL ??= "https://recs.haxbrasil.com";
+Bun.env.PUBLIC_BASE_URL ??= "http://127.0.0.1:19081";
+Bun.env.ROOM_ARTIFACT_STORAGE_DIR ??= `/tmp/haxfootball-api-room-artifacts-${crypto.randomUUID()}`;
 
 let databaseReady = false;
 

@@ -13,7 +13,10 @@ import { playerRoutes } from "@/features/players/player.routes";
 import { recordingRoutes } from "@/features/recordings/recording.routes";
 import { roleRoutes } from "@/features/roles/role.routes";
 import { reconcileOpenRooms } from "@/features/rooms/reconcile-rooms";
-import { roomRoutes } from "@/features/rooms/room.routes";
+import {
+  publicRoomArtifactRoutes,
+  roomRoutes
+} from "@/features/rooms/room.routes";
 import { sessionRoutes } from "@/features/sessions/session.routes";
 import { statEventSchemaRoutes } from "@/features/stat-event-schemas/stat-event-schema.routes";
 import { withJwtGuard } from "@/guards/jwt.guard";
@@ -62,6 +65,7 @@ app
     }
   })
   .use(withCommonErrorResponses)
+  .use(publicRoomArtifactRoutes)
   .use(authRoutes)
   .group("/api", (api) =>
     api

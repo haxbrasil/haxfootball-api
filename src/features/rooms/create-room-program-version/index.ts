@@ -25,6 +25,21 @@ export async function createRoomProgramVersion(
   });
 
   if (existingVersion) {
+    if (
+      input.artifact.checksumSha256 &&
+      existingVersion.artifact.checksumSha256 ===
+        input.artifact.checksumSha256 &&
+      existingVersion.artifact.releaseId === input.artifact.releaseId &&
+      existingVersion.artifact.tagName === input.artifact.tagName &&
+      existingVersion.artifact.assetUrl === input.artifact.assetUrl &&
+      existingVersion.artifact.assetName === input.artifact.assetName &&
+      existingVersion.artifact.publishedAt === input.artifact.publishedAt &&
+      existingVersion.nodeEntrypoint === input.nodeEntrypoint &&
+      existingVersion.installStrategy === (input.installStrategy ?? "npm-ci")
+    ) {
+      return toRoomProgramVersionResponse(existingVersion, program);
+    }
+
     throw badRequest("Room program version already exists");
   }
 

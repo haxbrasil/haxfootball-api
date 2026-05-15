@@ -39,6 +39,10 @@ import {
   listRoomProgramVersionsResponseSchema
 } from "@/features/rooms/list-room-program-versions";
 import {
+  listRoomProgramVersionAliases,
+  listRoomProgramVersionAliasesResponseSchema
+} from "@/features/rooms/list-room-program-version-aliases";
+import {
   listRoomProxyEndpoints,
   listRoomProxyEndpointsResponseSchema
 } from "@/features/rooms/list-room-proxy-endpoints";
@@ -48,8 +52,12 @@ import {
 } from "@/features/rooms/report-room-ready";
 import {
   listRoomsQuerySchema,
+  roomArtifactParamsSchema,
+  roomArtifactResponseSchema,
   roomLaunchConfigFieldSchema,
   roomIdParamsSchema,
+  roomProgramVersionAliasParamsSchema,
+  roomProgramVersionAliasResponseSchema,
   roomProgramIdParamsSchema,
   roomProgramReleaseSourceSchema,
   roomProgramVersionArtifactSchema,
@@ -60,6 +68,15 @@ import {
   roomResponseProxyEndpointSummarySchema,
   roomResponseVersionSummarySchema
 } from "@/features/rooms/room.contract";
+import { serveRoomArtifact } from "@/features/rooms/serve-room-artifact";
+import {
+  uploadRoomArtifact,
+  uploadRoomArtifactBodySchema
+} from "@/features/rooms/upload-room-artifact";
+import {
+  upsertRoomProgramVersionAlias,
+  upsertRoomProgramVersionAliasBodySchema
+} from "@/features/rooms/upsert-room-program-version-alias";
 import {
   updateRoomProgram,
   updateRoomProgramBodySchema
@@ -97,14 +114,19 @@ export const roomRoutes = new Elysia({
     DiscoverRoomProgramVersionsResponse:
       discoverRoomProgramVersionsResponseSchema,
     ListRoomProgramVersions: listRoomProgramVersionsResponseSchema,
+    ListRoomProgramVersionAliases: listRoomProgramVersionAliasesResponseSchema,
     ListRoomPrograms: listRoomProgramsResponseSchema,
     ListRoomProxyEndpoints: listRoomProxyEndpointsResponseSchema,
     ListRooms: listRoomsResponseSchema,
     ReportRoomReadyBody: reportRoomReadyBodySchema,
+    RoomArtifact: roomArtifactResponseSchema,
     Room: roomResponseSchema,
     RoomProgram: roomProgramResponseSchema,
+    RoomProgramVersionAlias: roomProgramVersionAliasResponseSchema,
     RoomProgramVersion: roomProgramVersionResponseSchema,
     RoomProxyEndpoint: roomProxyEndpointResponseSchema,
+    UploadRoomArtifactBody: uploadRoomArtifactBodySchema,
+    UpsertRoomProgramVersionAliasBody: upsertRoomProgramVersionAliasBodySchema,
     UpdateRoomProgramBody: updateRoomProgramBodySchema,
     UpdateRoomProxyEndpointBody: updateRoomProxyEndpointBodySchema
   })
@@ -176,6 +198,59 @@ export const roomRoutes = new Elysia({
           detail: {
             tags: ["Rooms"],
             summary: "List room program versions"
+          }
+        }
+      )
+      .post(
+        "/:id/artifacts",
+        async ({ body, params, set }) => {
+          set.status = 201;
+
+          return uploadRoomArtifact(params.id, body);
+        },
+        {
+          body: t.Ref("UploadRoomArtifactBody"),
+          params: roomProgramIdParamsSchema,
+          response: {
+            201: t.Ref("RoomArtifact"),
+            404: t.Ref("NotFoundError")
+          },
+          detail: {
+            tags: ["Rooms"],
+            summary: "Upload room artifact"
+          }
+        }
+      )
+      .get(
+        "/:id/version-aliases",
+        ({ params, query }) => listRoomProgramVersionAliases(params.id, query),
+        {
+          params: roomProgramIdParamsSchema,
+          query: paginationQuerySchema,
+          response: {
+            200: t.Ref("ListRoomProgramVersionAliases"),
+            404: t.Ref("NotFoundError")
+          },
+          detail: {
+            tags: ["Rooms"],
+            summary: "List room program version aliases"
+          }
+        }
+      )
+      .put(
+        "/:id/version-aliases/:alias",
+        ({ body, params }) =>
+          upsertRoomProgramVersionAlias(params.id, params.alias, body),
+        {
+          body: t.Ref("UpsertRoomProgramVersionAliasBody"),
+          params: roomProgramVersionAliasParamsSchema,
+          response: {
+            200: t.Ref("RoomProgramVersionAlias"),
+            404: t.Ref("NotFoundError")
+          },
+          detail: {
+            tags: ["Rooms"],
+            summary: "Create or update room program version alias"
           }
         }
       )
@@ -346,4 +421,28 @@ export const roomRoutes = new Elysia({
           }
         }
       )
+  );
+
+export const publicRoomArtifactRoutes = new Elysia({
+  name: "public-room-artifact-routes"
+})
+  .model({
+    NotFoundError: notFoundErrorResponseSchema,
+    RoomArtifactParams: roomArtifactParamsSchema
+  })
+  .get(
+    "/artifacts/rooms/:branch/:sha/:assetName",
+    ({ params }) => serveRoomArtifact(params),
+    {
+      params: roomArtifactParamsSchema,
+      response: {
+        200: t.Any(),
+        404: t.Ref("NotFoundError")
+      },
+      detail: {
+        tags: ["Rooms"],
+        security: [],
+        summary: "Download uploaded room artifact"
+      }
+    }
   );

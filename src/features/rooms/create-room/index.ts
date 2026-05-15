@@ -15,6 +15,7 @@ import {
 import { listGithubReleases } from "@/features/rooms/github-release.service";
 import {
   getLatestProgramVersion,
+  getProgramVersionAliasByProgramAndAlias,
   getProgramVersionByProgramAndVersion,
   getRoomProgramByUuid,
   listEnabledProxyEndpoints,
@@ -43,7 +44,8 @@ export async function createRoom(
   const firstConfigResolution = resolveLaunchConfig({
     fields: program.launchConfigFields,
     values: input.launchConfig ?? {},
-    assignedProxy: null
+    assignedProxy: null,
+    publicPolicy: env.roomPublicPolicy
   });
   const requestedProxy = stringLaunchConfigValue(input.launchConfig?.proxy);
   const proxyEndpoint = chooseProxyEndpoint({
@@ -55,7 +57,8 @@ export async function createRoom(
   const configResolution = resolveLaunchConfig({
     fields: program.launchConfigFields,
     values: input.launchConfig ?? {},
-    assignedProxy: proxyEndpoint
+    assignedProxy: proxyEndpoint,
+    publicPolicy: env.roomPublicPolicy
   });
   const commId = crypto.randomUUID() + crypto.randomUUID();
   const roomUuid = crypto.randomUUID();
@@ -124,11 +127,20 @@ async function resolveProgramVersion(
       version: versionReference
     });
 
-    if (!version) {
-      throw notFound("Room program version not found");
+    if (version) {
+      return version;
     }
 
-    return version;
+    const alias = await getProgramVersionAliasByProgramAndAlias({
+      programId,
+      alias: versionReference
+    });
+
+    if (alias) {
+      return alias.version;
+    }
+
+    throw notFound("Room program version not found");
   }
 
   const [anyKnownVersion] = await db

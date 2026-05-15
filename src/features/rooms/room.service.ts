@@ -10,11 +10,13 @@ import type { GitHubRelease } from "@/features/rooms/github-release.service";
 import { badRequest } from "@/shared/http/errors";
 
 export type EffectiveRoomEnvironment = Record<string, string>;
+export type RoomPublicPolicy = "default" | "force-private";
 
 export type ResolveLaunchConfigInput = {
   fields: RoomLaunchConfigField[];
   values: RoomLaunchConfig;
   assignedProxy: RoomProxyEndpoint | null;
+  publicPolicy?: RoomPublicPolicy;
 };
 
 export type ResolveLaunchConfigResult = {
@@ -109,10 +111,14 @@ export function resolveLaunchConfig(
   const environmentValues: RoomLaunchConfig = {};
 
   for (const field of input.fields) {
-    const value =
+    const rawValue =
       field.key === "proxy" && input.assignedProxy
         ? input.assignedProxy.proxyUrl
         : (input.values[field.key] ?? field.defaultValue);
+    const value =
+      field.key === "roomPublic" && input.publicPolicy === "force-private"
+        ? false
+        : rawValue;
 
     if (value === undefined || value === null || value === "") {
       if (field.required) {

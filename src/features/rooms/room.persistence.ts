@@ -3,10 +3,12 @@ import { db } from "@/db/client";
 import {
   roomInstances,
   roomPrograms,
+  roomProgramVersionAliases,
   roomProgramVersions,
   roomProxyEndpoints,
   type RoomInstance,
   type RoomProgram,
+  type RoomProgramVersionAlias,
   type RoomProgramVersion,
   type RoomProxyEndpoint
 } from "@/features/rooms/room.db";
@@ -33,6 +35,10 @@ export type ListRoomRowsInput = {
 export type GetProgramVersionByProgramAndVersionInput = {
   programId: number;
   version: string;
+};
+export type RoomVersionAliasRow = {
+  alias: RoomProgramVersionAlias;
+  version: RoomProgramVersion;
 };
 
 export async function getRoomProgramByUuid(uuid: string): Promise<RoomProgram> {
@@ -169,6 +175,58 @@ export async function getProgramVersionByProgramAndVersion(
     );
 
   return version ?? null;
+}
+
+export async function getProgramVersionAliasByProgramAndAlias(input: {
+  programId: number;
+  alias: string;
+}): Promise<RoomVersionAliasRow | null> {
+  const rows = await db
+    .select({
+      alias: roomProgramVersionAliases,
+      version: roomProgramVersions
+    })
+    .from(roomProgramVersionAliases)
+    .innerJoin(
+      roomProgramVersions,
+      eq(roomProgramVersionAliases.versionId, roomProgramVersions.id)
+    )
+    .where(
+      and(
+        eq(roomProgramVersionAliases.programId, input.programId),
+        eq(roomProgramVersionAliases.alias, input.alias)
+      )
+    );
+
+  return rows[0] ?? null;
+}
+
+export async function listProgramVersionAliases(input: {
+  programId: number;
+  pagination?: PaginationQuery;
+}): Promise<RoomVersionAliasRow[]> {
+  return db
+    .select({
+      alias: roomProgramVersionAliases,
+      version: roomProgramVersions
+    })
+    .from(roomProgramVersionAliases)
+    .innerJoin(
+      roomProgramVersions,
+      eq(roomProgramVersionAliases.versionId, roomProgramVersions.id)
+    )
+    .where(
+      and(
+        eq(roomProgramVersionAliases.programId, input.programId),
+        cursorAfter(
+          roomProgramVersionAliases.id,
+          input.pagination?.cursor,
+          "asc"
+        )
+      )
+    )
+    .orderBy(cursorSort(roomProgramVersionAliases.id, "asc"))
+    .limit(pageLimit(input.pagination));
 }
 
 export async function getLatestProgramVersion(

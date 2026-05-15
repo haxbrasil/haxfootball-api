@@ -28,6 +28,11 @@ type RoomVersionSummary = {
   version: string;
 };
 
+type RoomVersionReferenceSummary = {
+  id: string;
+  version: string;
+};
+
 type RoomStateSummary = {
   id: string;
   state: string;
@@ -88,11 +93,26 @@ type RoomVersionResponse = {
   installStrategy: string;
 };
 
+type RoomArtifactResponse = {
+  assetName: string;
+  assetUrl: string;
+  checksumSha256: string;
+  storageKey: string;
+};
+
+type RoomVersionAliasResponse = {
+  id: string;
+  programId: string;
+  alias: string;
+  version: RoomVersionReferenceSummary;
+};
+
 type RoomLaunchResponse = {
   id: string;
   state: string;
   roomLink: string | null;
   public: boolean;
+  version: RoomVersionReferenceSummary;
   proxyEndpoint: RoomProxyEndpointSummary | null;
   launchConfig: RoomLaunchConfigPayload;
 };
@@ -197,6 +217,16 @@ beforeAll(() => {
       }
 
       if (url.pathname.startsWith("/assets/")) {
+        assetRequests += 1;
+
+        return new Response(Bun.file(packageArchive), {
+          headers: {
+            "content-type": "application/gzip"
+          }
+        });
+      }
+
+      if (url.pathname.startsWith("/artifacts/rooms/")) {
         assetRequests += 1;
 
         return new Response(Bun.file(packageArchive), {
@@ -1208,6 +1238,235 @@ describe("rooms", () => {
           "At least one room program version is required before latest can be resolved"
       }
     });
+  });
+
+  it("uploads artifacts, registers immutable versions idempotently, and launches through aliases", async () => {
+    const programResponse = await request("/api/room-programs", {
+      method: "POST",
+      body: roomProgramBody({
+        launchConfigFields: [
+          {
+            key: "envCapture",
+            displayName: "Environment capture",
+            valueType: "string",
+            required: true,
+            secret: true,
+            envVar: "ROOM_E2E_ENV_OUT"
+          }
+        ]
+      })
+    });
+
+    expect(programResponse.status).toBe(201);
+
+    const program: RoomProgramResponse = await programResponse.json();
+    const branch = uniqueName("auth-visibility");
+    const sha = "abc1234";
+    const assetName = `room-${branch}-${sha}.tgz`;
+    const artifactForm = new FormData();
+
+    artifactForm.set("branch", branch);
+    artifactForm.set("sha", sha);
+    artifactForm.set("assetName", assetName);
+    artifactForm.set(
+      "file",
+      new Blob([readFileSync(packageArchive)], {
+        type: "application/gzip"
+      }),
+      assetName
+    );
+
+    const uploadResponse = await request(
+      `/api/room-programs/${program.id}/artifacts`,
+      {
+        method: "POST",
+        body: artifactForm
+      }
+    );
+
+    expect(uploadResponse.status).toBe(201);
+
+    const artifact: RoomArtifactResponse = await uploadResponse.json();
+    const downloadResponse = await rawRequest(
+      `/artifacts/rooms/${branch}/${sha}/${assetName}`
+    );
+    const invalidUploadForm = new FormData();
+
+    invalidUploadForm.set("branch", "../bad");
+    invalidUploadForm.set("sha", sha);
+    invalidUploadForm.set("assetName", assetName);
+    invalidUploadForm.set("file", new Blob(["bad"]), assetName);
+
+    const invalidUploadResponse = await request(
+      `/api/room-programs/${program.id}/artifacts`,
+      {
+        method: "POST",
+        body: invalidUploadForm
+      }
+    );
+
+    expect(downloadResponse.status).toBe(200);
+    expect(invalidUploadResponse.status).toBe(400);
+    expect(artifact).toMatchObject({
+      assetName,
+      assetUrl: `${fixtureBaseUrl.origin}/artifacts/rooms/${branch}/${sha}/${assetName}`,
+      storageKey: `rooms/${branch}/${sha}/${assetName}`
+    });
+    expect(artifact.checksumSha256).toHaveLength(64);
+    expect(
+      Buffer.from(await downloadResponse.arrayBuffer()).equals(
+        readFileSync(packageArchive)
+      )
+    ).toBe(true);
+
+    const immutableVersion = `${branch}@${sha}`;
+    const createVersionResponse = await request(
+      `/api/room-programs/${program.id}/versions`,
+      {
+        method: "POST",
+        body: {
+          version: immutableVersion,
+          artifact: {
+            releaseId: sha,
+            tagName: immutableVersion,
+            assetName: artifact.assetName,
+            assetUrl: artifact.assetUrl,
+            publishedAt: "2026-05-15T00:00:00Z",
+            checksumSha256: artifact.checksumSha256
+          },
+          nodeEntrypoint: "dist/server.js",
+          installStrategy: "none"
+        }
+      }
+    );
+    const repeatedVersionResponse = await request(
+      `/api/room-programs/${program.id}/versions`,
+      {
+        method: "POST",
+        body: {
+          version: immutableVersion,
+          artifact: {
+            releaseId: sha,
+            tagName: immutableVersion,
+            assetName: artifact.assetName,
+            assetUrl: artifact.assetUrl,
+            publishedAt: "2026-05-15T00:00:00Z",
+            checksumSha256: artifact.checksumSha256
+          },
+          nodeEntrypoint: "dist/server.js",
+          installStrategy: "none"
+        }
+      }
+    );
+    const conflictingVersionResponse = await request(
+      `/api/room-programs/${program.id}/versions`,
+      {
+        method: "POST",
+        body: {
+          version: immutableVersion,
+          artifact: {
+            releaseId: sha,
+            tagName: immutableVersion,
+            assetName: artifact.assetName,
+            assetUrl: artifact.assetUrl,
+            publishedAt: "2026-05-15T00:00:00Z",
+            checksumSha256: "0".repeat(64)
+          },
+          nodeEntrypoint: "dist/server.js",
+          installStrategy: "none"
+        }
+      }
+    );
+
+    expect(createVersionResponse.status).toBe(201);
+    expect(repeatedVersionResponse.status).toBe(201);
+    expect(conflictingVersionResponse.status).toBe(400);
+
+    const version: RoomVersionResponse = await createVersionResponse.json();
+    const repeatedVersion: RoomVersionResponse =
+      await repeatedVersionResponse.json();
+
+    expect(repeatedVersion.id).toBe(version.id);
+
+    const aliasName = `${branch}-latest`;
+    const aliasResponse = await request(
+      `/api/room-programs/${program.id}/version-aliases/${aliasName}`,
+      {
+        method: "PUT",
+        body: {
+          version: immutableVersion
+        }
+      }
+    );
+    const aliasesResponse = await request(
+      `/api/room-programs/${program.id}/version-aliases`
+    );
+    const nextVersionResponse = await request(
+      `/api/room-programs/${program.id}/versions`,
+      {
+        method: "POST",
+        body: roomVersionBody(`${branch}@def5678`, {
+          assetUrl: `${fixtureBaseUrl}/assets/room-v1.0.0.tgz`
+        })
+      }
+    );
+
+    expect(aliasResponse.status).toBe(200);
+    expect(aliasesResponse.status).toBe(200);
+    expect(nextVersionResponse.status).toBe(201);
+
+    const alias: RoomVersionAliasResponse = await aliasResponse.json();
+    const aliases =
+      await paginatedItems<RoomVersionAliasResponse>(aliasesResponse);
+
+    expect(alias).toMatchObject({
+      programId: program.id,
+      alias: aliasName,
+      version: {
+        version: immutableVersion
+      }
+    });
+    expect(aliases).toContainEqual(
+      expect.objectContaining({ alias: aliasName })
+    );
+
+    const updateAliasResponse = await request(
+      `/api/room-programs/${program.id}/version-aliases/${aliasName}`,
+      {
+        method: "PUT",
+        body: {
+          version: `${branch}@def5678`
+        }
+      }
+    );
+    const aliasLaunchEnvPath = fixtureEnvPath();
+    const aliasLaunchResponse = await request("/api/rooms", {
+      method: "POST",
+      body: {
+        programId: program.id,
+        version: aliasName,
+        haxballToken: "token",
+        launchConfig: {
+          envCapture: aliasLaunchEnvPath
+        }
+      }
+    });
+
+    expect(updateAliasResponse.status).toBe(200);
+    expect(aliasLaunchResponse.status).toBe(201);
+
+    const aliasRoom: RoomLaunchResponse = await aliasLaunchResponse.json();
+
+    expect(aliasRoom.version.version).toBe(`${branch}@def5678`);
+    expect(aliasRoom.version.version).not.toBe(aliasName);
+    const aliasCloseResponse = await request(
+      `/api/rooms/${aliasRoom.id}/close`,
+      {
+        method: "POST"
+      }
+    );
+
+    expect(aliasCloseResponse.status).toBe(200);
   });
 
   it("launches rooms with default launch config mapping and custom token env vars", async () => {

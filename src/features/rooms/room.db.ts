@@ -105,6 +105,33 @@ export const roomProgramVersions = sqliteTable(
   ]
 );
 
+export const roomProgramVersionAliases = sqliteTable(
+  "room_program_version_aliases",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    uuid: text("uuid").notNull().unique(),
+    programId: integer("program_id")
+      .notNull()
+      .references(() => roomPrograms.id),
+    alias: text("alias").notNull(),
+    versionId: integer("version_id")
+      .notNull()
+      .references(() => roomProgramVersions.id),
+    createdAt: text("created_at")
+      .notNull()
+      .$defaultFn(() => new Date().toISOString()),
+    updatedAt: text("updated_at")
+      .notNull()
+      .$defaultFn(() => new Date().toISOString())
+  },
+  (table) => [
+    uniqueIndex("room_program_version_aliases_program_id_alias_unique").on(
+      table.programId,
+      table.alias
+    )
+  ]
+);
+
 export const roomProxyEndpoints = sqliteTable(
   "room_proxy_endpoints",
   {
@@ -165,5 +192,7 @@ export const roomInstances = sqliteTable("room_instances", {
 
 export type RoomProgram = typeof roomPrograms.$inferSelect;
 export type RoomProgramVersion = typeof roomProgramVersions.$inferSelect;
+export type RoomProgramVersionAlias =
+  typeof roomProgramVersionAliases.$inferSelect;
 export type RoomProxyEndpoint = typeof roomProxyEndpoints.$inferSelect;
 export type RoomInstance = typeof roomInstances.$inferSelect;
