@@ -1,10 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { recordingBytes, recordingFile } from "@/test/e2e/fixtures/recording";
-import {
-  paginatedItems,
-  recordingObjectExists,
-  request
-} from "@/test/e2e/helpers/helpers";
+import { paginatedItems, request } from "@/test/e2e/helpers/helpers";
+import { recordingObjectExists } from "@/test/e2e/helpers/recordings";
 
 type RecordingResponse = {
   id: string;

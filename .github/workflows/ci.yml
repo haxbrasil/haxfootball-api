@@ -84,7 +84,9 @@ jobs:
           bun install --frozen-lockfile
           DATABASE_FILE=/home/ubuntu/haxfootball-api/data/app.sqlite bun run db:migrate
           sudo systemctl restart haxfootball-api
+          sudo systemctl restart haxfootball-api-jobs
           systemctl is-active --quiet haxfootball-api
+          systemctl is-active --quiet haxfootball-api-jobs
           REMOTE
 
       - name: Verify production health
@@ -99,5 +101,7 @@ jobs:
         run: |
           ssh -i ~/.ssh/oracle -o BatchMode=yes -o StrictHostKeyChecking=yes "$ORACLE_SSH_USER@$ORACLE_SSH_HOST" <<'REMOTE'
           systemctl status haxfootball-api --no-pager -l || true
+          systemctl status haxfootball-api-jobs --no-pager -l || true
           journalctl -u haxfootball-api -n 120 --no-pager || true
+          journalctl -u haxfootball-api-jobs -n 120 --no-pager || true
           REMOTE

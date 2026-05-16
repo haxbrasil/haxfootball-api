@@ -60,6 +60,20 @@ const envSchema = Type.Object({
   roomProcessLogDir: Type.String({
     default: "/tmp/haxfootball-api-rooms",
     minLength: 1
+  }),
+  jobRunnerEnabled: Type.Boolean({ default: true }),
+  jobRunnerId: Type.Optional(Type.String({ minLength: 1 })),
+  jobPollIntervalSeconds: Type.Integer({
+    default: 5,
+    minimum: 1
+  }),
+  jobLockTimeoutSeconds: Type.Integer({
+    default: 300,
+    minimum: 1
+  }),
+  roomReconcileIntervalSeconds: Type.Integer({
+    default: 30,
+    minimum: 0
   })
 });
 
@@ -86,7 +100,12 @@ const envInput = {
   roomProcessRunner: Bun.env.ROOM_PROCESS_RUNNER,
   roomNodeBinary: Bun.env.ROOM_NODE_BINARY,
   roomPackageCacheDir: Bun.env.ROOM_PACKAGE_CACHE_DIR,
-  roomProcessLogDir: Bun.env.ROOM_PROCESS_LOG_DIR
+  roomProcessLogDir: Bun.env.ROOM_PROCESS_LOG_DIR,
+  jobRunnerEnabled: Bun.env.JOB_RUNNER_ENABLED,
+  jobRunnerId: Bun.env.JOB_RUNNER_ID,
+  jobPollIntervalSeconds: Bun.env.JOB_POLL_INTERVAL_SECONDS,
+  jobLockTimeoutSeconds: Bun.env.JOB_LOCK_TIMEOUT_SECONDS,
+  roomReconcileIntervalSeconds: Bun.env.ROOM_RECONCILE_INTERVAL_SECONDS
 };
 
 const envValidator = TypeCompiler.Compile(envSchema);

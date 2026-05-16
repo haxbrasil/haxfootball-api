@@ -568,11 +568,145 @@ components:
       required:
         - error
       type: object
+    Job:
+      properties:
+        attempts:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - type: integer
+        createdAt:
+          type: string
+        error: {}
+        finishedAt:
+          anyOf:
+            - type: string
+            - type: "null"
+          nullable: true
+        id:
+          format: uuid
+          type: string
+        lockedAt:
+          anyOf:
+            - type: string
+            - type: "null"
+          nullable: true
+        lockedBy:
+          anyOf:
+            - type: string
+            - type: "null"
+          nullable: true
+        maxAttempts:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - type: integer
+        payload: {}
+        result: {}
+        runAfter:
+          type: string
+        startedAt:
+          anyOf:
+            - type: string
+            - type: "null"
+          nullable: true
+        status:
+          enum:
+            - queued
+            - running
+            - succeeded
+            - failed
+            - canceled
+          type: string
+        type:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - type
+        - status
+        - attempts
+        - maxAttempts
+        - runAfter
+        - lockedAt
+        - lockedBy
+        - startedAt
+        - finishedAt
+        - createdAt
+        - updatedAt
+      type: object
+    JobSchedule:
+      properties:
+        createdAt:
+          type: string
+        enabled:
+          type: boolean
+        id:
+          format: uuid
+          type: string
+        intervalSeconds:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - type: integer
+        key:
+          type: string
+        lastEnqueuedAt:
+          anyOf:
+            - type: string
+            - type: "null"
+          nullable: true
+        nextRunAt:
+          type: string
+        payload: {}
+        type:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - key
+        - type
+        - intervalSeconds
+        - enabled
+        - nextRunAt
+        - lastEnqueuedAt
+        - createdAt
+        - updatedAt
+      type: object
     ListAccounts:
       properties:
         items:
           items:
             $ref: "#/components/schemas/Account"
+          type: array
+        page:
+          $ref: "#/components/schemas/PageInfo"
+      required:
+        - items
+        - page
+      type: object
+    ListJobSchedules:
+      properties:
+        items:
+          items:
+            $ref: "#/components/schemas/JobSchedule"
+          type: array
+        page:
+          $ref: "#/components/schemas/PageInfo"
+      required:
+        - items
+        - page
+      type: object
+    ListJobs:
+      properties:
+        items:
+          items:
+            $ref: "#/components/schemas/Job"
           type: array
         page:
           $ref: "#/components/schemas/PageInfo"
@@ -2227,6 +2361,196 @@ paths:
       summary: Update an account
       tags:
         - Accounts
+  /api/job-schedules:
+    get:
+      operationId: getApiJob-schedules
+      parameters:
+        - in: query
+          name: limit
+          required: false
+          schema:
+            anyOf:
+              - default: 0
+                format: integer
+                type: string
+              - maximum: 100
+                minimum: 1
+                type: integer
+            maximum: 100
+            minimum: 1
+        - in: query
+          name: cursor
+          required: false
+          schema:
+            minLength: 1
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListJobSchedules"
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: List job schedules
+      tags:
+        - Jobs
+  /api/job-schedules/{id}:
+    get:
+      operationId: getApiJob-schedulesById
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobSchedule"
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Get job schedule
+      tags:
+        - Jobs
+  /api/jobs:
+    get:
+      operationId: getApiJobs
+      parameters:
+        - in: query
+          name: limit
+          required: false
+          schema:
+            anyOf:
+              - default: 0
+                format: integer
+                type: string
+              - maximum: 100
+                minimum: 1
+                type: integer
+            maximum: 100
+            minimum: 1
+        - in: query
+          name: cursor
+          required: false
+          schema:
+            minLength: 1
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListJobs"
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: List jobs
+      tags:
+        - Jobs
+  /api/jobs/{id}:
+    get:
+      operationId: getApiJobsById
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Job"
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Get job
+      tags:
+        - Jobs
   /api/matches:
     get:
       operationId: getApiMatches

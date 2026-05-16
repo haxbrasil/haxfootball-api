@@ -7,8 +7,16 @@ import {
   inspectRoomProcess
 } from "@/features/rooms/room-process.service";
 
-export async function reconcileOpenRooms(): Promise<void> {
-  await closeStaleOpenRooms();
+export type ReconcileOpenRoomsResult = {
+  inspected: number;
+  closed: number;
+  failed: number;
+  externalMarkedRunning: number;
+  staleClosed: number;
+};
+
+export async function reconcileOpenRooms(): Promise<ReconcileOpenRoomsResult> {
+  const staleClosed = await closeStaleOpenRooms();
 
   const rooms = await db
     .select({
@@ -19,6 +27,14 @@ export async function reconcileOpenRooms(): Promise<void> {
     .innerJoin(roomPrograms, eq(roomInstances.programId, roomPrograms.id))
     .where(inArray(roomInstances.state, ["provisioning", "running"]));
 
+  const result: ReconcileOpenRoomsResult = {
+    inspected: staleClosed + rooms.length,
+    closed: 0,
+    failed: 0,
+    externalMarkedRunning: 0,
+    staleClosed
+  };
+
   for (const { room, program } of rooms) {
     const status = await inspectRoomProcess(room);
 
@@ -28,6 +44,7 @@ export async function reconcileOpenRooms(): Promise<void> {
         room.id,
         "Room did not become ready before provisioning timeout"
       );
+      result.failed += 1;
       continue;
     }
 
@@ -46,6 +63,7 @@ export async function reconcileOpenRooms(): Promise<void> {
             updatedAt: new Date().toISOString()
           })
           .where(eq(roomInstances.id, room.id));
+        result.externalMarkedRunning += 1;
       }
 
       continue;
@@ -65,7 +83,15 @@ export async function reconcileOpenRooms(): Promise<void> {
         updatedAt: now
       })
       .where(eq(roomInstances.id, room.id));
+
+    if (state === "closed") {
+      result.closed += 1;
+    } else {
+      result.failed += 1;
+    }
   }
+
+  return result;
 }
 
 function shouldFailProvisioningRoom(room: { createdAt: string }): boolean {

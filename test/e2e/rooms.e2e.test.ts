@@ -8,6 +8,7 @@ import {
   writeFileSync
 } from "node:fs";
 import { join } from "node:path";
+import { runRoomReconciliationJob } from "@/test/e2e/helpers/jobs";
 import {
   paginatedItems,
   rawRequest,
@@ -1999,6 +2000,8 @@ describe("rooms", () => {
     let reconciledExitedRoom: RoomLaunchResponse | undefined;
 
     for (let attempt = 0; attempt < 40; attempt += 1) {
+      await runRoomReconciliationJob();
+
       const response = await request(`/api/rooms/${exitedRoom.id}`);
 
       expect(response.status).toBe(200);
@@ -2029,6 +2032,8 @@ describe("rooms", () => {
     let reconciledRunningRoom: RoomLaunchResponse | undefined;
 
     for (let attempt = 0; attempt < 40; attempt += 1) {
+      await runRoomReconciliationJob();
+
       const response = await request(`/api/rooms/${reconciledLinkRoom.id}`);
 
       expect(response.status).toBe(200);

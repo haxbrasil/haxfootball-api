@@ -6,7 +6,6 @@ import {
 } from "@/features/rooms/room.contract";
 import type { RoomRow } from "@/features/rooms/room.persistence";
 import { listRoomRows } from "@/features/rooms/room.persistence";
-import { reconcileOpenRooms } from "@/features/rooms/reconcile-rooms";
 import { pageItems, type PaginatedResponse } from "@lib";
 
 export { listRoomsResponseSchema };
@@ -14,8 +13,6 @@ export { listRoomsResponseSchema };
 export async function listRooms(
   query: ListRoomsQuery = {}
 ): Promise<PaginatedResponse<RoomResponse>> {
-  await reconcileOpenRooms();
-
   const rows = await listRoomRows({ state: query.state, pagination: query });
   const page = pageItems(rows, query, (row: RoomRow) => row.room.id);
 

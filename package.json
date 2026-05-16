@@ -7,6 +7,11 @@
   "scripts": {
     "dev": "bun --watch src/index.ts",
     "start": "bun src/index.ts",
+    "jobs:work": "bun src/jobs.ts work",
+    "jobs:enqueue": "bun src/jobs.ts enqueue",
+    "jobs:run": "bun src/jobs.ts run",
+    "jobs:list": "bun src/jobs.ts list",
+    "jobs:retry": "bun src/jobs.ts retry",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "format": "biome format --write .",
@@ -26,6 +31,7 @@
     "@elysiajs/openapi": "^1.4.15",
     "@hax-brasil/replay-decoder": "^1.0.1",
     "@sinclair/typebox": "^0.34.49",
+    "commander": "^14.0.3",
     "drizzle-orm": "~0.44.5",
     "elysia": "^1.4.28"
   },

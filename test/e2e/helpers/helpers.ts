@@ -1,5 +1,4 @@
 import { Database } from "bun:sqlite";
-import { HeadObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { expect } from "bun:test";
 
 type TestRequestInit = {
@@ -32,7 +31,7 @@ Bun.env.ROOM_PROCESS_LOG_DIR ??= `/tmp/haxfootball-api-room-logs-${crypto.random
 
 let databaseReady = false;
 
-async function setupTestDatabase(): Promise<void> {
+export async function setupTestDatabase(): Promise<void> {
   if (databaseReady) {
     return;
   }
@@ -153,31 +152,6 @@ export async function paginatedItems<T>(response: Response): Promise<T[]> {
   const body = await paginatedBody<T>(response);
 
   return body.items;
-}
-
-export async function recordingObjectExists(key: string): Promise<boolean> {
-  const client = new S3Client({
-    endpoint: Bun.env.R2_ENDPOINT ?? "https://example.r2.cloudflarestorage.com",
-    region: "auto",
-    forcePathStyle: true,
-    credentials: {
-      accessKeyId: Bun.env.R2_ACCESS_KEY_ID ?? "test-access-key-id",
-      secretAccessKey: Bun.env.R2_SECRET_ACCESS_KEY ?? "test-secret-access-key"
-    }
-  });
-
-  try {
-    await client.send(
-      new HeadObjectCommand({
-        Bucket: Bun.env.R2_BUCKET ?? "recs",
-        Key: key
-      })
-    );
-
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 function serializeBody(body: unknown): BodyInit | null | undefined {

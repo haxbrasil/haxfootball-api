@@ -38,6 +38,16 @@ export function isJsonValue(value: unknown): value is JsonValue {
   return false;
 }
 
+export function parseJsonValue(text: string): JsonValue {
+  const value = JSON.parse(text) as unknown;
+
+  if (!isJsonValue(value)) {
+    throw new Error("Expected a JSON value");
+  }
+
+  return value;
+}
+
 export function jsonType(value: JsonValue): JsonType {
   if (value === null) {
     return "null";

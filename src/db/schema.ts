@@ -1,4 +1,5 @@
 export * from "@/features/accounts/account.db";
+export * from "@/features/jobs/job.db";
 export * from "@/features/matches/match.db";
 export * from "@/features/match-stat-events/match-stat-event.db";
 export * from "@/features/permissions/permission.db";
