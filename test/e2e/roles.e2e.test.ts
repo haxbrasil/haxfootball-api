@@ -10,6 +10,7 @@ type RoleResponse = {
   name: string;
   title: string;
   permissions: string[];
+  bypassAllPermissions: boolean;
   isDefault: boolean;
   createdAt: string;
   updatedAt: string;
@@ -35,11 +36,136 @@ describe("roles", () => {
       name: "coach",
       title: "Coach",
       permissions: ["rooms:create", "admin:ban"],
+      bypassAllPermissions: false,
       isDefault: false,
       createdAt: expect.any(String),
       updatedAt: expect.any(String)
     });
     expect(role.id).toBeUndefined();
+  });
+
+  it("expands wildcard role permissions dynamically", async () => {
+    const firstPermissionResponse = await request("/api/permissions", {
+      method: "POST",
+      body: {
+        key: "wildcard:initial-a",
+        title: "Wildcard Initial A"
+      }
+    });
+    const secondPermissionResponse = await request("/api/permissions", {
+      method: "POST",
+      body: {
+        key: "wildcard:initial-b",
+        title: "Wildcard Initial B"
+      }
+    });
+
+    expect(firstPermissionResponse.status).toBe(201);
+    expect(secondPermissionResponse.status).toBe(201);
+
+    const createRoleResponse = await request("/api/roles", {
+      method: "POST",
+      body: {
+        name: "wildcard-role",
+        title: "Wildcard Role",
+        permissions: ["*"]
+      }
+    });
+
+    expect(createRoleResponse.status).toBe(201);
+
+    const role: RoleResponse = await createRoleResponse.json();
+
+    expect(role).toMatchObject({
+      name: "wildcard-role",
+      title: "Wildcard Role",
+      bypassAllPermissions: true
+    });
+    expect(role.permissions).toEqual(
+      expect.arrayContaining(["wildcard:initial-a", "wildcard:initial-b"])
+    );
+    expect(role.permissions).not.toContain("*");
+
+    const laterPermissionResponse = await request("/api/permissions", {
+      method: "POST",
+      body: {
+        key: "wildcard:later",
+        title: "Wildcard Later"
+      }
+    });
+
+    expect(laterPermissionResponse.status).toBe(201);
+
+    const getRoleResponse = await request(`/api/roles/${role.uuid}`);
+
+    expect(getRoleResponse.status).toBe(200);
+
+    const refreshedRole: RoleResponse = await getRoleResponse.json();
+
+    expect(refreshedRole.bypassAllPermissions).toBe(true);
+    expect(refreshedRole.permissions).toEqual(
+      expect.arrayContaining([
+        "wildcard:initial-a",
+        "wildcard:initial-b",
+        "wildcard:later"
+      ])
+    );
+    expect(refreshedRole.permissions).not.toContain("*");
+  });
+
+  it("updates and clears wildcard role permissions", async () => {
+    const createRoleResponse = await request("/api/roles", {
+      method: "POST",
+      body: {
+        name: "wildcard-update-role",
+        title: "Wildcard Update Role",
+        permissions: ["wildcard:update-explicit"]
+      }
+    });
+
+    expect(createRoleResponse.status).toBe(201);
+
+    const role: RoleResponse = await createRoleResponse.json();
+    const wildcardResponse = await request(`/api/roles/${role.uuid}`, {
+      method: "PATCH",
+      body: {
+        permissions: ["*"]
+      }
+    });
+
+    expect(wildcardResponse.status).toBe(200);
+
+    const wildcardRole: RoleResponse = await wildcardResponse.json();
+
+    expect(wildcardRole.bypassAllPermissions).toBe(true);
+    expect(wildcardRole.permissions).toContain("wildcard:update-explicit");
+    expect(wildcardRole.permissions).not.toContain("*");
+
+    const explicitResponse = await request(`/api/roles/${role.uuid}`, {
+      method: "PATCH",
+      body: {
+        permissions: ["wildcard:update-explicit"]
+      }
+    });
+
+    expect(explicitResponse.status).toBe(200);
+    expect(await explicitResponse.json()).toMatchObject({
+      bypassAllPermissions: false,
+      permissions: ["wildcard:update-explicit"]
+    });
+
+    const clearResponse = await request(`/api/roles/${role.uuid}`, {
+      method: "PATCH",
+      body: {
+        permissions: []
+      }
+    });
+
+    expect(clearResponse.status).toBe(200);
+    expect(await clearResponse.json()).toMatchObject({
+      bypassAllPermissions: false,
+      permissions: []
+    });
   });
 
   it("lists roles", async () => {

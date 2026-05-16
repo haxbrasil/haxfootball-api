@@ -3,8 +3,8 @@ import { type Static, t } from "elysia";
 import { db } from "@/db/client";
 import {
   type RoleResponse,
+  rolePermissionInputSchema,
   roleNameSchema,
-  rolePermissionsSchema,
   roleTitleSchema,
   toRoleResponse
 } from "@/features/roles/role.contract";
@@ -14,7 +14,7 @@ import {
   roles
 } from "@/features/roles/role.db";
 import {
-  ensurePermissionsByKeys,
+  resolveRolePermissionInput,
   roleWithPermissions
 } from "@/features/roles/role.persistence";
 import { badRequest, notFound } from "@/shared/http/errors";
@@ -23,7 +23,7 @@ export const updateRoleBodySchema = t.Partial(
   t.Object({
     name: roleNameSchema,
     title: roleTitleSchema,
-    permissions: rolePermissionsSchema
+    permissions: rolePermissionInputSchema
   })
 );
 
@@ -64,26 +64,33 @@ export async function updateRole(
   const permissionKeys = input.permissions;
 
   const updatedRole = await db.transaction(async (tx) => {
+    const resolvedPermissions =
+      permissionKeys !== undefined
+        ? await resolveRolePermissionInput(tx, permissionKeys)
+        : null;
     const [updated] = await tx
       .update(roles)
       .set({
         name,
         title,
+        ...(resolvedPermissions
+          ? {
+              bypassAllPermissions: resolvedPermissions.bypassAllPermissions
+            }
+          : {}),
         updatedAt: new Date().toISOString()
       })
       .where(eq(roles.id, role.id))
       .returning();
 
-    if (permissionKeys !== undefined) {
+    if (resolvedPermissions) {
       await tx
         .delete(rolePermissions)
         .where(eq(rolePermissions.roleId, role.id));
 
-      const permissionRows = await ensurePermissionsByKeys(tx, permissionKeys);
-
-      if (permissionRows.length > 0) {
+      if (resolvedPermissions.permissionRows.length > 0) {
         await tx.insert(rolePermissions).values(
-          permissionRows.map((permission) => ({
+          resolvedPermissions.permissionRows.map((permission) => ({
             roleId: role.id,
             permissionId: permission.id
           }))

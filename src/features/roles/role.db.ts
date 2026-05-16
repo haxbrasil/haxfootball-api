@@ -18,6 +18,9 @@ export const roles = sqliteTable("roles", {
     .$defaultFn(() => crypto.randomUUID()),
   name: text("name").notNull().unique(),
   title: text("title").notNull(),
+  bypassAllPermissions: integer("bypass_all_permissions", { mode: "boolean" })
+    .notNull()
+    .default(false),
   createdAt: text("created_at")
     .notNull()
     .$defaultFn(() => new Date().toISOString()),

@@ -4,7 +4,10 @@ import {
   type Permission,
   permissions
 } from "@/features/permissions/permission.db";
-import type { RoleWithPermissions } from "@/features/roles/role.contract";
+import {
+  allPermissionsWildcard,
+  type RoleWithPermissions
+} from "@/features/roles/role.contract";
 import { type Role, rolePermissions } from "@/features/roles/role.db";
 
 export async function ensurePermissionsByKeys(
@@ -51,6 +54,27 @@ export async function ensurePermissionsByKeys(
   });
 }
 
+export async function resolveRolePermissionInput(
+  database: DbTransaction,
+  keys: string[]
+): Promise<{
+  bypassAllPermissions: boolean;
+  permissionRows: Permission[];
+}> {
+  const bypassAllPermissions = keys.includes(allPermissionsWildcard);
+  const concretePermissionKeys = keys.filter(
+    (key) => key !== allPermissionsWildcard
+  );
+
+  return {
+    bypassAllPermissions,
+    permissionRows: await ensurePermissionsByKeys(
+      database,
+      concretePermissionKeys
+    )
+  };
+}
+
 export async function rolesWithPermissions(
   roles: Role[]
 ): Promise<RoleWithPermissions[]> {
@@ -79,9 +103,20 @@ export async function rolesWithPermissions(
     permissionsByRoleId.set(row.roleId, permissions);
   }
 
+  const allPermissionKeys = roles.some((role) => role.bypassAllPermissions)
+    ? (
+        await db
+          .select({ key: permissions.key })
+          .from(permissions)
+          .orderBy(asc(permissions.id))
+      ).map((permission) => permission.key)
+    : [];
+
   return roles.map((role) => ({
     role,
-    permissions: permissionsByRoleId.get(role.id) ?? []
+    permissions: role.bypassAllPermissions
+      ? allPermissionKeys
+      : (permissionsByRoleId.get(role.id) ?? [])
   }));
 }
 

@@ -372,10 +372,13 @@ components:
         permissions:
           default: []
           items:
-            maxLength: 100
-            minLength: 1
-            pattern: ^[a-z][a-z0-9-]*:[a-z][a-z0-9-]*$
-            type: string
+            anyOf:
+              - maxLength: 100
+                minLength: 1
+                pattern: ^[a-z][a-z0-9-]*:[a-z][a-z0-9-]*$
+                type: string
+              - const: "*"
+                type: string
           type: array
           uniqueItems: true
         title:
@@ -1379,6 +1382,8 @@ components:
           type: object
     Role:
       properties:
+        bypassAllPermissions:
+          type: boolean
         createdAt:
           type: string
         isDefault:
@@ -1407,6 +1412,7 @@ components:
         - name
         - title
         - permissions
+        - bypassAllPermissions
         - isDefault
         - createdAt
         - updatedAt
@@ -2019,10 +2025,13 @@ components:
         permissions:
           default: []
           items:
-            maxLength: 100
-            minLength: 1
-            pattern: ^[a-z][a-z0-9-]*:[a-z][a-z0-9-]*$
-            type: string
+            anyOf:
+              - maxLength: 100
+                minLength: 1
+                pattern: ^[a-z][a-z0-9-]*:[a-z][a-z0-9-]*$
+                type: string
+              - const: "*"
+                type: string
           type: array
           uniqueItems: true
         title:

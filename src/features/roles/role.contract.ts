@@ -12,7 +12,19 @@ export const roleTitleSchema = t.String({
   minLength: 1
 });
 
+export const allPermissionsWildcard = "*";
+
+export const rolePermissionInputKeySchema = t.Union([
+  permissionKeySchema,
+  t.Literal(allPermissionsWildcard)
+]);
+
 export const rolePermissionsSchema = t.Array(permissionKeySchema, {
+  default: [],
+  uniqueItems: true
+});
+
+export const rolePermissionInputSchema = t.Array(rolePermissionInputKeySchema, {
   default: [],
   uniqueItems: true
 });
@@ -22,6 +34,7 @@ export const roleResponseSchema = t.Object({
   name: t.String(),
   title: t.String({ minLength: 1 }),
   permissions: rolePermissionsSchema,
+  bypassAllPermissions: t.Boolean(),
   isDefault: t.Boolean(),
   createdAt: t.String(),
   updatedAt: t.String()
@@ -43,6 +56,7 @@ export function toRoleResponse({
     name: role.name,
     title: role.title,
     permissions,
+    bypassAllPermissions: role.bypassAllPermissions,
     isDefault: role.name === defaultRoleName,
     createdAt: role.createdAt,
     updatedAt: role.updatedAt
