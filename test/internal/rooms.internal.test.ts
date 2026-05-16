@@ -59,34 +59,75 @@ describe("room internals", () => {
       },
       publicRoom: false
     });
-    expect(
-      buildEffectiveRoomEnvironment({
-        program: {
-          id: 1,
-          uuid: crypto.randomUUID(),
-          name: "test",
-          title: null,
-          description: null,
-          releaseSource: {
-            owner: "haxbrasil",
-            repo: "test-room",
-            assetPattern: "room-{tag}.tgz"
-          },
-          launchConfigFields: fields,
-          supportsManualLinking: false,
-          haxballTokenEnvVar: "TOKEN",
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+    const externalEnvironment = buildEffectiveRoomEnvironment({
+      program: {
+        id: 1,
+        uuid: crypto.randomUUID(),
+        name: "test",
+        title: null,
+        description: null,
+        releaseSource: {
+          owner: "haxbrasil",
+          repo: "test-room",
+          assetPattern: "room-{tag}.tgz"
         },
-        fields,
-        environmentValues: forcedResolution.environmentValues,
-        haxballToken: "token",
-        roomId: crypto.randomUUID(),
-        roomApiUrl: "http://localhost/api",
-        roomApiJwt: "jwt",
-        commId: "comm"
-      }).ROOM_PUBLIC
-    ).toBe("0");
+        launchConfigFields: fields,
+        integrationMode: "external",
+        haxballTokenEnvVar: "TOKEN",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      },
+      fields,
+      environmentValues: forcedResolution.environmentValues,
+      haxballToken: "token",
+      roomId: crypto.randomUUID(),
+      roomApiUrl: "http://localhost/api",
+      roomApiJwt: "jwt",
+      commId: "comm"
+    });
+
+    expect(externalEnvironment.ROOM_PUBLIC).toBe("0");
+    expect(externalEnvironment.__ROOM_API_URL).toBeUndefined();
+    expect(externalEnvironment.__ROOM_API_JWT).toBeUndefined();
+    expect(externalEnvironment.__ROOM_ID).toBeUndefined();
+    expect(externalEnvironment.__ROOM_COMM_ID).toBeUndefined();
+
+    const integratedEnvironment = buildEffectiveRoomEnvironment({
+      program: {
+        id: 1,
+        uuid: crypto.randomUUID(),
+        name: "test-integrated",
+        title: null,
+        description: null,
+        releaseSource: {
+          owner: "haxbrasil",
+          repo: "test-room",
+          assetPattern: "room-{tag}.tgz"
+        },
+        launchConfigFields: fields,
+        integrationMode: "integrated",
+        haxballTokenEnvVar: "TOKEN",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      },
+      fields,
+      environmentValues: forcedResolution.environmentValues,
+      haxballToken: "token",
+      roomId: "room-id",
+      roomApiUrl: "http://localhost/api",
+      roomApiJwt: "jwt",
+      commId: "comm"
+    });
+
+    expect(integratedEnvironment).toMatchObject({
+      __ROOM_API_URL: "http://localhost/api",
+      __ROOM_API_JWT: "jwt",
+      __ROOM_ID: "room-id",
+      __ROOM_COMM_ID: "comm"
+    });
+    expect(integratedEnvironment.ROOM_API_URL).toBeUndefined();
+    expect(integratedEnvironment.ROOM_API_JWT).toBeUndefined();
+    expect(integratedEnvironment.ROOM_COMM_ID).toBeUndefined();
   });
 
   it("closes stale open rooms only when cleanup is configured", async () => {
@@ -111,7 +152,7 @@ describe("room internals", () => {
           assetPattern: "room-{tag}.tgz"
         },
         launchConfigFields: [],
-        supportsManualLinking: false,
+        integrationMode: "external",
         haxballTokenEnvVar: "ROOM_TOKEN"
       })
       .returning();
@@ -128,7 +169,7 @@ describe("room internals", () => {
           assetUrl: "https://example.com/room-internal.tgz",
           publishedAt: "2026-05-15T00:00:00.000Z"
         },
-        nodeEntrypoint: "dist/server.js",
+        entrypoint: "dist/server.js",
         installStrategy: "none"
       })
       .returning();
@@ -195,6 +236,80 @@ describe("room internals", () => {
     expect(openFreshRoom).toMatchObject({
       state: "running",
       closedAt: null
+    });
+  });
+
+  it("marks provisioning rooms failed after readiness timeout", async () => {
+    const { db } = await import("@/db/client");
+    const { roomInstances, roomPrograms, roomProgramVersions } = await import(
+      "@/features/rooms/room.db"
+    );
+    const { reconcileOpenRooms } = await import(
+      "@/features/rooms/reconcile-rooms"
+    );
+
+    const [program] = await db
+      .insert(roomPrograms)
+      .values({
+        uuid: crypto.randomUUID(),
+        name: `timeout-${crypto.randomUUID().slice(0, 8)}`,
+        title: "Timeout",
+        description: "Timeout",
+        releaseSource: {
+          owner: "haxbrasil",
+          repo: "test-room",
+          assetPattern: "room-{tag}.tgz"
+        },
+        launchConfigFields: [],
+        integrationMode: "integrated",
+        haxballTokenEnvVar: "ROOM_TOKEN"
+      })
+      .returning();
+    const [version] = await db
+      .insert(roomProgramVersions)
+      .values({
+        uuid: crypto.randomUUID(),
+        programId: program.id,
+        version: `timeout-${crypto.randomUUID().slice(0, 8)}`,
+        artifact: {
+          releaseId: "timeout",
+          tagName: "timeout",
+          assetName: "room-timeout.tgz",
+          assetUrl: "https://example.com/room-timeout.tgz",
+          publishedAt: "2026-05-15T00:00:00.000Z"
+        },
+        entrypoint: "dist/server.js",
+        installStrategy: "none"
+      })
+      .returning();
+    const createdAt = new Date(Date.now() - 121_000).toISOString();
+    const [room] = await db
+      .insert(roomInstances)
+      .values({
+        uuid: crypto.randomUUID(),
+        programId: program.id,
+        versionId: version.id,
+        state: "provisioning",
+        roomLink: null,
+        launchConfig: {},
+        public: false,
+        commIdHash: "timeout",
+        createdAt,
+        updatedAt: createdAt
+      })
+      .returning();
+
+    await reconcileOpenRooms();
+
+    const [failedRoom] = await db
+      .select()
+      .from(roomInstances)
+      .where(eq(roomInstances.id, room.id));
+
+    expect(failedRoom).toMatchObject({
+      state: "failed",
+      failedAt: expect.any(String),
+      failureReason: "Room did not become ready before provisioning timeout"
     });
   });
 });

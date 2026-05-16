@@ -93,13 +93,15 @@ export async function createRoom(
     version,
     environment
   });
-  const nextState = launch.roomLink ? "running" : "provisioning";
+  const nextRoomLink =
+    program.integrationMode === "external" ? (launch.roomLink ?? null) : null;
+  const nextState = nextRoomLink ? "running" : "provisioning";
 
   const [updatedRoom] = await db
     .update(roomInstances)
     .set({
       state: nextState,
-      roomLink: launch.roomLink ?? null,
+      roomLink: nextRoomLink,
       pid: launch.pid,
       processStartedAt: launch.processStartedAt,
       invocationId: launch.invocationId,
@@ -203,8 +205,7 @@ async function resolveProgramVersion(
         assetUrl: asset.downloadUrl,
         publishedAt: latestRelease.publishedAt
       },
-      nodeEntrypoint:
-        latestKnownVersion?.nodeEntrypoint ?? anyKnownVersion.nodeEntrypoint,
+      entrypoint: latestKnownVersion?.entrypoint ?? anyKnownVersion.entrypoint,
       installStrategy:
         latestKnownVersion?.installStrategy ?? anyKnownVersion.installStrategy
     })

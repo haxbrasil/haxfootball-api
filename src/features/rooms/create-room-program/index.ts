@@ -33,7 +33,7 @@ export async function createRoomProgram(
       description: input.description ?? null,
       releaseSource: input.releaseSource,
       launchConfigFields: normalizeLaunchConfigFields(input.launchConfigFields),
-      supportsManualLinking: input.supportsManualLinking ?? false,
+      integrationMode: input.integrationMode,
       haxballTokenEnvVar: input.haxballTokenEnvVar ?? "ROOM_TOKEN"
     })
     .returning();

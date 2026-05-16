@@ -417,7 +417,7 @@ export const roomRoutes = new Elysia({
           },
           detail: {
             tags: ["Rooms"],
-            summary: "Report room ready for manual linking"
+            summary: "Report integrated room ready"
           }
         }
       )

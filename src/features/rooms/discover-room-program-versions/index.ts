@@ -61,7 +61,7 @@ export async function discoverRoomProgramVersions(
           assetUrl: asset.downloadUrl,
           publishedAt: release.publishedAt
         },
-        nodeEntrypoint: input.nodeEntrypoint,
+        entrypoint: input.entrypoint,
         installStrategy: input.installStrategy ?? "npm-ci"
       })
       .returning();

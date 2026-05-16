@@ -4,6 +4,7 @@ import type {
   RoomLaunchConfig,
   RoomLaunchConfigField,
   RoomProgram,
+  RoomProgramIntegrationMode,
   RoomProgramReleaseSource,
   RoomProgramVersion,
   RoomProgramVersionAlias,
@@ -39,6 +40,11 @@ const launchConfigValueSchema = t.Union([
   t.Null()
 ]);
 
+const roomProgramIntegrationModeSchema = t.Union([
+  t.Literal("external"),
+  t.Literal("integrated")
+]);
+
 export const roomLaunchConfigFieldSchema = t.Object({
   key: roomLaunchConfigKeySchema,
   displayName: t.String({ minLength: 1, maxLength: 80 }),
@@ -70,7 +76,7 @@ export const roomProgramResponseSchema = t.Object({
   description: t.Nullable(t.String()),
   releaseSource: roomProgramReleaseSourceSchema,
   launchConfigFields: t.Array(roomLaunchConfigFieldSchema),
-  supportsManualLinking: t.Boolean(),
+  integrationMode: roomProgramIntegrationModeSchema,
   haxballTokenEnvVar: envVarSchema,
   createdAt: t.String(),
   updatedAt: t.String()
@@ -90,7 +96,7 @@ export const createRoomProgramBodySchema = t.Object({
   description: t.Optional(t.String({ minLength: 1 })),
   releaseSource: roomProgramReleaseSourceSchema,
   launchConfigFields: t.Optional(t.Array(roomLaunchConfigFieldSchema)),
-  supportsManualLinking: t.Optional(t.Boolean()),
+  integrationMode: roomProgramIntegrationModeSchema,
   haxballTokenEnvVar: t.Optional(envVarSchema)
 });
 
@@ -100,7 +106,7 @@ export const updateRoomProgramBodySchema = t.Partial(
     description: t.Nullable(t.String({ minLength: 1 })),
     releaseSource: roomProgramReleaseSourceSchema,
     launchConfigFields: t.Array(roomLaunchConfigFieldSchema),
-    supportsManualLinking: t.Boolean(),
+    integrationMode: roomProgramIntegrationModeSchema,
     haxballTokenEnvVar: envVarSchema
   })
 );
@@ -119,7 +125,7 @@ export const roomProgramVersionResponseSchema = t.Object({
   programId: roomUuidSchema,
   version: t.String({ minLength: 1 }),
   artifact: roomProgramVersionArtifactSchema,
-  nodeEntrypoint: t.String({ minLength: 1 }),
+  entrypoint: t.String({ minLength: 1 }),
   installStrategy: t.Union([
     t.Literal("none"),
     t.Literal("npm-ci"),
@@ -136,7 +142,7 @@ export const listRoomProgramVersionsResponseSchema = paginatedResponseSchema(
 export const createRoomProgramVersionBodySchema = t.Object({
   version: t.String({ minLength: 1, maxLength: 80 }),
   artifact: roomProgramVersionArtifactSchema,
-  nodeEntrypoint: t.String({ minLength: 1, maxLength: 240 }),
+  entrypoint: t.String({ minLength: 1, maxLength: 240 }),
   installStrategy: t.Optional(
     t.Union([t.Literal("none"), t.Literal("npm-ci"), t.Literal("npm-install")])
   )
@@ -217,7 +223,7 @@ export const roomArtifactParamsSchema = t.Object({
 });
 
 export const discoverRoomProgramVersionsBodySchema = t.Object({
-  nodeEntrypoint: t.String({ minLength: 1, maxLength: 240 }),
+  entrypoint: t.String({ minLength: 1, maxLength: 240 }),
   installStrategy: t.Optional(
     t.Union([t.Literal("none"), t.Literal("npm-ci"), t.Literal("npm-install")])
   )
@@ -294,7 +300,8 @@ export const roomResponseSchema = t.Object({
   state: t.Union([
     t.Literal("provisioning"),
     t.Literal("running"),
-    t.Literal("closed")
+    t.Literal("closed"),
+    t.Literal("failed")
   ]),
   roomLink: t.Nullable(t.String()),
   launchConfig: roomLaunchConfigSchema,
@@ -302,7 +309,9 @@ export const roomResponseSchema = t.Object({
   proxyEndpoint: t.Nullable(roomResponseProxyEndpointSummarySchema),
   createdAt: t.String(),
   updatedAt: t.String(),
-  closedAt: t.Nullable(t.String())
+  closedAt: t.Nullable(t.String()),
+  failedAt: t.Nullable(t.String()),
+  failureReason: t.Nullable(t.String())
 });
 
 export const listRoomsResponseSchema =
@@ -321,6 +330,7 @@ export const listRoomsQuerySchema = t.Object({
       t.Literal("provisioning"),
       t.Literal("running"),
       t.Literal("closed"),
+      t.Literal("failed"),
       t.Literal("all")
     ])
   )
@@ -405,7 +415,7 @@ export function toRoomProgramResponse(
     description: program.description,
     releaseSource: program.releaseSource,
     launchConfigFields: program.launchConfigFields,
-    supportsManualLinking: program.supportsManualLinking,
+    integrationMode: program.integrationMode,
     haxballTokenEnvVar: program.haxballTokenEnvVar,
     createdAt: program.createdAt,
     updatedAt: program.updatedAt
@@ -421,7 +431,7 @@ export function toRoomProgramVersionResponse(
     programId: program.uuid,
     version: version.version,
     artifact: version.artifact,
-    nodeEntrypoint: version.nodeEntrypoint,
+    entrypoint: version.entrypoint,
     installStrategy: version.installStrategy,
     createdAt: version.createdAt,
     updatedAt: version.updatedAt
@@ -513,11 +523,14 @@ export function toRoomResponse(input: ToRoomResponseInput): RoomResponse {
       : null,
     createdAt: room.createdAt,
     updatedAt: room.updatedAt,
-    closedAt: room.closedAt
+    closedAt: room.closedAt,
+    failedAt: room.failedAt,
+    failureReason: room.failureReason
   };
 }
 
 export type RoomProgramRow = RoomProgram;
+export type RoomProgramIntegrationModeInput = RoomProgramIntegrationMode;
 export type RoomProgramReleaseSourceInput = RoomProgramReleaseSource;
 export type RoomVersionArtifactInput = RoomProgramVersionArtifact;
 export type LaunchConfigInput = RoomLaunchConfig;

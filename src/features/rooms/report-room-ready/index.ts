@@ -22,12 +22,12 @@ export async function reportRoomReady(
 ): Promise<RoomResponse> {
   const row = await getRoomRow(uuid);
 
-  if (!row.program.supportsManualLinking) {
-    throw badRequest("Room program does not support manual linking");
+  if (row.program.integrationMode !== "integrated") {
+    throw badRequest("Room program is not integrated");
   }
 
-  if (row.room.state === "closed") {
-    throw badRequest("Closed room cannot be marked ready");
+  if (row.room.state === "closed" || row.room.state === "failed") {
+    throw badRequest("Terminal room cannot be marked ready");
   }
 
   if ((await hashSecret(input.commId)) !== row.room.commIdHash) {

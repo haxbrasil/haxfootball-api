@@ -115,6 +115,16 @@ components:
           nullable: true
         createdAt:
           type: string
+        failedAt:
+          anyOf:
+            - type: string
+            - type: "null"
+          nullable: true
+        failureReason:
+          anyOf:
+            - type: string
+            - type: "null"
+          nullable: true
         id:
           format: uuid
           type: string
@@ -146,6 +156,7 @@ components:
             - provisioning
             - running
             - closed
+            - failed
           type: string
         updatedAt:
           type: string
@@ -163,6 +174,8 @@ components:
         - createdAt
         - updatedAt
         - closedAt
+        - failedAt
+        - failureReason
       type: object
     ConfirmAccountBody:
       properties:
@@ -407,6 +420,11 @@ components:
           minLength: 1
           pattern: ^[A-Z_][A-Z0-9_]*$
           type: string
+        integrationMode:
+          enum:
+            - external
+            - integrated
+          type: string
         launchConfigFields:
           items:
             $ref: "#/components/schemas/RoomLaunchConfigField"
@@ -418,28 +436,27 @@ components:
           type: string
         releaseSource:
           $ref: "#/components/schemas/RoomProgramReleaseSource"
-        supportsManualLinking:
-          type: boolean
         title:
           minLength: 1
           type: string
       required:
         - name
         - releaseSource
+        - integrationMode
       type: object
     CreateRoomProgramVersionBody:
       properties:
         artifact:
           $ref: "#/components/schemas/RoomProgramVersionArtifact"
+        entrypoint:
+          maxLength: 240
+          minLength: 1
+          type: string
         installStrategy:
           enum:
             - none
             - npm-ci
             - npm-install
-          type: string
-        nodeEntrypoint:
-          maxLength: 240
-          minLength: 1
           type: string
         version:
           maxLength: 80
@@ -448,7 +465,7 @@ components:
       required:
         - version
         - artifact
-        - nodeEntrypoint
+        - entrypoint
       type: object
     CreateRoomProxyEndpointBody:
       properties:
@@ -518,18 +535,18 @@ components:
       type: object
     DiscoverRoomProgramVersionsBody:
       properties:
+        entrypoint:
+          maxLength: 240
+          minLength: 1
+          type: string
         installStrategy:
           enum:
             - none
             - npm-ci
             - npm-install
           type: string
-        nodeEntrypoint:
-          maxLength: 240
-          minLength: 1
-          type: string
       required:
-        - nodeEntrypoint
+        - entrypoint
       type: object
     DiscoverRoomProgramVersionsResponse:
       items:
@@ -1269,6 +1286,16 @@ components:
           nullable: true
         createdAt:
           type: string
+        failedAt:
+          anyOf:
+            - type: string
+            - type: "null"
+          nullable: true
+        failureReason:
+          anyOf:
+            - type: string
+            - type: "null"
+          nullable: true
         id:
           format: uuid
           type: string
@@ -1300,6 +1327,7 @@ components:
             - provisioning
             - running
             - closed
+            - failed
           type: string
         updatedAt:
           type: string
@@ -1317,6 +1345,8 @@ components:
         - createdAt
         - updatedAt
         - closedAt
+        - failedAt
+        - failureReason
       type: object
     RoomArtifact:
       properties:
@@ -1429,6 +1459,11 @@ components:
         id:
           format: uuid
           type: string
+        integrationMode:
+          enum:
+            - external
+            - integrated
+          type: string
         launchConfigFields:
           items:
             $ref: "#/components/schemas/RoomLaunchConfigField"
@@ -1440,8 +1475,6 @@ components:
           type: string
         releaseSource:
           $ref: "#/components/schemas/RoomProgramReleaseSource"
-        supportsManualLinking:
-          type: boolean
         title:
           anyOf:
             - type: string
@@ -1456,7 +1489,7 @@ components:
         - description
         - releaseSource
         - launchConfigFields
-        - supportsManualLinking
+        - integrationMode
         - haxballTokenEnvVar
         - createdAt
         - updatedAt
@@ -1486,6 +1519,9 @@ components:
           $ref: "#/components/schemas/RoomProgramVersionArtifact"
         createdAt:
           type: string
+        entrypoint:
+          minLength: 1
+          type: string
         id:
           format: uuid
           type: string
@@ -1494,9 +1530,6 @@ components:
             - none
             - npm-ci
             - npm-install
-          type: string
-        nodeEntrypoint:
-          minLength: 1
           type: string
         programId:
           format: uuid
@@ -1511,7 +1544,7 @@ components:
         - programId
         - version
         - artifact
-        - nodeEntrypoint
+        - entrypoint
         - installStrategy
         - createdAt
         - updatedAt
@@ -1875,6 +1908,11 @@ components:
           minLength: 1
           pattern: ^[A-Z_][A-Z0-9_]*$
           type: string
+        integrationMode:
+          enum:
+            - external
+            - integrated
+          type: string
         launchConfigFields:
           items:
             $ref: "#/components/schemas/RoomLaunchConfigField"
@@ -1898,8 +1936,6 @@ components:
             - repo
             - assetPattern
           type: object
-        supportsManualLinking:
-          type: boolean
         title:
           anyOf:
             - minLength: 1
@@ -4155,6 +4191,7 @@ paths:
               - provisioning
               - running
               - closed
+              - failed
               - all
             type: string
       responses:
@@ -4362,7 +4399,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/InternalServerError"
           description: Response for status 500
-      summary: Report room ready for manual linking
+      summary: Report integrated room ready
       tags:
         - Rooms
   /api/sessions/confirm:

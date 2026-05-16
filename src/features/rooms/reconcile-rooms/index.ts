@@ -1,7 +1,7 @@
 import { and, eq, inArray, lt } from "drizzle-orm";
 import { env } from "@/config/env";
 import { db } from "@/db/client";
-import { roomInstances } from "@/features/rooms/room.db";
+import { roomInstances, roomPrograms } from "@/features/rooms/room.db";
 import {
   closeRoomProcess,
   inspectRoomProcess
@@ -11,15 +11,33 @@ export async function reconcileOpenRooms(): Promise<void> {
   await closeStaleOpenRooms();
 
   const rooms = await db
-    .select()
+    .select({
+      room: roomInstances,
+      program: roomPrograms
+    })
     .from(roomInstances)
+    .innerJoin(roomPrograms, eq(roomInstances.programId, roomPrograms.id))
     .where(inArray(roomInstances.state, ["provisioning", "running"]));
 
-  for (const room of rooms) {
+  for (const { room, program } of rooms) {
     const status = await inspectRoomProcess(room);
 
+    if (room.state === "provisioning" && shouldFailProvisioningRoom(room)) {
+      await closeRoomProcess(room);
+      await markRoomFailed(
+        room.id,
+        "Room did not become ready before provisioning timeout"
+      );
+      continue;
+    }
+
     if (status.alive && status.expected) {
-      if (room.state === "provisioning" && !room.roomLink && status.roomLink) {
+      if (
+        program.integrationMode === "external" &&
+        room.state === "provisioning" &&
+        !room.roomLink &&
+        status.roomLink
+      ) {
         await db
           .update(roomInstances)
           .set({
@@ -34,16 +52,44 @@ export async function reconcileOpenRooms(): Promise<void> {
     }
 
     const now = new Date().toISOString();
+    const state = room.state === "provisioning" ? "failed" : "closed";
 
     await db
       .update(roomInstances)
       .set({
-        state: "closed",
-        closedAt: now,
+        state,
+        closedAt: state === "closed" ? now : null,
+        failedAt: state === "failed" ? now : null,
+        failureReason:
+          state === "failed" ? "Room process exited before readiness" : null,
         updatedAt: now
       })
       .where(eq(roomInstances.id, room.id));
   }
+}
+
+function shouldFailProvisioningRoom(room: { createdAt: string }): boolean {
+  const createdAt = Date.parse(room.createdAt);
+
+  if (Number.isNaN(createdAt)) {
+    return false;
+  }
+
+  return Date.now() - createdAt >= env.roomProvisioningTimeoutSeconds * 1000;
+}
+
+async function markRoomFailed(id: number, reason: string): Promise<void> {
+  const now = new Date().toISOString();
+
+  await db
+    .update(roomInstances)
+    .set({
+      state: "failed",
+      failedAt: now,
+      failureReason: reason,
+      updatedAt: now
+    })
+    .where(eq(roomInstances.id, id));
 }
 
 export async function closeStaleOpenRooms(

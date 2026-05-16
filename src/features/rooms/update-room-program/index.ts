@@ -30,8 +30,7 @@ export async function updateRoomProgram(
       launchConfigFields: input.launchConfigFields
         ? normalizeLaunchConfigFields(input.launchConfigFields)
         : program.launchConfigFields,
-      supportsManualLinking:
-        input.supportsManualLinking ?? program.supportsManualLinking,
+      integrationMode: input.integrationMode ?? program.integrationMode,
       haxballTokenEnvVar:
         input.haxballTokenEnvVar ?? program.haxballTokenEnvVar,
       updatedAt: new Date().toISOString()

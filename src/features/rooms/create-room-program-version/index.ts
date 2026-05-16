@@ -34,7 +34,7 @@ export async function createRoomProgramVersion(
       existingVersion.artifact.assetUrl === input.artifact.assetUrl &&
       existingVersion.artifact.assetName === input.artifact.assetName &&
       existingVersion.artifact.publishedAt === input.artifact.publishedAt &&
-      existingVersion.nodeEntrypoint === input.nodeEntrypoint &&
+      existingVersion.entrypoint === input.entrypoint &&
       existingVersion.installStrategy === (input.installStrategy ?? "npm-ci")
     ) {
       return toRoomProgramVersionResponse(existingVersion, program);
@@ -50,7 +50,7 @@ export async function createRoomProgramVersion(
       programId: program.id,
       version: input.version,
       artifact: input.artifact,
-      nodeEntrypoint: input.nodeEntrypoint,
+      entrypoint: input.entrypoint,
       installStrategy: input.installStrategy ?? "npm-ci"
     })
     .returning();

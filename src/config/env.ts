@@ -42,6 +42,10 @@ const envSchema = Type.Object({
     default: 0,
     minimum: 0
   }),
+  roomProvisioningTimeoutSeconds: Type.Integer({
+    default: 120,
+    minimum: 1
+  }),
   roomProcessRunner: Type.Union(
     [Type.Literal("bubblewrap"), Type.Literal("node")],
     {
@@ -78,6 +82,7 @@ const envInput = {
   roomArtifactStorageDir: Bun.env.ROOM_ARTIFACT_STORAGE_DIR,
   roomPublicPolicy: Bun.env.ROOM_PUBLIC_POLICY,
   roomStaleCloseAfterSeconds: Bun.env.ROOM_STALE_CLOSE_AFTER_SECONDS,
+  roomProvisioningTimeoutSeconds: Bun.env.ROOM_PROVISIONING_TIMEOUT_SECONDS,
   roomProcessRunner: Bun.env.ROOM_PROCESS_RUNNER,
   roomNodeBinary: Bun.env.ROOM_NODE_BINARY,
   roomPackageCacheDir: Bun.env.ROOM_PACKAGE_CACHE_DIR,

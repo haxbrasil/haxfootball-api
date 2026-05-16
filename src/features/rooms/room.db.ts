@@ -28,6 +28,12 @@ export type RoomProgramReleaseSource = {
 };
 
 export type RoomProgramInstallStrategy = "none" | "npm-ci" | "npm-install";
+export type RoomProgramIntegrationMode = "external" | "integrated";
+export type RoomInstanceState =
+  | "provisioning"
+  | "running"
+  | "closed"
+  | "failed";
 
 export type RoomProgramVersionArtifact = {
   releaseId: string;
@@ -54,11 +60,11 @@ export const roomPrograms = sqliteTable(
     launchConfigFields: text("launch_config_fields", { mode: "json" })
       .$type<RoomLaunchConfigField[]>()
       .notNull(),
-    supportsManualLinking: integer("supports_manual_linking", {
-      mode: "boolean"
+    integrationMode: text("integration_mode", {
+      enum: ["external", "integrated"]
     })
       .notNull()
-      .$default(() => false),
+      .$default(() => "external"),
     haxballTokenEnvVar: text("haxball_token_env_var")
       .notNull()
       .$default(() => "ROOM_TOKEN"),
@@ -84,7 +90,7 @@ export const roomProgramVersions = sqliteTable(
     artifact: text("artifact", { mode: "json" })
       .$type<RoomProgramVersionArtifact>()
       .notNull(),
-    nodeEntrypoint: text("node_entrypoint").notNull(),
+    entrypoint: text("entrypoint").notNull(),
     installStrategy: text("install_strategy", {
       enum: ["none", "npm-ci", "npm-install"]
     })
@@ -167,7 +173,7 @@ export const roomInstances = sqliteTable("room_instances", {
     () => roomProxyEndpoints.id
   ),
   state: text("state", {
-    enum: ["provisioning", "running", "closed"]
+    enum: ["provisioning", "running", "closed", "failed"]
   }).notNull(),
   roomLink: text("room_link"),
   launchConfig: text("launch_config", { mode: "json" })
@@ -180,6 +186,8 @@ export const roomInstances = sqliteTable("room_instances", {
   logPath: text("log_path"),
   commIdHash: text("comm_id_hash").notNull(),
   closedAt: text("closed_at"),
+  failedAt: text("failed_at"),
+  failureReason: text("failure_reason"),
   exitCode: integer("exit_code"),
   exitSignal: text("exit_signal"),
   createdAt: text("created_at")

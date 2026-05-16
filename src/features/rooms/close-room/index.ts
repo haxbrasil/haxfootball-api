@@ -14,7 +14,7 @@ export { roomResponseSchema as closeRoomResponseSchema };
 export async function closeRoom(uuid: string): Promise<RoomResponse> {
   const row = await getRoomRow(uuid);
 
-  if (row.room.state === "closed") {
+  if (row.room.state === "closed" || row.room.state === "failed") {
     return toRoomResponse(row);
   }
 

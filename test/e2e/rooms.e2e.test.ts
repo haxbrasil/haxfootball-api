@@ -71,7 +71,7 @@ type RoomProgramResponse = {
   description: string | null;
   releaseSource: ProgramReleaseSource;
   launchConfigFields: LaunchConfigFieldSummary[];
-  supportsManualLinking: boolean;
+  integrationMode: "external" | "integrated";
   haxballTokenEnvVar: string;
 };
 
@@ -89,7 +89,7 @@ type RoomVersionResponse = {
   programId: string;
   version: string;
   artifact: RoomVersionArtifactResponse;
-  nodeEntrypoint: string;
+  entrypoint: string;
   installStrategy: string;
 };
 
@@ -115,6 +115,9 @@ type RoomLaunchResponse = {
   version: RoomVersionReferenceSummary;
   proxyEndpoint: RoomProxyEndpointSummary | null;
   launchConfig: RoomLaunchConfigPayload;
+  closedAt: string | null;
+  failedAt: string | null;
+  failureReason: string | null;
 };
 
 type CreateRoomProgramInput = {
@@ -123,12 +126,12 @@ type CreateRoomProgramInput = {
   description?: string;
   releaseSource?: ProgramReleaseSource;
   launchConfigFields?: LaunchConfigFieldInput[];
-  supportsManualLinking?: boolean;
+  integrationMode?: "external" | "integrated";
   haxballTokenEnvVar?: string;
 };
 
 type CreateRoomProgramVersionInput = {
-  nodeEntrypoint?: string;
+  entrypoint?: string;
   installStrategy?: "none" | "npm-ci" | "npm-install";
   assetUrl?: string;
   publishedAt?: string;
@@ -263,7 +266,7 @@ describe("rooms", () => {
         name: uniqueName("zeta"),
         title: "Zeta program",
         description: "Second room program",
-        supportsManualLinking: true,
+        integrationMode: "integrated",
         haxballTokenEnvVar: "ROOM_ZETA_TOKEN",
         launchConfigFields: [
           {
@@ -317,7 +320,7 @@ describe("rooms", () => {
             envVar: "MAX_PLAYERS"
           }
         ],
-        supportsManualLinking: true,
+        integrationMode: "integrated",
         haxballTokenEnvVar: "ROOM_ALPHA_ACCESS_TOKEN"
       }
     });
@@ -326,6 +329,7 @@ describe("rooms", () => {
       method: "POST",
       body: {
         name: alpha.name,
+        integrationMode: "external",
         releaseSource: {
           owner: "haxbrasil",
           repo: "test-room",
@@ -357,7 +361,7 @@ describe("rooms", () => {
       name: alpha.name,
       title: "Alpha program",
       description: "First room program",
-      supportsManualLinking: false,
+      integrationMode: "external",
       haxballTokenEnvVar: "ROOM_ALPHA_TOKEN",
       launchConfigFields: expect.arrayContaining([
         expect.objectContaining({
@@ -379,7 +383,7 @@ describe("rooms", () => {
       name: zeta.name,
       title: "Zeta program",
       description: "Second room program",
-      supportsManualLinking: true,
+      integrationMode: "integrated",
       haxballTokenEnvVar: "ROOM_ZETA_TOKEN",
       launchConfigFields: expect.arrayContaining([
         expect.objectContaining({
@@ -407,7 +411,7 @@ describe("rooms", () => {
           envVar: "MAX_PLAYERS"
         })
       ]),
-      supportsManualLinking: true,
+      integrationMode: "integrated",
       haxballTokenEnvVar: "ROOM_ALPHA_ACCESS_TOKEN"
     });
     expect(await refetchResponse.json()).toMatchObject({
@@ -417,7 +421,7 @@ describe("rooms", () => {
       releaseSource: {
         repo: "latest-room"
       },
-      supportsManualLinking: true,
+      integrationMode: "integrated",
       haxballTokenEnvVar: "ROOM_ALPHA_ACCESS_TOKEN"
     });
     expect(await duplicateResponse.json()).toEqual({
@@ -526,6 +530,7 @@ describe("rooms", () => {
       method: "POST",
       body: {
         name: uniqueName("bad-fields"),
+        integrationMode: "external",
         releaseSource: {
           owner: "haxbrasil",
           repo: "test-room",
@@ -548,6 +553,7 @@ describe("rooms", () => {
       method: "POST",
       body: {
         name: uniqueName("bad-duplicate-key"),
+        integrationMode: "external",
         releaseSource: {
           owner: "haxbrasil",
           repo: "test-room",
@@ -577,6 +583,7 @@ describe("rooms", () => {
       method: "POST",
       body: {
         name: uniqueName("bad-duplicate-env"),
+        integrationMode: "external",
         releaseSource: {
           owner: "haxbrasil",
           repo: "test-room",
@@ -606,6 +613,7 @@ describe("rooms", () => {
       method: "POST",
       body: {
         name: uniqueName("bad-enum"),
+        integrationMode: "external",
         releaseSource: {
           owner: "haxbrasil",
           repo: "test-room",
@@ -742,7 +750,7 @@ describe("rooms", () => {
         tagName: "v1.0.0",
         assetName: "room-v1.0.0.tgz"
       },
-      nodeEntrypoint: "dist/server.js",
+      entrypoint: "dist/server.js",
       installStrategy: "none"
     });
     const defaultVersionResponse = await request(
@@ -758,7 +766,7 @@ describe("rooms", () => {
             assetUrl: `${fixtureBaseUrl}/assets/room-v1.0.0.tgz`,
             publishedAt: "2026-05-01T00:00:00Z"
           },
-          nodeEntrypoint: "dist/server.js"
+          entrypoint: "dist/server.js"
         }
       }
     );
@@ -781,7 +789,7 @@ describe("rooms", () => {
             assetUrl: `${fixtureBaseUrl}/assets/room-v1.0.0.tgz`,
             publishedAt: "2026-05-01T00:00:00Z"
           },
-          nodeEntrypoint: "dist/server.js",
+          entrypoint: "dist/server.js",
           installStrategy: "none"
         }
       }
@@ -957,7 +965,7 @@ describe("rooms", () => {
       {
         method: "POST",
         body: {
-          nodeEntrypoint: "dist/server.js",
+          entrypoint: "dist/server.js",
           installStrategy: "none"
         }
       }
@@ -970,7 +978,7 @@ describe("rooms", () => {
       {
         method: "POST",
         body: {
-          nodeEntrypoint: "dist/server.js"
+          entrypoint: "dist/server.js"
         }
       }
     );
@@ -1334,7 +1342,7 @@ describe("rooms", () => {
             publishedAt: "2026-05-15T00:00:00Z",
             checksumSha256: artifact.checksumSha256
           },
-          nodeEntrypoint: "dist/server.js",
+          entrypoint: "dist/server.js",
           installStrategy: "none"
         }
       }
@@ -1353,7 +1361,7 @@ describe("rooms", () => {
             publishedAt: "2026-05-15T00:00:00Z",
             checksumSha256: artifact.checksumSha256
           },
-          nodeEntrypoint: "dist/server.js",
+          entrypoint: "dist/server.js",
           installStrategy: "none"
         }
       }
@@ -1372,7 +1380,7 @@ describe("rooms", () => {
             publishedAt: "2026-05-15T00:00:00Z",
             checksumSha256: "0".repeat(64)
           },
-          nodeEntrypoint: "dist/server.js",
+          entrypoint: "dist/server.js",
           installStrategy: "none"
         }
       }
@@ -1474,7 +1482,7 @@ describe("rooms", () => {
     const programResponse = await request("/api/room-programs", {
       method: "POST",
       body: roomProgramBody({
-        supportsManualLinking: false,
+        integrationMode: "external",
         haxballTokenEnvVar: "ROOM_SESSION_TOKEN",
         launchConfigFields: [
           {
@@ -1534,16 +1542,16 @@ describe("rooms", () => {
       ROOM_NAME: "Sunday session",
       ROOM_PUBLIC: "1",
       ROOM_SESSION_TOKEN: "launch-only-token",
-      ROOM_E2E_ENV_OUT: envPath,
-      __ROOM_API_URL: "http://0.0.0.0:3000/api",
-      __ROOM_API_JWT: expect.any(String),
-      __ROOM_ID: room.id,
-      __ROOM_COMM_ID: expect.any(String)
+      ROOM_E2E_ENV_OUT: envPath
     });
     expect(capturedEnv.ROOM_TOKEN).toBeUndefined();
     expect(capturedEnv.ROOM_API_URL).toBeUndefined();
     expect(capturedEnv.ROOM_API_JWT).toBeUndefined();
     expect(capturedEnv.ROOM_COMM_ID).toBeUndefined();
+    expect(capturedEnv.__ROOM_API_URL).toBeUndefined();
+    expect(capturedEnv.__ROOM_API_JWT).toBeUndefined();
+    expect(capturedEnv.__ROOM_ID).toBeUndefined();
+    expect(capturedEnv.__ROOM_COMM_ID).toBeUndefined();
     expect(JSON.stringify(room)).not.toContain("launch-only-token");
     expect(JSON.stringify(room)).not.toContain(envPath);
     const readyResponse = await request(`/api/rooms/${room.id}/ready`, {
@@ -1558,7 +1566,7 @@ describe("rooms", () => {
     expect(await readyResponse.json()).toEqual({
       error: {
         code: "BAD_REQUEST",
-        message: "Room program does not support manual linking"
+        message: "Room program is not integrated"
       }
     });
     const closeResponse = await request(`/api/rooms/${room.id}/close`, {
@@ -1668,12 +1676,12 @@ describe("rooms", () => {
     expect(closeResponse.status).toBe(200);
   });
 
-  it("launches manual-link rooms and reports readiness only with the matching comm ID", async () => {
+  it("launches integrated rooms and reports readiness only with the matching comm ID", async () => {
     const envPath = fixtureEnvPath();
     const programResponse = await request("/api/room-programs", {
       method: "POST",
       body: roomProgramBody({
-        supportsManualLinking: true,
+        integrationMode: "integrated",
         launchConfigFields: [
           {
             key: "envCapture",
@@ -1726,8 +1734,8 @@ describe("rooms", () => {
 
     const room = (await launchResponse.json()) as RoomLaunchResponse;
     const capturedEnv = await readFixtureEnv(envPath);
-    const commId = capturedEnv.ROOM_COMM_ID;
-    const roomApiJwt = capturedEnv.ROOM_API_JWT ?? "";
+    const commId = capturedEnv.__ROOM_COMM_ID;
+    const roomApiJwt = capturedEnv.__ROOM_API_JWT ?? "";
 
     expect(room).toMatchObject({
       state: "provisioning",
@@ -1741,9 +1749,6 @@ describe("rooms", () => {
     });
     expect(capturedEnv).toMatchObject({
       ROOM_PUBLIC: "0",
-      ROOM_API_URL: "http://0.0.0.0:3000/api",
-      ROOM_API_JWT: expect.any(String),
-      ROOM_COMM_ID: expect.any(String),
       __ROOM_API_URL: "http://0.0.0.0:3000/api",
       __ROOM_API_JWT: expect.any(String),
       __ROOM_ID: room.id,
@@ -1751,6 +1756,9 @@ describe("rooms", () => {
     });
     expect(capturedEnv.ROOM_NAME).toBeUndefined();
     expect(capturedEnv.ROOM_TOKEN).toBe("manual-token");
+    expect(capturedEnv.ROOM_API_URL).toBeUndefined();
+    expect(capturedEnv.ROOM_API_JWT).toBeUndefined();
+    expect(capturedEnv.ROOM_COMM_ID).toBeUndefined();
     expect(commId).toEqual(expect.any(String));
 
     const missingAuthReadyResponse = await rawRequest(
@@ -1997,7 +2005,7 @@ describe("rooms", () => {
 
       const room = (await response.json()) as RoomLaunchResponse;
 
-      if (room.state === "closed") {
+      if (room.state === "failed") {
         reconciledExitedRoom = room;
         break;
       }
@@ -2006,8 +2014,17 @@ describe("rooms", () => {
     }
 
     if (!reconciledExitedRoom) {
-      throw new Error(`Room ${exitedRoom.id} did not reach state closed`);
+      throw new Error(`Room ${exitedRoom.id} did not reach state failed`);
     }
+
+    const failedRoomsResponse = await request("/api/rooms?state=failed");
+
+    expect(failedRoomsResponse.status).toBe(200);
+    expect(
+      (await paginatedItems<RoomStateSummary>(failedRoomsResponse)).some(
+        (room) => room.id === exitedRoom.id && room.state === "failed"
+      )
+    ).toBe(true);
 
     let reconciledRunningRoom: RoomLaunchResponse | undefined;
 
@@ -2040,8 +2057,9 @@ describe("rooms", () => {
     );
 
     expect(reconciledExitedRoom).toMatchObject({
-      state: "closed",
-      closedAt: expect.any(String)
+      state: "failed",
+      failedAt: expect.any(String),
+      failureReason: "Room process exited before readiness"
     });
     expect(reconciledRunningRoom).toMatchObject({
       roomLink: "https://www.haxball.com/play?c=fixture123"
@@ -2434,7 +2452,7 @@ describe("rooms", () => {
     const manualProgramResponse = await request("/api/room-programs", {
       method: "POST",
       body: roomProgramBody({
-        supportsManualLinking: true,
+        integrationMode: "integrated",
         launchConfigFields: [
           {
             key: "envCapture",
@@ -2502,7 +2520,7 @@ describe("rooms", () => {
 
     const provisioningRoom = await provisioningLaunchResponse.json();
     const provisioningEnv = await readFixtureEnv(provisioningEnvPath);
-    const commId = provisioningEnv.ROOM_COMM_ID;
+    const commId = provisioningEnv.__ROOM_COMM_ID;
 
     const openResponse = await request("/api/rooms");
     const runningResponse = await request("/api/rooms?state=running");
@@ -2626,7 +2644,7 @@ describe("rooms", () => {
     expect(await readyAfterCloseResponse.json()).toEqual({
       error: {
         code: "BAD_REQUEST",
-        message: "Closed room cannot be marked ready"
+        message: "Terminal room cannot be marked ready"
       }
     });
   });
@@ -2717,7 +2735,7 @@ function roomProgramBody(input: CreateRoomProgramInput = {}) {
       assetPattern: "room-{tag}.tgz"
     },
     launchConfigFields: input.launchConfigFields,
-    supportsManualLinking: input.supportsManualLinking ?? false,
+    integrationMode: input.integrationMode ?? "external",
     haxballTokenEnvVar: input.haxballTokenEnvVar
   };
 }
@@ -2736,7 +2754,7 @@ function roomVersionBody(
         input.assetUrl ?? `${fixtureBaseUrl}/assets/room-${version}.tgz`,
       publishedAt: input.publishedAt ?? "2026-05-01T00:00:00Z"
     },
-    nodeEntrypoint: input.nodeEntrypoint ?? "dist/server.js",
+    entrypoint: input.entrypoint ?? "dist/server.js",
     installStrategy: input.installStrategy ?? "none"
   };
 }

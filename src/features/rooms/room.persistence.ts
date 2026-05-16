@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, ne } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { db } from "@/db/client";
 import {
   roomInstances,
@@ -26,6 +26,7 @@ export type RoomStateFilter =
   | "provisioning"
   | "running"
   | "closed"
+  | "failed"
   | "all"
   | undefined;
 export type ListRoomRowsInput = {
@@ -243,7 +244,7 @@ export async function getLatestProgramVersion(
 
 function roomStateWhere(state: RoomStateFilter) {
   if (!state || state === "open") {
-    return ne(roomInstances.state, "closed");
+    return inArray(roomInstances.state, ["provisioning", "running"]);
   }
 
   if (state === "all") {

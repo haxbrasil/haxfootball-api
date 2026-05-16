@@ -147,12 +147,15 @@ export function buildEffectiveRoomEnvironment(
   input: BuildEffectiveRoomEnvironmentInput
 ): EffectiveRoomEnvironment {
   const environment: EffectiveRoomEnvironment = {
-    __ROOM_API_URL: input.roomApiUrl,
-    __ROOM_API_JWT: input.roomApiJwt,
-    __ROOM_ID: input.roomId,
-    __ROOM_COMM_ID: input.commId,
     [input.program.haxballTokenEnvVar]: input.haxballToken
   };
+
+  if (input.program.integrationMode === "integrated") {
+    environment.__ROOM_API_URL = input.roomApiUrl;
+    environment.__ROOM_API_JWT = input.roomApiJwt;
+    environment.__ROOM_ID = input.roomId;
+    environment.__ROOM_COMM_ID = input.commId;
+  }
 
   for (const field of input.fields) {
     const value = input.environmentValues[field.key];
@@ -162,12 +165,6 @@ export function buildEffectiveRoomEnvironment(
     }
 
     environment[field.envVar] = stringifyEnvironmentValue(value);
-  }
-
-  if (input.program.supportsManualLinking) {
-    environment.ROOM_API_URL = input.roomApiUrl;
-    environment.ROOM_API_JWT = input.roomApiJwt;
-    environment.ROOM_COMM_ID = input.commId;
   }
 
   return environment;

@@ -78,7 +78,7 @@ export async function inspectRoomProcess(
 
 async function preparePackage(version: RoomProgramVersion): Promise<string> {
   const packageRoot = join(env.roomPackageCacheDir, version.uuid);
-  const entrypointPath = join(packageRoot, version.nodeEntrypoint);
+  const entrypointPath = join(packageRoot, version.entrypoint);
 
   if (existsSync(entrypointPath)) {
     return packageRoot;
@@ -137,16 +137,12 @@ async function launchNodeProcess(
   await mkdir(roomRoot, { recursive: true });
 
   const logFd = openSync(logPath, "a");
-  const childProcess = spawn(
-    env.roomNodeBinary,
-    [input.version.nodeEntrypoint],
-    {
-      cwd: packageRoot,
-      detached: true,
-      env: input.environment,
-      stdio: ["ignore", logFd, logFd]
-    }
-  );
+  const childProcess = spawn(env.roomNodeBinary, [input.version.entrypoint], {
+    cwd: packageRoot,
+    detached: true,
+    env: input.environment,
+    stdio: ["ignore", logFd, logFd]
+  });
 
   closeSync(logFd);
   childProcess.unref();
@@ -203,7 +199,7 @@ async function launchBubblewrapProcess(
       "--clearenv",
       ...environmentArgs,
       "node",
-      input.version.nodeEntrypoint
+      input.version.entrypoint
     ],
     {
       detached: true,
