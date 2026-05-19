@@ -8,7 +8,7 @@
         "@aws-sdk/client-s3": "^3.1045.0",
         "@elysiajs/jwt": "^1.4.2",
         "@elysiajs/openapi": "^1.4.15",
-        "@hax-brasil/replay-decoder": "^1.0.1",
+        "@hax-brasil/replay-decoder": "^1.0.2",
         "@sinclair/typebox": "^0.34.49",
         "commander": "^14.0.3",
         "drizzle-orm": "~0.44.5",
@@ -187,17 +187,17 @@
 
     "@esbuild/win32-x64": ["@esbuild/win32-x64@0.25.12", "", { "os": "win32", "cpu": "x64" }, "sha512-alJC0uCZpTFrSL0CCDjcgleBXPnCrEAhTBILpeAp7M/OFgoqtAetfBzX0xM00MUsVVPpVjlPuMbREqnZCXaTnA=="],
 
-    "@hax-brasil/replay-decoder": ["@hax-brasil/replay-decoder@1.0.1", "", { "optionalDependencies": { "@hax-brasil/replay-decoder-darwin-arm64": "1.0.1", "@hax-brasil/replay-decoder-darwin-x64": "1.0.1", "@hax-brasil/replay-decoder-linux-arm64-gnu": "1.0.1", "@hax-brasil/replay-decoder-linux-x64-gnu": "1.0.1", "@hax-brasil/replay-decoder-win32-x64-msvc": "1.0.1" } }, "sha512-zVFJxuxs2oQ1G2sbPZFeqoyZbYB4zspf4xUPZ1tpPYNqAWAbWomaS7OtLhgXhNB9QoLM2/0blzBpxFf4+JjoGg=="],
+    "@hax-brasil/replay-decoder": ["@hax-brasil/replay-decoder@1.0.2", "", { "optionalDependencies": { "@hax-brasil/replay-decoder-darwin-arm64": "1.0.2", "@hax-brasil/replay-decoder-darwin-x64": "1.0.2", "@hax-brasil/replay-decoder-linux-arm64-gnu": "1.0.2", "@hax-brasil/replay-decoder-linux-x64-gnu": "1.0.2", "@hax-brasil/replay-decoder-win32-x64-msvc": "1.0.2" } }, "sha512-/BsdEwYQgPV2y7rKtbhWxJ+An91bduCM8/lcOwXbShUJzDxZ3lypPd3SVok8+rKKvdSZ9jkvSZMgWyhPwaWB2w=="],
 
-    "@hax-brasil/replay-decoder-darwin-arm64": ["@hax-brasil/replay-decoder-darwin-arm64@1.0.1", "", { "os": "darwin", "cpu": "arm64" }, "sha512-eTORVbsNk25peNFuVCqvLM6wNh20BCauRaV9dfVg5u/uC2cVb31+Ip5yjR7nHDIz+xTJhaOR/NQUwW+ikmYlug=="],
+    "@hax-brasil/replay-decoder-darwin-arm64": ["@hax-brasil/replay-decoder-darwin-arm64@1.0.2", "", { "os": "darwin", "cpu": "arm64" }, "sha512-yEtVi/udQzWjNrPNoAfGubo428kyxBD8WPasW+xj1YZ4M+qg9t0sPmZcGaxVe9a0kSisxUYArlf+7RK2Wyy69A=="],
 
-    "@hax-brasil/replay-decoder-darwin-x64": ["@hax-brasil/replay-decoder-darwin-x64@1.0.1", "", { "os": "darwin", "cpu": "x64" }, "sha512-T81+Xn7Am41mFE0Q1TP9svs4f+hg4jIZJqFL/FMUP5BffVOH0mZpVzAIJrWRvl7CK8LGLu6jKKYG/Tb0LkB31A=="],
+    "@hax-brasil/replay-decoder-darwin-x64": ["@hax-brasil/replay-decoder-darwin-x64@1.0.2", "", { "os": "darwin", "cpu": "x64" }, "sha512-dZOMJkN47OVi226Tqa2OlLeVmHA3/01ABKTpriAqoEGgAD90DGH6RiJCWxJ7dirIUo/WwicZiZmQ6VzMLbL2IQ=="],
 
-    "@hax-brasil/replay-decoder-linux-arm64-gnu": ["@hax-brasil/replay-decoder-linux-arm64-gnu@1.0.1", "", { "os": "linux", "cpu": "arm64" }, "sha512-QBa1Kvy31wHVAaL0SiqOpevezKZjraEfOdq4tAKtl8RMjWiQj3/98lCtUe3gnqS0X6cjfLuUs8+4zjBrZ8AQ1g=="],
+    "@hax-brasil/replay-decoder-linux-arm64-gnu": ["@hax-brasil/replay-decoder-linux-arm64-gnu@1.0.2", "", { "os": "linux", "cpu": "arm64" }, "sha512-9RHoau4ytWNhsirVFwF7AHNAo6ecvH7F8o5a15eGrJ9g3mqcuFIKyUad2VJOT9do/yr389P3cFh2Cov6Jk4H5A=="],
 
-    "@hax-brasil/replay-decoder-linux-x64-gnu": ["@hax-brasil/replay-decoder-linux-x64-gnu@1.0.1", "", { "os": "linux", "cpu": "x64" }, "sha512-vE4bBAhL5I6usB4MRu2nkwcVzhF6g0y7Gy/4wuYfUD/ppGqP2iFlK4IAwZUay4uqjHbv04fIZxc3rT7ORYuH2w=="],
+    "@hax-brasil/replay-decoder-linux-x64-gnu": ["@hax-brasil/replay-decoder-linux-x64-gnu@1.0.2", "", { "os": "linux", "cpu": "x64" }, "sha512-9BxI5rRdfs56aVWEZoVDgYRdv0zoBGXba2WxoJRfdKt+WpDx5ySpa164hgWda5m2FXjnrSozFU6EXic4YHqKyw=="],
 
-    "@hax-brasil/replay-decoder-win32-x64-msvc": ["@hax-brasil/replay-decoder-win32-x64-msvc@1.0.1", "", { "os": "win32", "cpu": "x64" }, "sha512-/jKQt4fezhuKJUSpSDBIoidejwiSDMdpj6Jan48WfXLJefXnvS9oGovDiNpDq1ktRzgKegAq92ZxTohOhk/z0g=="],
+    "@hax-brasil/replay-decoder-win32-x64-msvc": ["@hax-brasil/replay-decoder-win32-x64-msvc@1.0.2", "", { "os": "win32", "cpu": "x64" }, "sha512-pLn97FXFiOs1le2wnXpRPBFUdN75TdhiHZ+WyTLSwO2HAtgBdPedY96xJPzjU49px5E6DlEQ0NZKf7woqzz2Jw=="],
 
     "@nodable/entities": ["@nodable/entities@2.1.0", "", {}, "sha512-nyT7T3nbMyBI/lvr6L5TyWbFJAI9FTgVRakNoBqCD+PmID8DzFrrNdLLtHMwMszOtqZa8PAOV24ZqDnQrhQINA=="],
 

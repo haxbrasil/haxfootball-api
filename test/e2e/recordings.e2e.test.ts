@@ -1,5 +1,10 @@
 import { describe, expect, it } from "bun:test";
-import { recordingBytes, recordingFile } from "@/test/e2e/fixtures/recording";
+import {
+  headlessAvatarEmojiRecordingBytes,
+  headlessAvatarEmojiRecordingFile,
+  recordingBytes,
+  recordingFile
+} from "@/test/e2e/fixtures/recording";
 import { paginatedItems, request } from "@/test/e2e/helpers/helpers";
 import { recordingObjectExists } from "@/test/e2e/helpers/recordings";
 
@@ -30,6 +35,26 @@ describe("recordings", () => {
     expect(recording.url.endsWith(`${recording.id}.hbr2`)).toBe(true);
     expect(recording).toMatchObject({
       sizeBytes: recordingBytes().byteLength,
+      createdAt: expect.any(String)
+    });
+    expect(await recordingObjectExists(`${recording.id}.hbr2`)).toBe(true);
+  });
+
+  it("saves a recording with an emoji headless avatar", async () => {
+    const formData = new FormData();
+    formData.set("file", headlessAvatarEmojiRecordingFile());
+
+    const response = await request("/api/recs", {
+      method: "POST",
+      body: formData
+    });
+
+    expect([200, 201]).toContain(response.status);
+
+    const recording: RecordingResponse = await response.json();
+
+    expect(recording).toMatchObject({
+      sizeBytes: headlessAvatarEmojiRecordingBytes().byteLength,
       createdAt: expect.any(String)
     });
     expect(await recordingObjectExists(`${recording.id}.hbr2`)).toBe(true);
