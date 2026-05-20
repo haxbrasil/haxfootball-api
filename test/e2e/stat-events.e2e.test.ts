@@ -740,11 +740,12 @@ describe("match stat events", () => {
 
   it("queries aggregate metrics with schema metadata and localized labels", async () => {
     const schemaName = uniqueName("query-schema");
+    const metricLabelPrefix = `metric.${schemaName}`;
     const schemaResponse = await request("/api/stat-event-schemas", {
       method: "POST",
       body: {
         name: schemaName,
-        definition: metadataDefinition()
+        definition: metadataDefinition(metricLabelPrefix)
       }
     });
     const accountResponse = await request("/api/accounts", {
@@ -805,22 +806,22 @@ describe("match stat events", () => {
       body: {
         values: [
           {
-            value: "metric.goals",
+            value: `${metricLabelPrefix}.goals`,
             language: "pt",
             label: "Gols"
           },
           {
-            value: "metric.points",
+            value: `${metricLabelPrefix}.points`,
             language: "en",
             label: "Points"
           },
           {
-            value: "metric.assists",
+            value: `${metricLabelPrefix}.assists`,
             language: "pt",
             label: "Assistências"
           },
           {
-            value: "metric.contributions",
+            value: `${metricLabelPrefix}.contributions`,
             language: "pt",
             label: "Contribuições"
           }
@@ -1975,31 +1976,31 @@ function baseDefinition() {
   };
 }
 
-function metadataDefinition() {
+function metadataDefinition(metricLabelPrefix = "metric") {
   return {
     ...baseDefinition(),
     metrics: [
       {
         key: "goals",
-        label: "metric.goals",
+        label: `${metricLabelPrefix}.goals`,
         valueType: "number",
         format: "integer"
       },
       {
         key: "points",
-        label: "metric.points",
+        label: `${metricLabelPrefix}.points`,
         valueType: "number",
         format: "integer"
       },
       {
         key: "assists",
-        label: "metric.assists",
+        label: `${metricLabelPrefix}.assists`,
         valueType: "number",
         format: "integer"
       },
       {
         key: "contributions",
-        label: "metric.contributions",
+        label: `${metricLabelPrefix}.contributions`,
         valueType: "number",
         format: "integer"
       }
