@@ -1,13 +1,11 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { notFound } from "@/shared/http/errors";
-import {
-  type AccountResponse,
-  toAccountResponse
-} from "@/features/accounts/account.contract";
-import { accounts } from "@/features/accounts/account.db";
-import { roles } from "@/features/roles/role.db";
-import { roleWithPermissions } from "@/features/roles/role.persistence";
+import type { AccountResponse } from "@/features/accounts/_shared/http/responses";
+import { toAccountResponse } from "@/features/accounts/_shared/http/responses";
+import { accounts } from "@/features/accounts/db";
+import { roles } from "@/features/roles/db";
+import { roleWithPermissions } from "@/features/roles/resolve-role-permissions";
 
 export async function getAccount(uuid: string): Promise<AccountResponse> {
   const [row] = await db

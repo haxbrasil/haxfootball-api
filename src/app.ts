@@ -5,20 +5,18 @@ import {
 } from "@elysiajs/openapi";
 import { Elysia } from "elysia";
 import { normalizeOpenApiDocument } from "@lib/openapi";
-import { authRoutes } from "@/features/auth/auth.routes";
-import { accountRoutes } from "@/features/accounts/account.routes";
-import { jobRoutes } from "@/features/jobs/job.routes";
-import { matchRoutes } from "@/features/matches/match.routes";
-import { permissionRoutes } from "@/features/permissions/permission.routes";
-import { playerRoutes } from "@/features/players/player.routes";
-import { recordingRoutes } from "@/features/recordings/recording.routes";
-import { roleRoutes } from "@/features/roles/role.routes";
-import {
-  publicRoomArtifactRoutes,
-  roomRoutes
-} from "@/features/rooms/room.routes";
-import { sessionRoutes } from "@/features/sessions/session.routes";
-import { statEventSchemaRoutes } from "@/features/stat-event-schemas/stat-event-schema.routes";
+import { authRoutes } from "@/features/auth/http";
+import { accountRoutes } from "@/features/accounts/http";
+import { jobRoutes } from "@/features/jobs/http";
+import { localizationRoutes } from "@/features/localization/http";
+import { matchRoutes } from "@/features/matches/http";
+import { permissionRoutes } from "@/features/permissions/http";
+import { playerRoutes } from "@/features/players/http";
+import { recordingRoutes } from "@/features/recordings/http";
+import { roleRoutes } from "@/features/roles/http";
+import { publicRoomArtifactRoutes, roomRoutes } from "@/features/rooms/http";
+import { sessionRoutes } from "@/features/sessions/http";
+import { statEventSchemaRoutes } from "@/features/stat-event-schemas/http";
 import { withJwtGuard } from "@/guards/jwt.guard";
 import { withCommonErrorResponses } from "@/plugins/common-error-responses";
 import { errorHandler } from "@/plugins/error-handler";
@@ -73,6 +71,7 @@ app
       .use(playerRoutes)
       .use(sessionRoutes)
       .use(jobRoutes)
+      .use(localizationRoutes)
       .use(matchRoutes)
       .use(recordingRoutes)
       .use(roomRoutes)

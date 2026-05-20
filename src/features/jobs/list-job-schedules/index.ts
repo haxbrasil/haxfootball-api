@@ -2,8 +2,8 @@ import {
   type JobScheduleResponse,
   listJobSchedulesResponseSchema,
   toJobScheduleResponse
-} from "@/features/jobs/job.contract";
-import { listJobScheduleRows } from "@/features/jobs/job.persistence";
+} from "@/features/jobs/_shared/http/responses";
+import { listJobScheduleRows } from "@/features/jobs/_shared/db/queries";
 import { pageItems, type PaginatedResponse, type PaginationQuery } from "@lib";
 
 export { listJobSchedulesResponseSchema };

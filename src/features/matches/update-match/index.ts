@@ -2,14 +2,14 @@ import { eq } from "drizzle-orm";
 import { type Static, t } from "elysia";
 import { db } from "@/db/client";
 import {
-  type MatchResponse,
   type MatchScore,
   matchPlayerEventInputSchema,
   matchScoreSchema,
-  matchStatusSchema,
-  toMatchResponse
-} from "@/features/matches/match.contract";
-import { matches } from "@/features/matches/match.db";
+  matchStatusSchema
+} from "@/features/matches/_shared/http/inputs";
+import type { MatchResponse } from "@/features/matches/_shared/http/responses";
+import { toMatchResponse } from "@/features/matches/_shared/http/responses";
+import { matches } from "@/features/matches/db";
 import {
   getMatchDetail,
   getMatchSummary,
@@ -18,12 +18,12 @@ import {
   resolveMatchStatEventSchemaVersionId,
   recomputeMatchStints,
   replaceMatchEvents
-} from "@/features/matches/match.persistence";
-import { statEventSchemaReferenceSchema } from "@/features/stat-event-schemas/stat-event-schema.contract";
+} from "@/features/matches/_shared/db/queries";
+import { statEventSchemaReferenceSchema } from "@/features/stat-event-schemas/http";
 import {
   assertCompletedMatchFields,
   assertMatchIsEditable
-} from "@/features/matches/match.service";
+} from "@/features/matches/_shared/domain/validation";
 
 export const updateMatchBodySchema = t.Partial(
   t.Object({

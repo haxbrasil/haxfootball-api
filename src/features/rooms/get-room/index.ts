@@ -2,8 +2,8 @@ import {
   roomResponseSchema,
   toRoomResponse,
   type RoomResponse
-} from "@/features/rooms/room.contract";
-import { getRoomRow } from "@/features/rooms/room.persistence";
+} from "@/features/rooms/_shared/http/inputs";
+import { getRoomRow } from "@/features/rooms/_shared/db/queries";
 
 export { roomResponseSchema };
 

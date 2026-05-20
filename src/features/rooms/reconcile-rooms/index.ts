@@ -1,11 +1,11 @@
 import { and, eq, inArray, lt } from "drizzle-orm";
 import { env } from "@/config/env";
 import { db } from "@/db/client";
-import { roomInstances, roomPrograms } from "@/features/rooms/room.db";
+import { roomInstances, roomPrograms } from "@/features/rooms/db";
 import {
   closeRoomProcess,
   inspectRoomProcess
-} from "@/features/rooms/room-process.service";
+} from "@/features/rooms/_shared/adapters/room-process";
 
 export type ReconcileOpenRoomsResult = {
   inspected: number;

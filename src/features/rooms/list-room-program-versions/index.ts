@@ -4,9 +4,9 @@ import {
   listRoomProgramVersionsResponseSchema,
   toRoomProgramVersionResponse,
   type RoomProgramVersionResponse
-} from "@/features/rooms/room.contract";
-import { roomProgramVersions } from "@/features/rooms/room.db";
-import { getRoomProgramByUuid } from "@/features/rooms/room.persistence";
+} from "@/features/rooms/_shared/http/inputs";
+import { roomProgramVersions } from "@/features/rooms/db";
+import { getRoomProgramByUuid } from "@/features/rooms/_shared/db/queries";
 import {
   cursorAfter,
   cursorSort,

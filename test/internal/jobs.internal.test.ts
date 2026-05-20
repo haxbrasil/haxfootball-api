@@ -8,9 +8,9 @@ beforeAll(async () => {
 
 describe("job internals", () => {
   it("enqueues and claims only due queued jobs", async () => {
-    const { getJobByUuid } = await import("@/features/jobs/job.persistence");
+    const { getJobByUuid } = await import("@/features/jobs/_shared/db/queries");
     const { enqueueKnownJob, runNextDueJob } = await import(
-      "@/features/jobs/job.service"
+      "@/features/jobs/_shared/domain/execution"
     );
 
     const type = `test.due-${crypto.randomUUID()}`;
@@ -44,9 +44,11 @@ describe("job internals", () => {
   });
 
   it("does not double-claim a running job", async () => {
-    const { enqueueKnownJob } = await import("@/features/jobs/job.service");
+    const { enqueueKnownJob } = await import(
+      "@/features/jobs/_shared/domain/execution"
+    );
     const { claimNextDueJob, markJobSucceeded } = await import(
-      "@/features/jobs/job.persistence"
+      "@/features/jobs/_shared/db/queries"
     );
 
     const type = `test.claim-${crypto.randomUUID()}`;
@@ -73,7 +75,7 @@ describe("job internals", () => {
 
   it("requeues failing jobs until attempts are exhausted", async () => {
     const { enqueueKnownJob, runNextDueJob } = await import(
-      "@/features/jobs/job.service"
+      "@/features/jobs/_shared/domain/execution"
     );
 
     const type = `test.fail-${crypto.randomUUID()}`;
@@ -109,9 +111,9 @@ describe("job internals", () => {
 
   it("recovers abandoned running jobs", async () => {
     const { db } = await import("@/db/client");
-    const { jobs } = await import("@/features/jobs/job.db");
+    const { jobs } = await import("@/features/jobs/db");
     const { recoverAbandonedJobs } = await import(
-      "@/features/jobs/job.persistence"
+      "@/features/jobs/_shared/db/queries"
     );
 
     const now = new Date(Date.now() + 3_600_000);
@@ -177,10 +179,10 @@ describe("job internals", () => {
 
   it("enqueues each due schedule window once", async () => {
     const { upsertJobSchedule } = await import(
-      "@/features/jobs/job.persistence"
+      "@/features/jobs/_shared/db/queries"
     );
     const { enqueueDueJobSchedules, runNextDueJob } = await import(
-      "@/features/jobs/job.service"
+      "@/features/jobs/_shared/domain/execution"
     );
 
     const type = `test.schedule-${crypto.randomUUID()}`;
@@ -215,11 +217,11 @@ describe("job internals", () => {
 
   it("runs room reconciliation through a job and stores the summary", async () => {
     const { db } = await import("@/db/client");
-    const { jobs } = await import("@/features/jobs/job.db");
+    const { jobs } = await import("@/features/jobs/db");
     const { enqueueKnownJob, roomReconcileJobType, runNextDueJob } =
-      await import("@/features/jobs/job.service");
+      await import("@/features/jobs/_shared/domain/execution");
     const { roomInstances, roomPrograms, roomProgramVersions } = await import(
-      "@/features/rooms/room.db"
+      "@/features/rooms/db"
     );
 
     const [program] = await db

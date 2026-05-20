@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { env } from "@/config/env";
-import { roomArtifactParamsSchema } from "@/features/rooms/room.contract";
+import { roomArtifactParamsSchema } from "@/features/rooms/_shared/http/inputs";
 import { notFound } from "@/shared/http/errors";
 
 export { roomArtifactParamsSchema };

@@ -2,8 +2,8 @@ import {
   roomProgramResponseSchema,
   toRoomProgramResponse,
   type RoomProgramResponse
-} from "@/features/rooms/room.contract";
-import { getRoomProgramByUuid } from "@/features/rooms/room.persistence";
+} from "@/features/rooms/_shared/http/inputs";
+import { getRoomProgramByUuid } from "@/features/rooms/_shared/db/queries";
 
 export { roomProgramResponseSchema };
 

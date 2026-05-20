@@ -3,17 +3,17 @@ import { type Static, t } from "elysia";
 import { db } from "@/db/client";
 import { badRequest } from "@/shared/http/errors";
 import {
-  type RoleResponse,
   rolePermissionInputSchema,
   roleNameSchema,
-  roleTitleSchema,
-  toRoleResponse
-} from "@/features/roles/role.contract";
-import { rolePermissions, roles } from "@/features/roles/role.db";
+  roleTitleSchema
+} from "@/features/roles/_shared/http/inputs";
+import type { RoleResponse } from "@/features/roles/_shared/http/responses";
+import { toRoleResponse } from "@/features/roles/_shared/http/responses";
+import { rolePermissions, roles } from "@/features/roles/db";
 import {
   resolveRolePermissionInput,
   roleWithPermissions
-} from "@/features/roles/role.persistence";
+} from "@/features/roles/_shared/db/queries";
 
 export const createRoleBodySchema = t.Object({
   name: roleNameSchema,

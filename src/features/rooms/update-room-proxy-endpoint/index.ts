@@ -5,9 +5,9 @@ import {
   type RoomProxyEndpointResponse,
   updateRoomProxyEndpointBodySchema,
   type UpdateRoomProxyEndpointInput
-} from "@/features/rooms/room.contract";
-import { roomProxyEndpoints } from "@/features/rooms/room.db";
-import { getRoomProxyEndpointByUuid } from "@/features/rooms/room.persistence";
+} from "@/features/rooms/_shared/http/inputs";
+import { roomProxyEndpoints } from "@/features/rooms/db";
+import { getRoomProxyEndpointByUuid } from "@/features/rooms/_shared/db/queries";
 
 export { updateRoomProxyEndpointBodySchema };
 

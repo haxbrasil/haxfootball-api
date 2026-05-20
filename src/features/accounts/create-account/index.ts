@@ -4,13 +4,13 @@ import { type Static, t } from "elysia";
 import { db } from "@/db/client";
 import { getDefaultRole } from "@/features/roles/get-default-role";
 import {
-  type AccountResponse,
   accountExternalIdSchema,
   accountNameSchema,
-  accountPasswordSchema,
-  toAccountResponse
-} from "@/features/accounts/account.contract";
-import { accounts } from "@/features/accounts/account.db";
+  accountPasswordSchema
+} from "@/features/accounts/_shared/http/inputs";
+import type { AccountResponse } from "@/features/accounts/_shared/http/responses";
+import { toAccountResponse } from "@/features/accounts/_shared/http/responses";
+import { accounts } from "@/features/accounts/db";
 import { badRequest } from "@/shared/http/errors";
 
 export const createAccountBodySchema = t.Object({

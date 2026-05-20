@@ -2,8 +2,8 @@ import {
   type JobResponse,
   jobResponseSchema,
   toJobResponse
-} from "@/features/jobs/job.contract";
-import { getJobByUuid } from "@/features/jobs/job.persistence";
+} from "@/features/jobs/_shared/http/responses";
+import { getJobByUuid } from "@/features/jobs/_shared/db/queries";
 
 export { jobResponseSchema };
 

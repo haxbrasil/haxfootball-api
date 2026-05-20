@@ -2,8 +2,8 @@ import {
   type JobResponse,
   listJobsResponseSchema,
   toJobResponse
-} from "@/features/jobs/job.contract";
-import { listJobRows } from "@/features/jobs/job.persistence";
+} from "@/features/jobs/_shared/http/responses";
+import { listJobRows } from "@/features/jobs/_shared/db/queries";
 import { pageItems, type PaginatedResponse, type PaginationQuery } from "@lib";
 
 export { listJobsResponseSchema };

@@ -1,10 +1,10 @@
 import { db } from "@/db/client";
+import type { PermissionResponse } from "@/features/permissions/_shared/http/responses";
 import {
-  type PermissionResponse,
   permissionResponseSchema,
   toPermissionResponse
-} from "@/features/permissions/permission.contract";
-import { permissions } from "@/features/permissions/permission.db";
+} from "@/features/permissions/_shared/http/responses";
+import { permissions } from "@/features/permissions/db";
 import {
   cursorAfter,
   cursorSort,

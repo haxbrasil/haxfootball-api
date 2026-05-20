@@ -1,12 +1,12 @@
 import {
   type MatchMetricsResponse,
   matchMetricsResponseSchema
-} from "@/features/match-stat-events/match-stat-event.contract";
-import { deriveMatchMetrics } from "@/features/match-stat-events/match-metrics.service";
+} from "@/features/match-stat-events/_shared/http/responses";
+import { deriveMatchMetrics } from "@/features/match-stat-events/_shared/domain/metrics";
 import {
   getSchemaBoundMatch,
   listMatchStatEventsByMatchId
-} from "@/features/match-stat-events/match-stat-event.persistence";
+} from "@/features/match-stat-events/_shared/db/queries";
 
 export { matchMetricsResponseSchema };
 

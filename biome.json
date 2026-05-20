@@ -23,6 +23,26 @@
     "enabled": true,
     "rules": {
       "recommended": true,
+      "style": {
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "patterns": [
+              {
+                "group": [
+                  "@/features/**/*.contract",
+                  "@/features/**/*.db",
+                  "@/features/**/*.persistence",
+                  "@/features/**/*.routes",
+                  "@/features/**/*.service",
+                  "@/features/**/*.util"
+                ],
+                "message": "Use the feature boundary files (`db.ts`, `http.ts`) or the standardized `_shared` structure instead of old suffix modules."
+              }
+            ]
+          }
+        }
+      },
       "suspicious": {
         "noThenProperty": "off"
       }
@@ -40,5 +60,617 @@
     "formatter": {
       "trailingCommas": "none"
     }
-  }
+  },
+  "overrides": [
+    {
+      "includes": [
+        "src/*.ts",
+        "src/config/**/*.ts",
+        "src/db/**/*.ts",
+        "src/guards/**/*.ts",
+        "src/plugins/**/*.ts",
+        "scripts/**/*.ts"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "@/features/**/*.contract",
+                      "@/features/**/*.db",
+                      "@/features/**/*.persistence",
+                      "@/features/**/*.routes",
+                      "@/features/**/*.service",
+                      "@/features/**/*.util"
+                    ],
+                    "message": "Use the feature boundary files (`db.ts`, `http.ts`) or the standardized `_shared` structure instead of old suffix modules."
+                  },
+                  {
+                    "group": ["@/features/*/_shared/**"],
+                    "message": "Feature `_shared` modules are private. Import from `@/features/<feature>/db`, `@/features/<feature>/http`, or a public operation folder instead."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/features/accounts/**/*.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "@/features/**/*.contract",
+                      "@/features/**/*.db",
+                      "@/features/**/*.persistence",
+                      "@/features/**/*.routes",
+                      "@/features/**/*.service",
+                      "@/features/**/*.util"
+                    ],
+                    "message": "Use the feature boundary files (`db.ts`, `http.ts`) or the standardized `_shared` structure instead of old suffix modules."
+                  },
+                  {
+                    "group": [
+                      "@/features/auth/_shared/**",
+                      "@/features/jobs/_shared/**",
+                      "@/features/localization/_shared/**",
+                      "@/features/match-stat-events/_shared/**",
+                      "@/features/matches/_shared/**",
+                      "@/features/permissions/_shared/**",
+                      "@/features/players/_shared/**",
+                      "@/features/recordings/_shared/**",
+                      "@/features/roles/_shared/**",
+                      "@/features/rooms/_shared/**",
+                      "@/features/sessions/_shared/**",
+                      "@/features/stat-event-schemas/_shared/**"
+                    ],
+                    "message": "Feature `_shared` modules are private. Import from the other feature public boundary (`db.ts`, `http.ts`) or a public operation folder instead."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/features/auth/**/*.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "@/features/**/*.contract",
+                      "@/features/**/*.db",
+                      "@/features/**/*.persistence",
+                      "@/features/**/*.routes",
+                      "@/features/**/*.service",
+                      "@/features/**/*.util"
+                    ],
+                    "message": "Use the feature boundary files (`db.ts`, `http.ts`) or the standardized `_shared` structure instead of old suffix modules."
+                  },
+                  {
+                    "group": [
+                      "@/features/accounts/_shared/**",
+                      "@/features/jobs/_shared/**",
+                      "@/features/localization/_shared/**",
+                      "@/features/match-stat-events/_shared/**",
+                      "@/features/matches/_shared/**",
+                      "@/features/permissions/_shared/**",
+                      "@/features/players/_shared/**",
+                      "@/features/recordings/_shared/**",
+                      "@/features/roles/_shared/**",
+                      "@/features/rooms/_shared/**",
+                      "@/features/sessions/_shared/**",
+                      "@/features/stat-event-schemas/_shared/**"
+                    ],
+                    "message": "Feature `_shared` modules are private. Import from the other feature public boundary (`db.ts`, `http.ts`) or a public operation folder instead."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/features/jobs/**/*.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "@/features/**/*.contract",
+                      "@/features/**/*.db",
+                      "@/features/**/*.persistence",
+                      "@/features/**/*.routes",
+                      "@/features/**/*.service",
+                      "@/features/**/*.util"
+                    ],
+                    "message": "Use the feature boundary files (`db.ts`, `http.ts`) or the standardized `_shared` structure instead of old suffix modules."
+                  },
+                  {
+                    "group": [
+                      "@/features/accounts/_shared/**",
+                      "@/features/auth/_shared/**",
+                      "@/features/localization/_shared/**",
+                      "@/features/match-stat-events/_shared/**",
+                      "@/features/matches/_shared/**",
+                      "@/features/permissions/_shared/**",
+                      "@/features/players/_shared/**",
+                      "@/features/recordings/_shared/**",
+                      "@/features/roles/_shared/**",
+                      "@/features/rooms/_shared/**",
+                      "@/features/sessions/_shared/**",
+                      "@/features/stat-event-schemas/_shared/**"
+                    ],
+                    "message": "Feature `_shared` modules are private. Import from the other feature public boundary (`db.ts`, `http.ts`) or a public operation folder instead."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/features/localization/**/*.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "@/features/**/*.contract",
+                      "@/features/**/*.db",
+                      "@/features/**/*.persistence",
+                      "@/features/**/*.routes",
+                      "@/features/**/*.service",
+                      "@/features/**/*.util"
+                    ],
+                    "message": "Use the feature boundary files (`db.ts`, `http.ts`) or the standardized `_shared` structure instead of old suffix modules."
+                  },
+                  {
+                    "group": [
+                      "@/features/accounts/_shared/**",
+                      "@/features/auth/_shared/**",
+                      "@/features/jobs/_shared/**",
+                      "@/features/match-stat-events/_shared/**",
+                      "@/features/matches/_shared/**",
+                      "@/features/permissions/_shared/**",
+                      "@/features/players/_shared/**",
+                      "@/features/recordings/_shared/**",
+                      "@/features/roles/_shared/**",
+                      "@/features/rooms/_shared/**",
+                      "@/features/sessions/_shared/**",
+                      "@/features/stat-event-schemas/_shared/**"
+                    ],
+                    "message": "Feature `_shared` modules are private. Import from the other feature public boundary (`db.ts`, `http.ts`) or a public operation folder instead."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/features/match-stat-events/**/*.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "@/features/**/*.contract",
+                      "@/features/**/*.db",
+                      "@/features/**/*.persistence",
+                      "@/features/**/*.routes",
+                      "@/features/**/*.service",
+                      "@/features/**/*.util"
+                    ],
+                    "message": "Use the feature boundary files (`db.ts`, `http.ts`) or the standardized `_shared` structure instead of old suffix modules."
+                  },
+                  {
+                    "group": [
+                      "@/features/accounts/_shared/**",
+                      "@/features/auth/_shared/**",
+                      "@/features/jobs/_shared/**",
+                      "@/features/localization/_shared/**",
+                      "@/features/matches/_shared/**",
+                      "@/features/permissions/_shared/**",
+                      "@/features/players/_shared/**",
+                      "@/features/recordings/_shared/**",
+                      "@/features/roles/_shared/**",
+                      "@/features/rooms/_shared/**",
+                      "@/features/sessions/_shared/**",
+                      "@/features/stat-event-schemas/_shared/**"
+                    ],
+                    "message": "Feature `_shared` modules are private. Import from the other feature public boundary (`db.ts`, `http.ts`) or a public operation folder instead."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/features/matches/**/*.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "@/features/**/*.contract",
+                      "@/features/**/*.db",
+                      "@/features/**/*.persistence",
+                      "@/features/**/*.routes",
+                      "@/features/**/*.service",
+                      "@/features/**/*.util"
+                    ],
+                    "message": "Use the feature boundary files (`db.ts`, `http.ts`) or the standardized `_shared` structure instead of old suffix modules."
+                  },
+                  {
+                    "group": [
+                      "@/features/accounts/_shared/**",
+                      "@/features/auth/_shared/**",
+                      "@/features/jobs/_shared/**",
+                      "@/features/localization/_shared/**",
+                      "@/features/match-stat-events/_shared/**",
+                      "@/features/permissions/_shared/**",
+                      "@/features/players/_shared/**",
+                      "@/features/recordings/_shared/**",
+                      "@/features/roles/_shared/**",
+                      "@/features/rooms/_shared/**",
+                      "@/features/sessions/_shared/**",
+                      "@/features/stat-event-schemas/_shared/**"
+                    ],
+                    "message": "Feature `_shared` modules are private. Import from the other feature public boundary (`db.ts`, `http.ts`) or a public operation folder instead."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/features/permissions/**/*.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "@/features/**/*.contract",
+                      "@/features/**/*.db",
+                      "@/features/**/*.persistence",
+                      "@/features/**/*.routes",
+                      "@/features/**/*.service",
+                      "@/features/**/*.util"
+                    ],
+                    "message": "Use the feature boundary files (`db.ts`, `http.ts`) or the standardized `_shared` structure instead of old suffix modules."
+                  },
+                  {
+                    "group": [
+                      "@/features/accounts/_shared/**",
+                      "@/features/auth/_shared/**",
+                      "@/features/jobs/_shared/**",
+                      "@/features/localization/_shared/**",
+                      "@/features/match-stat-events/_shared/**",
+                      "@/features/matches/_shared/**",
+                      "@/features/players/_shared/**",
+                      "@/features/recordings/_shared/**",
+                      "@/features/roles/_shared/**",
+                      "@/features/rooms/_shared/**",
+                      "@/features/sessions/_shared/**",
+                      "@/features/stat-event-schemas/_shared/**"
+                    ],
+                    "message": "Feature `_shared` modules are private. Import from the other feature public boundary (`db.ts`, `http.ts`) or a public operation folder instead."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/features/players/**/*.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "@/features/**/*.contract",
+                      "@/features/**/*.db",
+                      "@/features/**/*.persistence",
+                      "@/features/**/*.routes",
+                      "@/features/**/*.service",
+                      "@/features/**/*.util"
+                    ],
+                    "message": "Use the feature boundary files (`db.ts`, `http.ts`) or the standardized `_shared` structure instead of old suffix modules."
+                  },
+                  {
+                    "group": [
+                      "@/features/accounts/_shared/**",
+                      "@/features/auth/_shared/**",
+                      "@/features/jobs/_shared/**",
+                      "@/features/localization/_shared/**",
+                      "@/features/match-stat-events/_shared/**",
+                      "@/features/matches/_shared/**",
+                      "@/features/permissions/_shared/**",
+                      "@/features/recordings/_shared/**",
+                      "@/features/roles/_shared/**",
+                      "@/features/rooms/_shared/**",
+                      "@/features/sessions/_shared/**",
+                      "@/features/stat-event-schemas/_shared/**"
+                    ],
+                    "message": "Feature `_shared` modules are private. Import from the other feature public boundary (`db.ts`, `http.ts`) or a public operation folder instead."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/features/recordings/**/*.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "@/features/**/*.contract",
+                      "@/features/**/*.db",
+                      "@/features/**/*.persistence",
+                      "@/features/**/*.routes",
+                      "@/features/**/*.service",
+                      "@/features/**/*.util"
+                    ],
+                    "message": "Use the feature boundary files (`db.ts`, `http.ts`) or the standardized `_shared` structure instead of old suffix modules."
+                  },
+                  {
+                    "group": [
+                      "@/features/accounts/_shared/**",
+                      "@/features/auth/_shared/**",
+                      "@/features/jobs/_shared/**",
+                      "@/features/localization/_shared/**",
+                      "@/features/match-stat-events/_shared/**",
+                      "@/features/matches/_shared/**",
+                      "@/features/permissions/_shared/**",
+                      "@/features/players/_shared/**",
+                      "@/features/roles/_shared/**",
+                      "@/features/rooms/_shared/**",
+                      "@/features/sessions/_shared/**",
+                      "@/features/stat-event-schemas/_shared/**"
+                    ],
+                    "message": "Feature `_shared` modules are private. Import from the other feature public boundary (`db.ts`, `http.ts`) or a public operation folder instead."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/features/roles/**/*.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "@/features/**/*.contract",
+                      "@/features/**/*.db",
+                      "@/features/**/*.persistence",
+                      "@/features/**/*.routes",
+                      "@/features/**/*.service",
+                      "@/features/**/*.util"
+                    ],
+                    "message": "Use the feature boundary files (`db.ts`, `http.ts`) or the standardized `_shared` structure instead of old suffix modules."
+                  },
+                  {
+                    "group": [
+                      "@/features/accounts/_shared/**",
+                      "@/features/auth/_shared/**",
+                      "@/features/jobs/_shared/**",
+                      "@/features/localization/_shared/**",
+                      "@/features/match-stat-events/_shared/**",
+                      "@/features/matches/_shared/**",
+                      "@/features/permissions/_shared/**",
+                      "@/features/players/_shared/**",
+                      "@/features/recordings/_shared/**",
+                      "@/features/rooms/_shared/**",
+                      "@/features/sessions/_shared/**",
+                      "@/features/stat-event-schemas/_shared/**"
+                    ],
+                    "message": "Feature `_shared` modules are private. Import from the other feature public boundary (`db.ts`, `http.ts`) or a public operation folder instead."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/features/rooms/**/*.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "@/features/**/*.contract",
+                      "@/features/**/*.db",
+                      "@/features/**/*.persistence",
+                      "@/features/**/*.routes",
+                      "@/features/**/*.service",
+                      "@/features/**/*.util"
+                    ],
+                    "message": "Use the feature boundary files (`db.ts`, `http.ts`) or the standardized `_shared` structure instead of old suffix modules."
+                  },
+                  {
+                    "group": [
+                      "@/features/accounts/_shared/**",
+                      "@/features/auth/_shared/**",
+                      "@/features/jobs/_shared/**",
+                      "@/features/localization/_shared/**",
+                      "@/features/match-stat-events/_shared/**",
+                      "@/features/matches/_shared/**",
+                      "@/features/permissions/_shared/**",
+                      "@/features/players/_shared/**",
+                      "@/features/recordings/_shared/**",
+                      "@/features/roles/_shared/**",
+                      "@/features/sessions/_shared/**",
+                      "@/features/stat-event-schemas/_shared/**"
+                    ],
+                    "message": "Feature `_shared` modules are private. Import from the other feature public boundary (`db.ts`, `http.ts`) or a public operation folder instead."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/features/sessions/**/*.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "@/features/**/*.contract",
+                      "@/features/**/*.db",
+                      "@/features/**/*.persistence",
+                      "@/features/**/*.routes",
+                      "@/features/**/*.service",
+                      "@/features/**/*.util"
+                    ],
+                    "message": "Use the feature boundary files (`db.ts`, `http.ts`) or the standardized `_shared` structure instead of old suffix modules."
+                  },
+                  {
+                    "group": [
+                      "@/features/accounts/_shared/**",
+                      "@/features/auth/_shared/**",
+                      "@/features/jobs/_shared/**",
+                      "@/features/localization/_shared/**",
+                      "@/features/match-stat-events/_shared/**",
+                      "@/features/matches/_shared/**",
+                      "@/features/permissions/_shared/**",
+                      "@/features/players/_shared/**",
+                      "@/features/recordings/_shared/**",
+                      "@/features/roles/_shared/**",
+                      "@/features/rooms/_shared/**",
+                      "@/features/stat-event-schemas/_shared/**"
+                    ],
+                    "message": "Feature `_shared` modules are private. Import from the other feature public boundary (`db.ts`, `http.ts`) or a public operation folder instead."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/features/stat-event-schemas/**/*.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "@/features/**/*.contract",
+                      "@/features/**/*.db",
+                      "@/features/**/*.persistence",
+                      "@/features/**/*.routes",
+                      "@/features/**/*.service",
+                      "@/features/**/*.util"
+                    ],
+                    "message": "Use the feature boundary files (`db.ts`, `http.ts`) or the standardized `_shared` structure instead of old suffix modules."
+                  },
+                  {
+                    "group": [
+                      "@/features/accounts/_shared/**",
+                      "@/features/auth/_shared/**",
+                      "@/features/jobs/_shared/**",
+                      "@/features/localization/_shared/**",
+                      "@/features/match-stat-events/_shared/**",
+                      "@/features/matches/_shared/**",
+                      "@/features/permissions/_shared/**",
+                      "@/features/players/_shared/**",
+                      "@/features/recordings/_shared/**",
+                      "@/features/roles/_shared/**",
+                      "@/features/rooms/_shared/**",
+                      "@/features/sessions/_shared/**"
+                    ],
+                    "message": "Feature `_shared` modules are private. Import from the other feature public boundary (`db.ts`, `http.ts`) or a public operation folder instead."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
 }

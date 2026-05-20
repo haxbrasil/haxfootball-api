@@ -1,10 +1,10 @@
+import { toMatchSummaryResponse } from "@/features/matches/_shared/http/responses";
+import type { MatchSummaryRow } from "@/features/matches/_shared/http/responses";
 import {
   type MatchSummaryResponse,
-  listMatchesResponseSchema,
-  toMatchSummaryResponse
-} from "@/features/matches/match.contract";
-import type { MatchSummaryRow } from "@/features/matches/match.contract";
-import { listMatchSummaries } from "@/features/matches/match.persistence";
+  listMatchesResponseSchema
+} from "@/features/matches/_shared/http/responses";
+import { listMatchSummaries } from "@/features/matches/_shared/db/queries";
 import { pageItems, type PaginatedResponse, type PaginationQuery } from "@lib";
 
 export { listMatchesResponseSchema };

@@ -1,17 +1,15 @@
 import { type Static, t } from "elysia";
-import {
-  type MatchResponse,
-  matchPlayerEventInputSchema,
-  toMatchResponse
-} from "@/features/matches/match.contract";
+import { matchPlayerEventInputSchema } from "@/features/matches/_shared/http/inputs";
+import type { MatchResponse } from "@/features/matches/_shared/http/responses";
+import { toMatchResponse } from "@/features/matches/_shared/http/responses";
 import {
   getMatchDetail,
   getMatchSummary,
   nextMatchEventSequence,
   persistMatchEvents,
   recomputeMatchStints
-} from "@/features/matches/match.persistence";
-import { assertMatchIsEditable } from "@/features/matches/match.service";
+} from "@/features/matches/_shared/db/queries";
+import { assertMatchIsEditable } from "@/features/matches/_shared/domain/validation";
 
 export const appendMatchEventsBodySchema = t.Object({
   events: t.Array(matchPlayerEventInputSchema, { minItems: 1 })

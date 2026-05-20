@@ -1,17 +1,17 @@
 import { and, eq } from "drizzle-orm";
 import { type Static, t } from "elysia";
 import { db } from "@/db/client";
+import type { StatEventSchemaResponse } from "@/features/stat-event-schemas/_shared/http/responses";
 import {
-  type StatEventSchemaResponse,
   statEventSchemaResponseSchema,
   toStatEventSchemaResponse
-} from "@/features/stat-event-schemas/stat-event-schema.contract";
-import { statEventSchemaVersions } from "@/features/stat-event-schemas/stat-event-schema.db";
+} from "@/features/stat-event-schemas/_shared/http/responses";
+import { statEventSchemaVersions } from "@/features/stat-event-schemas/db";
 import {
   isBreakingSchemaChange,
   validateStatEventSchemaDefinition
-} from "@/features/stat-event-schemas/stat-event-schema.service";
-import { getStatEventSchemaRow } from "@/features/stat-event-schemas/stat-event-schema.persistence";
+} from "@/features/stat-event-schemas/_shared/domain/definition";
+import { getStatEventSchemaRow } from "@/features/stat-event-schemas/_shared/db/queries";
 import { badRequest } from "@/shared/http/errors";
 
 export const updateStatEventSchemaBodySchema = t.Object({

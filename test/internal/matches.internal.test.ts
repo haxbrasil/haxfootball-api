@@ -9,7 +9,7 @@ describe("match internals", () => {
   it("creates a match with a database-backed recording association", async () => {
     const { db } = await import("@/db/client");
     const { createMatch } = await import("@/features/matches/create-match");
-    const { recordings } = await import("@/features/recordings/recording.db");
+    const { recordings } = await import("@/features/recordings/db");
 
     const publicId = crypto.randomUUID().replaceAll("-", "").slice(0, 8);
     const objectKey = `${publicId}.hbr2`;

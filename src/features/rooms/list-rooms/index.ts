@@ -3,9 +3,9 @@ import {
   toRoomResponse,
   type ListRoomsQuery,
   type RoomResponse
-} from "@/features/rooms/room.contract";
-import type { RoomRow } from "@/features/rooms/room.persistence";
-import { listRoomRows } from "@/features/rooms/room.persistence";
+} from "@/features/rooms/_shared/http/inputs";
+import type { RoomRow } from "@/features/rooms/_shared/db/queries";
+import { listRoomRows } from "@/features/rooms/_shared/db/queries";
 import { pageItems, type PaginatedResponse } from "@lib";
 
 export { listRoomsResponseSchema };

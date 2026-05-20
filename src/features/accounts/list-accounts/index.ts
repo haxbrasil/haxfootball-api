@@ -1,13 +1,13 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
+import type { AccountResponse } from "@/features/accounts/_shared/http/responses";
 import {
-  type AccountResponse,
   accountResponseSchema,
   toAccountResponse
-} from "@/features/accounts/account.contract";
-import { accounts } from "@/features/accounts/account.db";
-import { roles } from "@/features/roles/role.db";
-import { rolesWithPermissions } from "@/features/roles/role.persistence";
+} from "@/features/accounts/_shared/http/responses";
+import { accounts } from "@/features/accounts/db";
+import { roles } from "@/features/roles/db";
+import { rolesWithPermissions } from "@/features/roles/resolve-role-permissions";
 import {
   cursorAfter,
   cursorSort,

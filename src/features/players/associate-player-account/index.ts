@@ -1,12 +1,10 @@
 import { eq } from "drizzle-orm";
 import { type Static, t } from "elysia";
 import { db } from "@/db/client";
-import { accounts } from "@/features/accounts/account.db";
-import {
-  type PlayerResponse,
-  toPlayerResponse
-} from "@/features/players/player.contract";
-import { players } from "@/features/players/player.db";
+import { accounts } from "@/features/accounts/db";
+import type { PlayerResponse } from "@/features/players/_shared/http/responses";
+import { toPlayerResponse } from "@/features/players/_shared/http/responses";
+import { players } from "@/features/players/db";
 import { badRequest, notFound } from "@/shared/http/errors";
 
 export const associatePlayerAccountBodySchema = t.Object({

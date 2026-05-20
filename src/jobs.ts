@@ -12,7 +12,7 @@ program
   .command("work")
   .description("Run the long-lived job runner")
   .action(async () => {
-    const { workJobs } = await import("@/features/jobs/job-runner.service");
+    const { workJobs } = await import("@/features/jobs/work-jobs");
 
     await workJobs();
   });
@@ -39,22 +39,9 @@ program
   .argument("<job-type>", "registered job type")
   .argument("[payload-json]", "optional JSON payload", jsonArgument)
   .action(async (type: string, payload: JsonValue | undefined) => {
-    const { toJobResponse } = await import("@/features/jobs/job.contract");
-    const { assertKnownJobType, enqueueKnownJob, runnerId, runQueuedJob } =
-      await import("@/features/jobs/job.service");
+    const { runJob } = await import("@/features/jobs/run-job");
 
-    assertKnownJobType(type);
-
-    const enqueued = await enqueueKnownJob({
-      type,
-      payload
-    });
-    const completed = await runQueuedJob({
-      uuid: enqueued.uuid,
-      runnerId: runnerId()
-    });
-
-    printJson(toJobResponse(completed ?? enqueued));
+    printJson(await runJob({ type, payload }));
   });
 
 program

@@ -1,9 +1,9 @@
+import { matchStatEventInputSchema } from "@/features/match-stat-events/_shared/http/inputs";
 import {
   type MatchStatEventResponse,
-  matchStatEventInputSchema,
   toMatchStatEventResponse
-} from "@/features/match-stat-events/match-stat-event.contract";
-import { addMatchStatEvent as persistMatchStatEvent } from "@/features/match-stat-events/match-stat-event.persistence";
+} from "@/features/match-stat-events/_shared/http/responses";
+import { addMatchStatEvent as persistMatchStatEvent } from "@/features/match-stat-events/_shared/db/queries";
 
 export const addMatchStatEventBodySchema = matchStatEventInputSchema;
 

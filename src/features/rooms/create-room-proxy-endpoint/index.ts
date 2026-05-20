@@ -5,8 +5,8 @@ import {
   toRoomProxyEndpointResponse,
   type CreateRoomProxyEndpointInput,
   type RoomProxyEndpointResponse
-} from "@/features/rooms/room.contract";
-import { roomProxyEndpoints } from "@/features/rooms/room.db";
+} from "@/features/rooms/_shared/http/inputs";
+import { roomProxyEndpoints } from "@/features/rooms/db";
 import { badRequest } from "@/shared/http/errors";
 
 export { createRoomProxyEndpointBodySchema };

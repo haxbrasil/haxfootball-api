@@ -9,7 +9,7 @@ beforeAll(async () => {
 describe("room internals", () => {
   it("forces public room launch config private only when the policy is enabled", async () => {
     const { buildEffectiveRoomEnvironment, resolveLaunchConfig } = await import(
-      "@/features/rooms/room.service"
+      "@/features/rooms/_shared/domain/launch-config"
     );
 
     const fields = [
@@ -133,7 +133,7 @@ describe("room internals", () => {
   it("closes stale open rooms only when cleanup is configured", async () => {
     const { db } = await import("@/db/client");
     const { roomInstances, roomPrograms, roomProgramVersions } = await import(
-      "@/features/rooms/room.db"
+      "@/features/rooms/db"
     );
     const { closeStaleOpenRooms } = await import(
       "@/features/rooms/reconcile-rooms"
@@ -242,7 +242,7 @@ describe("room internals", () => {
   it("marks provisioning rooms failed after readiness timeout", async () => {
     const { db } = await import("@/db/client");
     const { roomInstances, roomPrograms, roomProgramVersions } = await import(
-      "@/features/rooms/room.db"
+      "@/features/rooms/db"
     );
     const { reconcileOpenRooms } = await import(
       "@/features/rooms/reconcile-rooms"

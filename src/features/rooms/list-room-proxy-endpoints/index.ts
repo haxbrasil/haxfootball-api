@@ -3,8 +3,8 @@ import {
   listRoomProxyEndpointsResponseSchema,
   toRoomProxyEndpointResponse,
   type RoomProxyEndpointResponse
-} from "@/features/rooms/room.contract";
-import { roomProxyEndpoints } from "@/features/rooms/room.db";
+} from "@/features/rooms/_shared/http/inputs";
+import { roomProxyEndpoints } from "@/features/rooms/db";
 import {
   cursorAfter,
   cursorSort,

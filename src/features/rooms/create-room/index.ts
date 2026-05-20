@@ -6,13 +6,13 @@ import {
   toRoomResponse,
   type CreateRoomInput,
   type RoomResponse
-} from "@/features/rooms/room.contract";
+} from "@/features/rooms/_shared/http/inputs";
 import {
   roomInstances,
   roomPrograms,
   roomProgramVersions
-} from "@/features/rooms/room.db";
-import { listGithubReleases } from "@/features/rooms/github-release.service";
+} from "@/features/rooms/db";
+import { listGithubReleases } from "@/features/rooms/_shared/adapters/github-releases";
 import {
   getLatestProgramVersion,
   getProgramVersionAliasByProgramAndAlias,
@@ -20,15 +20,15 @@ import {
   getRoomProgramByUuid,
   listEnabledProxyEndpoints,
   listOpenRoomInstances
-} from "@/features/rooms/room.persistence";
+} from "@/features/rooms/_shared/db/queries";
 import {
   buildEffectiveRoomEnvironment,
   chooseProxyEndpoint,
   latestStableRelease,
   matchReleaseAsset,
   resolveLaunchConfig
-} from "@/features/rooms/room.service";
-import { launchRoomProcess } from "@/features/rooms/room-process.service";
+} from "@/features/rooms/_shared/domain/launch-config";
+import { launchRoomProcess } from "@/features/rooms/_shared/adapters/room-process";
 import { badRequest, notFound } from "@/shared/http/errors";
 
 export { createRoomBodySchema };

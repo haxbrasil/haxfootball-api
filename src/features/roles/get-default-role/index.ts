@@ -1,13 +1,13 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
-import type { RoleWithPermissions } from "@/features/roles/role.contract";
+import type { RoleWithPermissions } from "@/features/roles/_shared/http/responses";
 import {
   defaultRoleId,
   defaultRoleName,
   defaultRoleTitle,
   roles
-} from "@/features/roles/role.db";
-import { roleWithPermissions } from "@/features/roles/role.persistence";
+} from "@/features/roles/db";
+import { roleWithPermissions } from "@/features/roles/_shared/db/queries";
 
 export async function getDefaultRole(): Promise<RoleWithPermissions> {
   const [existingRole] = await db

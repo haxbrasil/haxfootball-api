@@ -2,21 +2,17 @@ import { eq } from "drizzle-orm";
 import { type Static, t } from "elysia";
 import { db } from "@/db/client";
 import {
-  type RoleResponse,
   rolePermissionInputSchema,
   roleNameSchema,
-  roleTitleSchema,
-  toRoleResponse
-} from "@/features/roles/role.contract";
-import {
-  defaultRoleName,
-  rolePermissions,
-  roles
-} from "@/features/roles/role.db";
+  roleTitleSchema
+} from "@/features/roles/_shared/http/inputs";
+import type { RoleResponse } from "@/features/roles/_shared/http/responses";
+import { toRoleResponse } from "@/features/roles/_shared/http/responses";
+import { defaultRoleName, rolePermissions, roles } from "@/features/roles/db";
 import {
   resolveRolePermissionInput,
   roleWithPermissions
-} from "@/features/roles/role.persistence";
+} from "@/features/roles/_shared/db/queries";
 import { badRequest, notFound } from "@/shared/http/errors";
 
 export const updateRoleBodySchema = t.Partial(

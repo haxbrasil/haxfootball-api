@@ -2,8 +2,8 @@ import {
   type MatchStatEventResponse,
   matchStatEventResponseSchema,
   toMatchStatEventResponse
-} from "@/features/match-stat-events/match-stat-event.contract";
-import { disableMatchStatEvent as persistDisabledMatchStatEvent } from "@/features/match-stat-events/match-stat-event.persistence";
+} from "@/features/match-stat-events/_shared/http/responses";
+import { disableMatchStatEvent as persistDisabledMatchStatEvent } from "@/features/match-stat-events/_shared/db/queries";
 import { t } from "elysia";
 
 export const disableMatchStatEventBodySchema = t.Object({

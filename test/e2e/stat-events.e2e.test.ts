@@ -20,6 +20,7 @@ type MatchMetricsResponse = Array<{
 
 type PlayerResponse = {
   id: string;
+  name: string;
 };
 
 type StatEventSchemaResponse = {
@@ -429,6 +430,181 @@ describe("stat event schemas", () => {
     expect(oldMatchAssistResponse.status).toBe(201);
     expect(newMatchAssistResponse.status).toBe(400);
   });
+
+  it("gets stat event schemas by name and version", async () => {
+    const schemaName = uniqueName("lookup-schema");
+    const schemaResponse = await request("/api/stat-event-schemas", {
+      method: "POST",
+      body: {
+        name: schemaName,
+        definition: baseDefinition()
+      }
+    });
+
+    expect(schemaResponse.status).toBe(201);
+
+    const schema: StatEventSchemaResponse = await schemaResponse.json();
+    const publishResponse = await request(
+      `/api/stat-event-schemas/${schema.id}/versions`,
+      {
+        method: "POST",
+        body: {
+          definition: {
+            events: [baseDefinition().events[0]]
+          }
+        }
+      }
+    );
+
+    expect(publishResponse.status).toBe(201);
+
+    const latestByNameResponse = await request(
+      `/api/stat-event-schemas/by-name/${schemaName}`
+    );
+    const firstVersionByNameResponse = await request(
+      `/api/stat-event-schemas/by-name/${schemaName}/versions/1`
+    );
+    const missingByNameResponse = await request(
+      `/api/stat-event-schemas/by-name/${uniqueName("missing")}`
+    );
+
+    expect(latestByNameResponse.status).toBe(200);
+    expect(await latestByNameResponse.json()).toMatchObject({
+      id: schema.id,
+      name: schemaName,
+      version: 2,
+      isLatest: true
+    });
+    expect(firstVersionByNameResponse.status).toBe(200);
+    expect(await firstVersionByNameResponse.json()).toMatchObject({
+      id: schema.id,
+      name: schemaName,
+      version: 1,
+      isLatest: false,
+      definition: baseDefinition()
+    });
+    expect(missingByNameResponse.status).toBe(404);
+  });
+
+  it("accepts reusable presentation metadata and rejects invalid metric metadata", async () => {
+    const validResponse = await request("/api/stat-event-schemas", {
+      method: "POST",
+      body: {
+        name: uniqueName("metadata-schema"),
+        definition: {
+          ...metadataDefinition(),
+          presentation: {
+            label: "schema.test",
+            description: "schema.test.description"
+          },
+          events: [
+            {
+              ...baseDefinition().events[0],
+              presentation: {
+                label: "event.goal"
+              }
+            },
+            baseDefinition().events[1],
+            baseDefinition().events[2]
+          ]
+        }
+      }
+    });
+
+    expect(validResponse.status).toBe(201);
+    expect(await validResponse.json()).toMatchObject({
+      definition: expect.objectContaining({
+        presentation: {
+          label: "schema.test",
+          description: "schema.test.description"
+        },
+        metrics: expect.arrayContaining([
+          expect.objectContaining({
+            key: "goals",
+            label: "metric.goals"
+          })
+        ])
+      })
+    });
+
+    const invalidDefinitions = [
+      {
+        ...baseDefinition(),
+        metrics: [
+          {
+            key: "unknown-metric",
+            label: "metric.unknown"
+          }
+        ]
+      },
+      {
+        ...baseDefinition(),
+        metrics: [
+          {
+            key: "goals",
+            label: "metric.goals"
+          },
+          {
+            key: "goals",
+            label: "metric.goals-again"
+          }
+        ]
+      },
+      {
+        ...baseDefinition(),
+        metrics: [
+          {
+            key: "goals",
+            label: "Metric.Goals"
+          }
+        ]
+      },
+      {
+        ...baseDefinition(),
+        metrics: [
+          {
+            key: "goals",
+            label: "metric.goals",
+            valueType: "integer"
+          }
+        ]
+      },
+      {
+        ...baseDefinition(),
+        metrics: [
+          {
+            key: "goals",
+            label: "metric.goals",
+            precision: -1
+          }
+        ]
+      },
+      {
+        ...baseDefinition(),
+        presentation: {
+          label: "Schema.Bad"
+        }
+      }
+    ];
+
+    for (const definition of invalidDefinitions) {
+      const response = await request("/api/stat-event-schemas", {
+        method: "POST",
+        body: {
+          name: uniqueName("invalid-metadata"),
+          definition
+        }
+      });
+
+      expect(response.status).toBe(400);
+      expect(await response.json()).toEqual({
+        error: {
+          code: "BAD_REQUEST",
+          message: "Invalid stat event schema definition"
+        }
+      });
+    }
+  });
 });
 
 describe("match stat events", () => {
@@ -560,6 +736,262 @@ describe("match stat events", () => {
         }
       }
     ]);
+  });
+
+  it("queries aggregate metrics with schema metadata and localized labels", async () => {
+    const schemaName = uniqueName("query-schema");
+    const schemaResponse = await request("/api/stat-event-schemas", {
+      method: "POST",
+      body: {
+        name: schemaName,
+        definition: metadataDefinition()
+      }
+    });
+    const accountResponse = await request("/api/accounts", {
+      method: "POST",
+      body: {
+        name: `Acct${crypto.randomUUID().slice(0, 8)}`,
+        password: "pass1234",
+        externalId: uniqueDiscordId()
+      }
+    });
+    const firstPlayerResponse = await request("/api/players", {
+      method: "POST",
+      body: {
+        externalId: `query-first-${crypto.randomUUID()}`,
+        name: "query-first"
+      }
+    });
+    const secondPlayerResponse = await request("/api/players", {
+      method: "POST",
+      body: {
+        externalId: `query-second-${crypto.randomUUID()}`,
+        name: "query-second"
+      }
+    });
+    const guestPlayerResponse = await request("/api/players", {
+      method: "POST",
+      body: {
+        externalId: `query-guest-${crypto.randomUUID()}`,
+        name: "query-guest"
+      }
+    });
+
+    expect(schemaResponse.status).toBe(201);
+    expect(accountResponse.status).toBe(201);
+    expect(firstPlayerResponse.status).toBe(201);
+    expect(secondPlayerResponse.status).toBe(201);
+    expect(guestPlayerResponse.status).toBe(201);
+
+    const schema: StatEventSchemaResponse = await schemaResponse.json();
+    const account = await accountResponse.json();
+    const firstPlayer: PlayerResponse = await firstPlayerResponse.json();
+    const secondPlayer: PlayerResponse = await secondPlayerResponse.json();
+    const guestPlayer: PlayerResponse = await guestPlayerResponse.json();
+
+    for (const player of [firstPlayer, secondPlayer]) {
+      const response = await request(`/api/players/${player.id}/account`, {
+        method: "PATCH",
+        body: {
+          accountUuid: account.uuid
+        }
+      });
+
+      expect(response.status).toBe(200);
+    }
+
+    const labelsResponse = await request("/api/values/bulk", {
+      method: "POST",
+      body: {
+        values: [
+          {
+            value: "metric.goals",
+            language: "pt",
+            label: "Gols"
+          },
+          {
+            value: "metric.points",
+            language: "en",
+            label: "Points"
+          },
+          {
+            value: "metric.assists",
+            language: "pt",
+            label: "Assistências"
+          },
+          {
+            value: "metric.contributions",
+            language: "pt",
+            label: "Contribuições"
+          }
+        ]
+      }
+    });
+
+    expect(labelsResponse.status).toBe(200);
+
+    const matchResponse = await request("/api/matches", {
+      method: "POST",
+      body: {
+        status: "ongoing",
+        initiatedAt: "2026-05-10T12:00:00.000Z",
+        statEventSchema: {
+          id: schema.id,
+          version: schema.version
+        }
+      }
+    });
+
+    expect(matchResponse.status).toBe(201);
+
+    const match: MatchResponse = await matchResponse.json();
+
+    for (const event of [
+      {
+        type: "goal",
+        playerId: firstPlayer.id,
+        value: 3
+      },
+      {
+        type: "assist",
+        playerId: firstPlayer.id,
+        value: {
+          amount: 2
+        }
+      },
+      {
+        type: "goal",
+        playerId: secondPlayer.id,
+        value: 2
+      },
+      {
+        type: "goal",
+        playerId: guestPlayer.id,
+        value: 4
+      }
+    ]) {
+      const response = await request(`/api/matches/${match.id}/stat-events`, {
+        method: "POST",
+        body: event
+      });
+
+      expect(response.status).toBe(201);
+    }
+
+    const completeResponse = await request(`/api/matches/${match.id}`, {
+      method: "PATCH",
+      body: {
+        status: "completed",
+        endedAt: "2026-05-10T12:30:00.000Z",
+        score: {
+          red: 1,
+          blue: 0
+        }
+      }
+    });
+
+    expect(completeResponse.status).toBe(200);
+
+    const accountOnlyResponse = await request("/api/matches/metrics/query", {
+      method: "POST",
+      body: {
+        schema: {
+          name: schemaName
+        },
+        language: "pt",
+        metrics: ["points", "assists", "contributions"],
+        sort: [
+          {
+            type: "metric",
+            key: "points",
+            direction: "desc"
+          },
+          {
+            type: "field",
+            key: "name",
+            direction: "asc"
+          }
+        ],
+        page: {
+          limit: 10
+        }
+      }
+    });
+
+    expect(accountOnlyResponse.status).toBe(200);
+
+    const accountOnly = await accountOnlyResponse.json();
+
+    expect(accountOnly.items).toEqual([
+      expect.objectContaining({
+        rank: 1,
+        group: expect.objectContaining({
+          type: "account",
+          id: account.uuid,
+          name: account.name
+        }),
+        metrics: {
+          points: 5,
+          assists: 2,
+          contributions: 4
+        },
+        contribution: {
+          matchesCount: 1,
+          eventsCount: 3,
+          playersCount: 2
+        }
+      })
+    ]);
+    expect(accountOnly.meta.availableMetrics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: "goals",
+          label: "Gols"
+        }),
+        expect.objectContaining({
+          key: "points",
+          label: "Points"
+        })
+      ])
+    );
+
+    const hybridResponse = await request("/api/matches/metrics/query", {
+      method: "POST",
+      body: {
+        schema: {
+          id: schema.id,
+          version: schema.version
+        },
+        group: {
+          by: "account-or-player"
+        },
+        sort: [
+          {
+            type: "metric",
+            key: "points",
+            direction: "desc"
+          }
+        ]
+      }
+    });
+
+    expect(hybridResponse.status).toBe(200);
+
+    const hybrid = await hybridResponse.json();
+
+    expect(
+      hybrid.items.map((item: { group: { type: string } }) => item.group.type)
+    ).toEqual(["account", "player"]);
+    expect(hybrid.items[1]).toMatchObject({
+      group: {
+        type: "player",
+        id: guestPlayer.id,
+        name: guestPlayer.name
+      },
+      metrics: expect.objectContaining({
+        points: 4
+      })
+    });
   });
 
   it("disables stat events only after completion and excludes them from metrics", async () => {
@@ -1543,6 +1975,46 @@ function baseDefinition() {
   };
 }
 
+function metadataDefinition() {
+  return {
+    ...baseDefinition(),
+    metrics: [
+      {
+        key: "goals",
+        label: "metric.goals",
+        valueType: "number",
+        format: "integer"
+      },
+      {
+        key: "points",
+        label: "metric.points",
+        valueType: "number",
+        format: "integer"
+      },
+      {
+        key: "assists",
+        label: "metric.assists",
+        valueType: "number",
+        format: "integer"
+      },
+      {
+        key: "contributions",
+        label: "metric.contributions",
+        valueType: "number",
+        format: "integer"
+      }
+    ]
+  };
+}
+
 function uniqueName(prefix: string): string {
   return `${prefix}-${crypto.randomUUID().slice(0, 8)}`;
+}
+
+function uniqueDiscordId(): string {
+  return `9${crypto
+    .randomUUID()
+    .replaceAll(/[^0-9]/g, "")
+    .padEnd(17, "0")
+    .slice(0, 17)}`;
 }

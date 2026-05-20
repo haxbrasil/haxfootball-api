@@ -1,14 +1,14 @@
 import { type Static, t } from "elysia";
+import type { StatEventSchemaResponse } from "@/features/stat-event-schemas/_shared/http/responses";
 import {
-  type StatEventSchemaResponse,
   statEventSchemaResponseSchema,
   toStatEventSchemaResponse
-} from "@/features/stat-event-schemas/stat-event-schema.contract";
-import { validateStatEventSchemaDefinition } from "@/features/stat-event-schemas/stat-event-schema.service";
+} from "@/features/stat-event-schemas/_shared/http/responses";
+import { validateStatEventSchemaDefinition } from "@/features/stat-event-schemas/_shared/domain/definition";
 import {
   createStatEventSchemaVersion,
   getLatestStatEventSchemaRow
-} from "@/features/stat-event-schemas/stat-event-schema.persistence";
+} from "@/features/stat-event-schemas/_shared/db/queries";
 import { badRequest } from "@/shared/http/errors";
 
 export const publishStatEventSchemaVersionBodySchema = t.Object({

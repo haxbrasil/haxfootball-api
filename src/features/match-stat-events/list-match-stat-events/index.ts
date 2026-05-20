@@ -2,8 +2,8 @@ import {
   type MatchStatEventResponse,
   listMatchStatEventsResponseSchema,
   toMatchStatEventResponse
-} from "@/features/match-stat-events/match-stat-event.contract";
-import { listMatchStatEventRows } from "@/features/match-stat-events/match-stat-event.persistence";
+} from "@/features/match-stat-events/_shared/http/responses";
+import { listMatchStatEventRows } from "@/features/match-stat-events/_shared/db/queries";
 import { pageItems, type PaginatedResponse, type PaginationQuery } from "@lib";
 
 export { listMatchStatEventsResponseSchema };

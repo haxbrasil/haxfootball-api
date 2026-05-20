@@ -5,12 +5,12 @@ import {
   upsertRoomProgramVersionAliasBodySchema,
   type RoomProgramVersionAliasResponse,
   type UpsertRoomProgramVersionAliasInput
-} from "@/features/rooms/room.contract";
-import { roomProgramVersionAliases } from "@/features/rooms/room.db";
+} from "@/features/rooms/_shared/http/inputs";
+import { roomProgramVersionAliases } from "@/features/rooms/db";
 import {
   getProgramVersionByProgramAndVersion,
   getRoomProgramByUuid
-} from "@/features/rooms/room.persistence";
+} from "@/features/rooms/_shared/db/queries";
 import { notFound } from "@/shared/http/errors";
 
 export {

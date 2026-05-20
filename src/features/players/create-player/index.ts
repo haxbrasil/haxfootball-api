@@ -2,13 +2,13 @@ import { eq } from "drizzle-orm";
 import { type Static, t } from "elysia";
 import { db } from "@/db/client";
 import {
-  type PlayerResponse,
   playerCountrySchema,
   playerExternalIdSchema,
-  playerNameSchema,
-  toPlayerResponse
-} from "@/features/players/player.contract";
-import { players } from "@/features/players/player.db";
+  playerNameSchema
+} from "@/features/players/_shared/http/inputs";
+import type { PlayerResponse } from "@/features/players/_shared/http/responses";
+import { toPlayerResponse } from "@/features/players/_shared/http/responses";
+import { players } from "@/features/players/db";
 import { badRequest } from "@/shared/http/errors";
 
 export const createPlayerBodySchema = t.Object({

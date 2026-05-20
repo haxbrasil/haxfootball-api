@@ -1,10 +1,8 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
-import {
-  type RecordingResponse,
-  toRecordingResponse
-} from "@/features/recordings/recording.contract";
-import { recordings } from "@/features/recordings/recording.db";
+import type { RecordingResponse } from "@/features/recordings/_shared/http/responses";
+import { toRecordingResponse } from "@/features/recordings/_shared/http/responses";
+import { recordings } from "@/features/recordings/db";
 import { notFound } from "@/shared/http/errors";
 
 export async function getRecording(id: string): Promise<RecordingResponse> {

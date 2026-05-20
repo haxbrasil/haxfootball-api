@@ -12,7 +12,7 @@ describe("recording internals", () => {
       "@/features/recordings/create-recording"
     );
     const { recordings: recordingsTable } = await import(
-      "@/features/recordings/recording.db"
+      "@/features/recordings/db"
     );
 
     await db.insert(recordingsTable).values({
@@ -33,7 +33,7 @@ describe("recording internals", () => {
       "@/features/recordings/list-recordings"
     );
     const { recordings: recordingsTable } = await import(
-      "@/features/recordings/recording.db"
+      "@/features/recordings/db"
     );
 
     await db.insert(recordingsTable).values([

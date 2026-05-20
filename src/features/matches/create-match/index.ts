@@ -2,15 +2,17 @@ import { type Static, t } from "elysia";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import {
-  type MatchResponse,
   matchPlayerEventInputSchema,
-  matchResponseSchema,
   matchScoreSchema,
-  matchStatusSchema,
+  matchStatusSchema
+} from "@/features/matches/_shared/http/inputs";
+import type { MatchResponse } from "@/features/matches/_shared/http/responses";
+import {
+  matchResponseSchema,
   toMatchResponse
-} from "@/features/matches/match.contract";
-import { matches } from "@/features/matches/match.db";
-import { createUniqueMatchPublicId } from "@/features/matches/match-public-id.util";
+} from "@/features/matches/_shared/http/responses";
+import { matches } from "@/features/matches/db";
+import { createUniqueMatchPublicId } from "@/features/matches/_shared/domain/public-id";
 import {
   getMatchDetail,
   getRecordingForAssociation,
@@ -18,9 +20,9 @@ import {
   persistMatchScore,
   resolveMatchStatEventSchemaVersionId,
   recomputeMatchStints
-} from "@/features/matches/match.persistence";
-import { assertCompletedMatchFields } from "@/features/matches/match.service";
-import { statEventSchemaReferenceSchema } from "@/features/stat-event-schemas/stat-event-schema.contract";
+} from "@/features/matches/_shared/db/queries";
+import { assertCompletedMatchFields } from "@/features/matches/_shared/domain/validation";
+import { statEventSchemaReferenceSchema } from "@/features/stat-event-schemas/http";
 import { badRequest } from "@/shared/http/errors";
 
 export const createMatchBodySchema = t.Object({

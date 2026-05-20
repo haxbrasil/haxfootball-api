@@ -5,8 +5,8 @@ import { db } from "@/db/client";
 import {
   accountNameSchema,
   accountPasswordSchema
-} from "@/features/accounts/account.contract";
-import { accounts } from "@/features/accounts/account.db";
+} from "@/features/accounts/_shared/http/inputs";
+import { accounts } from "@/features/accounts/db";
 
 export const confirmBodySchema = t.Object({
   name: accountNameSchema,

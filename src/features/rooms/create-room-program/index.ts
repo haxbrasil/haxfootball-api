@@ -5,9 +5,9 @@ import {
   toRoomProgramResponse,
   type CreateRoomProgramInput,
   type RoomProgramResponse
-} from "@/features/rooms/room.contract";
-import { roomPrograms } from "@/features/rooms/room.db";
-import { normalizeLaunchConfigFields } from "@/features/rooms/room.service";
+} from "@/features/rooms/_shared/http/inputs";
+import { roomPrograms } from "@/features/rooms/db";
+import { normalizeLaunchConfigFields } from "@/features/rooms/_shared/domain/launch-config";
 import { badRequest } from "@/shared/http/errors";
 
 export { createRoomProgramBodySchema };

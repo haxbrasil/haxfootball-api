@@ -1,16 +1,14 @@
 import { eq } from "drizzle-orm";
 import { type Static, t } from "elysia";
 import { db } from "@/db/client";
-import {
-  type MatchResponse,
-  toMatchResponse
-} from "@/features/matches/match.contract";
-import { matches } from "@/features/matches/match.db";
+import type { MatchResponse } from "@/features/matches/_shared/http/responses";
+import { toMatchResponse } from "@/features/matches/_shared/http/responses";
+import { matches } from "@/features/matches/db";
 import {
   getMatchDetail,
   getMatchSummary,
   getRecordingForAssociation
-} from "@/features/matches/match.persistence";
+} from "@/features/matches/_shared/db/queries";
 import { badRequest } from "@/shared/http/errors";
 
 export const associateMatchRecordingBodySchema = t.Object({

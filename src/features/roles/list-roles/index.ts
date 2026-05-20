@@ -1,11 +1,11 @@
 import { db } from "@/db/client";
+import type { RoleResponse } from "@/features/roles/_shared/http/responses";
 import {
-  type RoleResponse,
   roleResponseSchema,
   toRoleResponse
-} from "@/features/roles/role.contract";
-import { roles } from "@/features/roles/role.db";
-import { rolesWithPermissions } from "@/features/roles/role.persistence";
+} from "@/features/roles/_shared/http/responses";
+import { roles } from "@/features/roles/db";
+import { rolesWithPermissions } from "@/features/roles/_shared/db/queries";
 import {
   cursorAfter,
   cursorSort,

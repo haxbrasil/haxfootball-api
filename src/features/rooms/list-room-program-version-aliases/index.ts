@@ -2,11 +2,11 @@ import {
   listRoomProgramVersionAliasesResponseSchema,
   toRoomProgramVersionAliasResponse,
   type RoomProgramVersionAliasResponse
-} from "@/features/rooms/room.contract";
+} from "@/features/rooms/_shared/http/inputs";
 import {
   getRoomProgramByUuid,
   listProgramVersionAliases
-} from "@/features/rooms/room.persistence";
+} from "@/features/rooms/_shared/db/queries";
 import { pageItems, type PaginatedResponse, type PaginationQuery } from "@lib";
 
 export { listRoomProgramVersionAliasesResponseSchema };

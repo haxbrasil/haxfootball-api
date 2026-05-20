@@ -3,16 +3,16 @@ import { eq } from "drizzle-orm";
 import { type Static, t } from "elysia";
 import { db } from "@/db/client";
 import { notFound } from "@/shared/http/errors";
-import { roles } from "@/features/roles/role.db";
+import { roles } from "@/features/roles/db";
 import {
-  type AccountResponse,
   accountExternalIdSchema,
   accountNameSchema,
-  accountPasswordSchema,
-  toAccountResponse
-} from "@/features/accounts/account.contract";
-import { accounts } from "@/features/accounts/account.db";
-import { roleWithPermissions } from "@/features/roles/role.persistence";
+  accountPasswordSchema
+} from "@/features/accounts/_shared/http/inputs";
+import type { AccountResponse } from "@/features/accounts/_shared/http/responses";
+import { toAccountResponse } from "@/features/accounts/_shared/http/responses";
+import { accounts } from "@/features/accounts/db";
+import { roleWithPermissions } from "@/features/roles/resolve-role-permissions";
 
 export const updateAccountBodySchema = t.Partial(
   t.Object({

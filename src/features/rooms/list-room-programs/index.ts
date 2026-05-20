@@ -3,8 +3,8 @@ import {
   listRoomProgramsResponseSchema,
   toRoomProgramResponse,
   type RoomProgramResponse
-} from "@/features/rooms/room.contract";
-import { roomPrograms } from "@/features/rooms/room.db";
+} from "@/features/rooms/_shared/http/inputs";
+import { roomPrograms } from "@/features/rooms/db";
 import {
   cursorAfter,
   cursorSort,

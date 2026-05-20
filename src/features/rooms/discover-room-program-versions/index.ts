@@ -5,14 +5,14 @@ import {
   toRoomProgramVersionResponse,
   type DiscoverRoomProgramVersionsInput,
   type RoomProgramVersionResponse
-} from "@/features/rooms/room.contract";
-import { roomProgramVersions } from "@/features/rooms/room.db";
-import { listGithubReleases } from "@/features/rooms/github-release.service";
+} from "@/features/rooms/_shared/http/inputs";
+import { roomProgramVersions } from "@/features/rooms/db";
+import { listGithubReleases } from "@/features/rooms/_shared/adapters/github-releases";
 import {
   getProgramVersionByProgramAndVersion,
   getRoomProgramByUuid
-} from "@/features/rooms/room.persistence";
-import { matchReleaseAsset } from "@/features/rooms/room.service";
+} from "@/features/rooms/_shared/db/queries";
+import { matchReleaseAsset } from "@/features/rooms/_shared/domain/launch-config";
 import { t } from "elysia";
 
 export { discoverRoomProgramVersionsBodySchema };

@@ -2,12 +2,12 @@ import { eq } from "drizzle-orm";
 import { type Static, t } from "elysia";
 import { db } from "@/db/client";
 import {
-  type PermissionResponse,
   permissionKeySchema,
-  permissionTitleInputSchema,
-  toPermissionResponse
-} from "@/features/permissions/permission.contract";
-import { permissions } from "@/features/permissions/permission.db";
+  permissionTitleInputSchema
+} from "@/features/permissions/_shared/http/inputs";
+import type { PermissionResponse } from "@/features/permissions/_shared/http/responses";
+import { toPermissionResponse } from "@/features/permissions/_shared/http/responses";
+import { permissions } from "@/features/permissions/db";
 import { badRequest } from "@/shared/http/errors";
 
 export const createPermissionBodySchema = t.Object({

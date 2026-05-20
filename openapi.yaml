@@ -106,6 +106,34 @@ components:
           required:
             - error
           type: object
+    BulkUpsertValuesBody:
+      properties:
+        values:
+          items:
+            properties:
+              label:
+                minLength: 1
+                type: string
+              language:
+                maxLength: 16
+                minLength: 2
+                pattern: ^[a-z]{2,3}(-[a-z0-9]{2,8})*$
+                type: string
+              value:
+                maxLength: 128
+                minLength: 1
+                pattern: ^[a-z][a-z0-9.-]{0,127}$
+                type: string
+            required:
+              - value
+              - language
+              - label
+            type: object
+          minItems: 1
+          type: array
+      required:
+        - values
+      type: object
     CloseRoomResponse:
       properties:
         closedAt:
@@ -717,6 +745,35 @@ components:
         - items
         - page
       type: object
+    ListLanguages:
+      properties:
+        items:
+          items:
+            properties:
+              code:
+                maxLength: 16
+                minLength: 2
+                pattern: ^[a-z]{2,3}(-[a-z0-9]{2,8})*$
+                type: string
+              createdAt:
+                type: string
+              name:
+                type: string
+              updatedAt:
+                type: string
+            required:
+              - code
+              - name
+              - createdAt
+              - updatedAt
+            type: object
+          type: array
+        page:
+          $ref: "#/components/schemas/PageInfo"
+      required:
+        - items
+        - page
+      type: object
     ListMatchStatEvents:
       properties:
         items:
@@ -1250,6 +1307,403 @@ components:
         definition: {}
       required:
         - definition
+      type: object
+    QueryMatchMetrics:
+      properties:
+        items:
+          items:
+            properties:
+              contribution:
+                properties:
+                  eventsCount:
+                    anyOf:
+                      - default: 0
+                        format: integer
+                        type: string
+                      - minimum: 0
+                        type: integer
+                    minimum: 0
+                  matchesCount:
+                    anyOf:
+                      - default: 0
+                        format: integer
+                        type: string
+                      - minimum: 0
+                        type: integer
+                    minimum: 0
+                  playersCount:
+                    anyOf:
+                      - default: 0
+                        format: integer
+                        type: string
+                      - minimum: 0
+                        type: integer
+                    minimum: 0
+                required:
+                  - matchesCount
+                  - eventsCount
+                  - playersCount
+                type: object
+              group:
+                anyOf:
+                  - properties:
+                      externalId:
+                        type: string
+                      id:
+                        format: uuid
+                        type: string
+                      name:
+                        type: string
+                      type:
+                        const: account
+                        type: string
+                    required:
+                      - type
+                      - id
+                      - name
+                      - externalId
+                    type: object
+                  - properties:
+                      account:
+                        anyOf:
+                          - $ref: "#/components/schemas/PlayerAccount"
+                          - type: "null"
+                        nullable: true
+                      country:
+                        anyOf:
+                          - type: string
+                          - type: "null"
+                        nullable: true
+                      id:
+                        type: string
+                      name:
+                        type: string
+                      type:
+                        const: player
+                        type: string
+                    required:
+                      - type
+                      - id
+                      - name
+                      - country
+                      - account
+                    type: object
+              metrics:
+                patternProperties:
+                  ^(.*)$: {}
+                type: object
+              rank:
+                anyOf:
+                  - default: 0
+                    format: integer
+                    type: string
+                  - minimum: 1
+                    type: integer
+                minimum: 1
+            required:
+              - rank
+              - group
+              - metrics
+              - contribution
+            type: object
+          type: array
+        meta:
+          properties:
+            availableMetrics:
+              items:
+                properties:
+                  description:
+                    anyOf:
+                      - type: string
+                      - type: "null"
+                    nullable: true
+                  format:
+                    type: string
+                  hidden:
+                    type: boolean
+                  key:
+                    type: string
+                  label:
+                    type: string
+                  precision:
+                    type: number
+                  valueType:
+                    type: string
+                required:
+                  - key
+                  - label
+                  - description
+                type: object
+              type: array
+            group:
+              properties:
+                by:
+                  enum:
+                    - account
+                    - player
+                    - account-or-player
+                  type: string
+                identityMode:
+                  const: current
+                  type: string
+              required:
+                - by
+                - identityMode
+              type: object
+            schema:
+              properties:
+                id:
+                  format: uuid
+                  type: string
+                isLatest:
+                  type: boolean
+                name:
+                  maxLength: 64
+                  minLength: 1
+                  pattern: ^[a-z][a-z0-9-]{0,63}$
+                  type: string
+                version:
+                  anyOf:
+                    - default: 0
+                      format: integer
+                      type: string
+                    - minimum: 1
+                      type: integer
+                  minimum: 1
+              required:
+                - id
+                - name
+                - version
+                - isLatest
+              type: object
+            sort:
+              items: {}
+              type: array
+            totals:
+              properties:
+                eventsCount:
+                  anyOf:
+                    - default: 0
+                      format: integer
+                      type: string
+                    - minimum: 0
+                      type: integer
+                  minimum: 0
+                groupsCount:
+                  anyOf:
+                    - default: 0
+                      format: integer
+                      type: string
+                    - minimum: 0
+                      type: integer
+                  minimum: 0
+                matchesCount:
+                  anyOf:
+                    - default: 0
+                      format: integer
+                      type: string
+                    - minimum: 0
+                      type: integer
+                  minimum: 0
+              required:
+                - groupsCount
+                - matchesCount
+                - eventsCount
+              type: object
+          required:
+            - schema
+            - group
+            - availableMetrics
+            - sort
+            - totals
+          type: object
+        page:
+          $ref: "#/components/schemas/PageInfo"
+      required:
+        - items
+        - page
+        - meta
+      type: object
+    QueryMatchMetricsBody:
+      properties:
+        filters:
+          properties:
+            accountIds:
+              items:
+                format: uuid
+                type: string
+              minItems: 1
+              type: array
+              uniqueItems: true
+            eventTypes:
+              items:
+                maxLength: 64
+                minLength: 1
+                type: string
+              minItems: 1
+              type: array
+              uniqueItems: true
+            matchIds:
+              items:
+                maxLength: 8
+                minLength: 8
+                type: string
+              minItems: 1
+              type: array
+              uniqueItems: true
+            period:
+              properties:
+                field:
+                  enum:
+                    - initiatedAt
+                    - endedAt
+                    - createdAt
+                  type: string
+                from:
+                  minLength: 1
+                  type: string
+                to:
+                  minLength: 1
+                  type: string
+              required:
+                - field
+              type: object
+            playerIds:
+              items:
+                maxLength: 64
+                minLength: 1
+                type: string
+              minItems: 1
+              type: array
+              uniqueItems: true
+            statuses:
+              items:
+                enum:
+                  - completed
+                  - ongoing
+                type: string
+              maxItems: 2
+              minItems: 1
+              type: array
+              uniqueItems: true
+          type: object
+        group:
+          properties:
+            by:
+              enum:
+                - account
+                - player
+                - account-or-player
+              type: string
+          required:
+            - by
+          type: object
+        language:
+          maxLength: 16
+          minLength: 2
+          type: string
+        metrics:
+          items:
+            maxLength: 64
+            minLength: 1
+            type: string
+          minItems: 1
+          type: array
+          uniqueItems: true
+        page:
+          properties:
+            cursor:
+              minLength: 1
+              type: string
+            limit:
+              anyOf:
+                - default: 0
+                  format: integer
+                  type: string
+                - maximum: 100
+                  minimum: 1
+                  type: integer
+              maximum: 100
+              minimum: 1
+          type: object
+        schema:
+          anyOf:
+            - properties:
+                id:
+                  format: uuid
+                  type: string
+                version:
+                  anyOf:
+                    - default: 0
+                      format: integer
+                      type: string
+                    - minimum: 1
+                      type: integer
+                  minimum: 1
+              required:
+                - id
+              type: object
+            - properties:
+                name:
+                  maxLength: 64
+                  minLength: 1
+                  pattern: ^[a-z][a-z0-9-]{0,63}$
+                  type: string
+                version:
+                  anyOf:
+                    - default: 0
+                      format: integer
+                      type: string
+                    - minimum: 1
+                      type: integer
+                  minimum: 1
+              required:
+                - name
+              type: object
+        sort:
+          items:
+            anyOf:
+              - properties:
+                  direction:
+                    anyOf:
+                      - const: asc
+                        type: string
+                      - const: desc
+                        type: string
+                  key:
+                    maxLength: 64
+                    minLength: 1
+                    type: string
+                  type:
+                    const: metric
+                    type: string
+                required:
+                  - type
+                  - key
+                  - direction
+                type: object
+              - properties:
+                  direction:
+                    anyOf:
+                      - const: asc
+                        type: string
+                      - const: desc
+                        type: string
+                  key:
+                    const: name
+                    type: string
+                  type:
+                    const: field
+                    type: string
+                required:
+                  - type
+                  - key
+                  - direction
+                type: object
+          minItems: 1
+          type: array
+      required:
+        - schema
       type: object
     Recording:
       properties:
@@ -2142,6 +2596,46 @@ components:
       required:
         - version
       type: object
+    Value:
+      properties:
+        labels:
+          items:
+            properties:
+              label:
+                type: string
+              language:
+                properties:
+                  code:
+                    maxLength: 16
+                    minLength: 2
+                    pattern: ^[a-z]{2,3}(-[a-z0-9]{2,8})*$
+                    type: string
+                  createdAt:
+                    type: string
+                  name:
+                    type: string
+                  updatedAt:
+                    type: string
+                required:
+                  - code
+                  - name
+                  - createdAt
+                  - updatedAt
+                type: object
+            required:
+              - language
+              - label
+            type: object
+          type: array
+        value:
+          maxLength: 128
+          minLength: 1
+          pattern: ^[a-z][a-z0-9.-]{0,127}$
+          type: string
+      required:
+        - value
+        - labels
+      type: object
   securitySchemes:
     bearerAuth:
       bearerFormat: JWT
@@ -2560,6 +3054,57 @@ paths:
       summary: Get job
       tags:
         - Jobs
+  /api/languages:
+    get:
+      operationId: getApiLanguages
+      parameters:
+        - in: query
+          name: limit
+          required: false
+          schema:
+            anyOf:
+              - default: 0
+                format: integer
+                type: string
+              - maximum: 100
+                minimum: 1
+                type: integer
+            maximum: 100
+            minimum: 1
+        - in: query
+          name: cursor
+          required: false
+          schema:
+            minLength: 1
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListLanguages"
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: List languages
+      tags:
+        - Localization
   /api/matches:
     get:
       operationId: getApiMatches
@@ -2653,6 +3198,49 @@ paths:
       summary: Create a match
       tags:
         - Matches
+  /api/matches/metrics/query:
+    post:
+      operationId: postApiMatchesMetricsQuery
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QueryMatchMetricsBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QueryMatchMetrics"
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Query match metrics
+      tags:
+        - Match Metrics
   /api/matches/{id}:
     get:
       operationId: getApiMatchesById
@@ -4896,6 +5484,109 @@ paths:
       summary: Create stat event schema
       tags:
         - Stat Event Schemas
+  /api/stat-event-schemas/by-name/{name}:
+    get:
+      operationId: getApiStat-event-schemasBy-nameByName
+      parameters:
+        - in: path
+          name: name
+          required: true
+          schema:
+            maxLength: 64
+            minLength: 1
+            pattern: ^[a-z][a-z0-9-]{0,63}$
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatEventSchema"
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Get latest stat event schema by name
+      tags:
+        - Stat Event Schemas
+  /api/stat-event-schemas/by-name/{name}/versions/{version}:
+    get:
+      operationId: getApiStat-event-schemasBy-nameByNameVersionsByVersion
+      parameters:
+        - in: path
+          name: name
+          required: true
+          schema:
+            maxLength: 64
+            minLength: 1
+            pattern: ^[a-z][a-z0-9-]{0,63}$
+            type: string
+        - in: path
+          name: version
+          required: true
+          schema:
+            anyOf:
+              - default: 0
+                format: integer
+                type: string
+              - minimum: 1
+                type: integer
+            minimum: 1
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatEventSchema"
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Get stat event schema version by name
+      tags:
+        - Stat Event Schemas
   /api/stat-event-schemas/{id}:
     get:
       operationId: getApiStat-event-schemasById
@@ -5105,6 +5796,91 @@ paths:
       summary: Update stat event schema version
       tags:
         - Stat Event Schemas
+  /api/values/bulk:
+    post:
+      operationId: postApiValuesBulk
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkUpsertValuesBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/Value"
+                type: array
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Bulk upsert localized values
+      tags:
+        - Localization
+  /api/values/{value}:
+    get:
+      operationId: getApiValuesByValue
+      parameters:
+        - in: path
+          name: value
+          required: true
+          schema:
+            maxLength: 128
+            minLength: 1
+            pattern: ^[a-z][a-z0-9.-]{0,127}$
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Value"
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Get a localized value
+      tags:
+        - Localization
   /artifacts/rooms/{branch}/{sha}/{assetName}:
     get:
       operationId: getArtifactsRoomsByBranchByShaByAssetName

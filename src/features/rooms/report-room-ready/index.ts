@@ -6,9 +6,9 @@ import {
   toRoomResponse,
   type ReportRoomReadyInput,
   type RoomResponse
-} from "@/features/rooms/room.contract";
-import { roomInstances } from "@/features/rooms/room.db";
-import { getRoomRow } from "@/features/rooms/room.persistence";
+} from "@/features/rooms/_shared/http/inputs";
+import { roomInstances } from "@/features/rooms/db";
+import { getRoomRow } from "@/features/rooms/_shared/db/queries";
 import { badRequest } from "@/shared/http/errors";
 
 export {

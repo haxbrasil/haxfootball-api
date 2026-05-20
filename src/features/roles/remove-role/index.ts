@@ -1,14 +1,10 @@
 import { eq } from "drizzle-orm";
 import { type Static, t } from "elysia";
 import { db } from "@/db/client";
-import { accounts } from "@/features/accounts/account.db";
+import { accounts } from "@/features/accounts/db";
 import { badRequest, notFound } from "@/shared/http/errors";
 import { getDefaultRole } from "@/features/roles/get-default-role";
-import {
-  defaultRoleName,
-  rolePermissions,
-  roles
-} from "@/features/roles/role.db";
+import { defaultRoleName, rolePermissions, roles } from "@/features/roles/db";
 
 export const removeRoleResponseSchema = t.Object({
   deleted: t.Boolean()

@@ -2,8 +2,8 @@ import {
   type JobResponse,
   jobResponseSchema,
   toJobResponse
-} from "@/features/jobs/job.contract";
-import { enqueueKnownJob } from "@/features/jobs/job.service";
+} from "@/features/jobs/_shared/http/responses";
+import { enqueueKnownJob } from "@/features/jobs/_shared/domain/execution";
 import type { JsonValue } from "@lib/json";
 
 export { jobResponseSchema };

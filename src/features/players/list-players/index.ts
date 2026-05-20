@@ -1,12 +1,12 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
-import { accounts } from "@/features/accounts/account.db";
+import { accounts } from "@/features/accounts/db";
+import type { PlayerResponse } from "@/features/players/_shared/http/responses";
 import {
-  type PlayerResponse,
   playerResponseSchema,
   toPlayerResponse
-} from "@/features/players/player.contract";
-import { players } from "@/features/players/player.db";
+} from "@/features/players/_shared/http/responses";
+import { players } from "@/features/players/db";
 import {
   cursorAfter,
   cursorSort,

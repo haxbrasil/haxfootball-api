@@ -1,8 +1,8 @@
 import { eq } from "drizzle-orm";
 import { type Static, t } from "elysia";
 import { db } from "@/db/client";
-import { rolePermissions } from "@/features/roles/role.db";
-import { permissions } from "@/features/permissions/permission.db";
+import { rolePermissions } from "@/features/roles/db";
+import { permissions } from "@/features/permissions/db";
 import { notFound } from "@/shared/http/errors";
 
 export const removePermissionResponseSchema = t.Object({

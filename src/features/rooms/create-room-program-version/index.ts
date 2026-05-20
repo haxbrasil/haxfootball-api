@@ -4,12 +4,12 @@ import {
   toRoomProgramVersionResponse,
   type CreateRoomProgramVersionInput,
   type RoomProgramVersionResponse
-} from "@/features/rooms/room.contract";
-import { roomProgramVersions } from "@/features/rooms/room.db";
+} from "@/features/rooms/_shared/http/inputs";
+import { roomProgramVersions } from "@/features/rooms/db";
 import {
   getProgramVersionByProgramAndVersion,
   getRoomProgramByUuid
-} from "@/features/rooms/room.persistence";
+} from "@/features/rooms/_shared/db/queries";
 import { badRequest } from "@/shared/http/errors";
 
 export { createRoomProgramVersionBodySchema };
