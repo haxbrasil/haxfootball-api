@@ -1427,13 +1427,25 @@ components:
                   category:
                     anyOf:
                       - properties:
+                          description:
+                            anyOf:
+                              - type: string
+                              - type: "null"
+                            nullable: true
                           key:
                             type: string
                           label:
                             type: string
+                          primaryMetric:
+                            anyOf:
+                              - type: string
+                              - type: "null"
+                            nullable: true
                         required:
                           - key
                           - label
+                          - description
+                          - primaryMetric
                         type: object
                       - type: "null"
                     nullable: true

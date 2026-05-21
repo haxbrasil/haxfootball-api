@@ -147,7 +147,9 @@ const matchMetricsMetricSchema = t.Object({
   category: t.Nullable(
     t.Object({
       key: t.String(),
-      label: t.String()
+      label: t.String(),
+      description: t.Nullable(t.String()),
+      primaryMetric: t.Nullable(t.String())
     })
   ),
   valueType: t.Optional(t.String()),
@@ -671,6 +673,9 @@ async function metricMetadata(
   const metadataByKey = new Map(
     (definition.metrics ?? []).map((metric) => [metric.key, metric])
   );
+  const categoryMetadataByKey = new Map(
+    (definition.categories ?? []).map((category) => [category.key, category])
+  );
 
   const labelKeys = metricKeys.flatMap((key) => {
     const metadata = metadataByKey.get(key);
@@ -684,7 +689,11 @@ async function metricMetadata(
     const category = metadataByKey.get(key)?.category;
 
     if (category) {
-      labelKeys.push(category);
+      const categoryMetadata = categoryMetadataByKey.get(category);
+      labelKeys.push(
+        categoryMetadata?.label ?? category,
+        ...(categoryMetadata?.description ? [categoryMetadata.description] : [])
+      );
     }
   }
 
@@ -695,6 +704,9 @@ async function metricMetadata(
     const labelKey = metadata?.label ?? key;
     const descriptionKey = metadata?.description;
     const categoryKey = metadata?.category;
+    const categoryMetadata = categoryKey
+      ? categoryMetadataByKey.get(categoryKey)
+      : undefined;
 
     return {
       key,
@@ -705,7 +717,15 @@ async function metricMetadata(
       category: categoryKey
         ? {
             key: categoryKey,
-            label: labels.get(categoryKey) ?? categoryKey
+            label:
+              labels.get(categoryMetadata?.label ?? categoryKey) ??
+              categoryMetadata?.label ??
+              categoryKey,
+            description: categoryMetadata?.description
+              ? (labels.get(categoryMetadata.description) ??
+                categoryMetadata.description)
+              : null,
+            primaryMetric: categoryMetadata?.primaryMetric ?? null
           }
         : null,
       ...optionalMetricMetadata(metadata)

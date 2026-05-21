@@ -49,10 +49,18 @@ export type StatMetricMetadata = {
   hidden?: boolean;
 };
 
+export type StatMetricCategoryMetadata = {
+  key: string;
+  label?: string;
+  description?: string;
+  primaryMetric?: string;
+};
+
 export type StatEventSchemaDefinition = {
   events: StatEventDefinition[];
   virtualMetrics?: StatVirtualMetricDefinition[];
   metrics?: StatMetricMetadata[];
+  categories?: StatMetricCategoryMetadata[];
   presentation?: PresentationMetadata;
 };
 
@@ -85,6 +93,7 @@ export function validateStatEventSchemaDefinition(
 
   const virtualMetrics = definition.virtualMetrics;
   const metrics = definition.metrics;
+  const categories = definition.categories;
   const presentation = definition.presentation;
 
   if (virtualMetrics !== undefined) {
@@ -103,8 +112,14 @@ export function validateStatEventSchemaDefinition(
 
   const metricDefinitions =
     metrics === undefined ? undefined : toMetrics(metrics);
+  const categoryDefinitions =
+    categories === undefined ? undefined : toCategories(categories);
 
   if (metrics !== undefined && !metricDefinitions) {
+    return null;
+  }
+
+  if (categories !== undefined && !categoryDefinitions) {
     return null;
   }
 
@@ -128,6 +143,13 @@ export function validateStatEventSchemaDefinition(
     return null;
   }
 
+  if (
+    categoryDefinitions &&
+    !categoriesMatchKnownMetrics(categoryDefinitions, metricDefinitions ?? [])
+  ) {
+    return null;
+  }
+
   return {
     events: eventDefinitions,
     ...(virtualMetrics
@@ -136,6 +158,7 @@ export function validateStatEventSchemaDefinition(
         }
       : {}),
     ...(metricDefinitions ? { metrics: metricDefinitions } : {}),
+    ...(categoryDefinitions ? { categories: categoryDefinitions } : {}),
     ...(presentationMetadata ? { presentation: presentationMetadata } : {})
   };
 }
@@ -260,6 +283,26 @@ function toMetrics(value: JsonValue): StatMetricMetadata[] | null {
   return metrics as StatMetricMetadata[];
 }
 
+function toCategories(value: JsonValue): StatMetricCategoryMetadata[] | null {
+  if (!Array.isArray(value)) {
+    return null;
+  }
+
+  const categories = value.map(toCategoryMetadata);
+
+  if (categories.some((category) => category === null)) {
+    return null;
+  }
+
+  const categoryKeys = new Set(categories.map((category) => category?.key));
+
+  if (categoryKeys.size !== categories.length) {
+    return null;
+  }
+
+  return categories as StatMetricCategoryMetadata[];
+}
+
 function toMetricMetadata(value: JsonValue): StatMetricMetadata | null {
   if (!isJsonObject(value) || typeof value.key !== "string") {
     return null;
@@ -337,6 +380,47 @@ function toMetricMetadata(value: JsonValue): StatMetricMetadata | null {
   return metadata;
 }
 
+function toCategoryMetadata(
+  value: JsonValue
+): StatMetricCategoryMetadata | null {
+  if (!isJsonObject(value) || !isValueKey(value.key)) {
+    return null;
+  }
+
+  const metadata: StatMetricCategoryMetadata = {
+    key: value.key
+  };
+
+  if (value.label !== undefined) {
+    if (!isValueKey(value.label)) {
+      return null;
+    }
+
+    metadata.label = value.label;
+  }
+
+  if (value.description !== undefined) {
+    if (!isValueKey(value.description)) {
+      return null;
+    }
+
+    metadata.description = value.description;
+  }
+
+  if (value.primaryMetric !== undefined) {
+    if (
+      typeof value.primaryMetric !== "string" ||
+      !isPublicIdentifier(value.primaryMetric)
+    ) {
+      return null;
+    }
+
+    metadata.primaryMetric = value.primaryMetric;
+  }
+
+  return metadata;
+}
+
 function toPresentationMetadata(
   value: JsonValue | undefined
 ): PresentationMetadata | null {
@@ -393,6 +477,34 @@ function metricsMatchKnownMetrics(
   }
 
   return metrics.every((metric) => knownMetrics.has(metric.key));
+}
+
+function categoriesMatchKnownMetrics(
+  categories: StatMetricCategoryMetadata[],
+  metrics: StatMetricMetadata[]
+): boolean {
+  const categoryKeys = new Set(categories.map((category) => category.key));
+  const metricByKey = new Map(metrics.map((metric) => [metric.key, metric]));
+
+  for (const metric of metrics) {
+    if (metric.category && !categoryKeys.has(metric.category)) {
+      return false;
+    }
+  }
+
+  for (const category of categories) {
+    if (!category.primaryMetric) {
+      continue;
+    }
+
+    const primaryMetric = metricByKey.get(category.primaryMetric);
+
+    if (!primaryMetric || primaryMetric.category !== category.key) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 function toVirtualMetricDefinition(
