@@ -18,7 +18,7 @@ import {
 import {
   playerResponseSchema,
   toPlayerResponse
-} from "@/features/players/http";
+} from "@/features/players/responses";
 import type { Player } from "@/features/players/db";
 import {
   recordingResponseSchema,

@@ -72,6 +72,114 @@ describe("accounts", () => {
     expect(await getResponse.json()).toEqual(account);
   });
 
+  it("gets accounts by name and external ID", async () => {
+    const name = uniqueAccountName("LookupAccount");
+    const externalId = uniqueAccountExternalId();
+    const createResponse = await request("/api/accounts", {
+      method: "POST",
+      body: {
+        name,
+        password: "pass1234",
+        externalId
+      }
+    });
+
+    expect(createResponse.status).toBe(201);
+
+    const account = await createResponse.json();
+    const byNameResponse = await request(
+      `/api/accounts/by-name/${encodeURIComponent(name)}`
+    );
+    const byExternalIdResponse = await request(
+      `/api/accounts/by-external-id/${externalId}`
+    );
+
+    expect(byNameResponse.status).toBe(200);
+    expect(byExternalIdResponse.status).toBe(200);
+    expect(await byNameResponse.json()).toEqual(account);
+    expect(await byExternalIdResponse.json()).toEqual(account);
+  });
+
+  it("filters account lists by search, name, external ID, and role", async () => {
+    const roleResponse = await request("/api/roles", {
+      method: "POST",
+      body: {
+        name: uniqueRoleName("web-admin"),
+        title: "Web Admin",
+        permissions: ["rooms:create"]
+      }
+    });
+
+    expect(roleResponse.status).toBe(201);
+
+    const role = await roleResponse.json();
+    const name = uniqueAccountName("FilterAccount");
+    const externalId = uniqueAccountExternalId();
+    const createResponse = await request("/api/accounts", {
+      method: "POST",
+      body: {
+        name,
+        password: "pass1234",
+        externalId
+      }
+    });
+
+    expect(createResponse.status).toBe(201);
+
+    const created = await createResponse.json();
+    const updateResponse = await request(`/api/accounts/${created.uuid}`, {
+      method: "PATCH",
+      body: {
+        roleUuid: role.uuid
+      }
+    });
+
+    expect(updateResponse.status).toBe(200);
+
+    const account = await updateResponse.json();
+    const searchResponse = await request(
+      `/api/accounts?search=${encodeURIComponent(name.slice(0, 12))}`
+    );
+    const nameResponse = await request(
+      `/api/accounts?name=${encodeURIComponent(name)}`
+    );
+    const externalIdResponse = await request(
+      `/api/accounts?externalId=${externalId}`
+    );
+    const roleResponseList = await request(
+      `/api/accounts?roleUuid=${role.uuid}`
+    );
+
+    expect(await paginatedItems(searchResponse)).toContainEqual(account);
+    expect(await paginatedItems(nameResponse)).toEqual([account]);
+    expect(await paginatedItems(externalIdResponse)).toEqual([account]);
+    expect(await paginatedItems(roleResponseList)).toContainEqual(account);
+  });
+
+  it("returns 404 for missing account lookup routes", async () => {
+    const byNameResponse = await request(
+      "/api/accounts/by-name/MissingAccount"
+    );
+    const byExternalIdResponse = await request(
+      `/api/accounts/by-external-id/${uniqueAccountExternalId()}`
+    );
+
+    expect(byNameResponse.status).toBe(404);
+    expect(byExternalIdResponse.status).toBe(404);
+    expect(await byNameResponse.json()).toEqual({
+      error: {
+        code: "NOT_FOUND",
+        message: "Account not found"
+      }
+    });
+    expect(await byExternalIdResponse.json()).toEqual({
+      error: {
+        code: "NOT_FOUND",
+        message: "Account not found"
+      }
+    });
+  });
+
   it("updates an account", async () => {
     const createResponse = await request("/api/accounts", {
       method: "POST",
@@ -422,3 +530,19 @@ describe("accounts", () => {
     });
   });
 });
+
+function uniqueAccountExternalId(): string {
+  return `7${crypto
+    .randomUUID()
+    .replaceAll(/[^0-9]/g, "")
+    .padEnd(17, "0")
+    .slice(0, 17)}`;
+}
+
+function uniqueAccountName(prefix: string): string {
+  return `${prefix}${crypto.randomUUID().replaceAll("-", "").slice(0, 8)}`;
+}
+
+function uniqueRoleName(prefix: string): string {
+  return `${prefix}-${crypto.randomUUID().slice(0, 8)}`;
+}

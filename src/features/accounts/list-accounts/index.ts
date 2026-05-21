@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, like, type SQL } from "drizzle-orm";
 import { db } from "@/db/client";
 import type { AccountResponse } from "@/features/accounts/_shared/http/responses";
 import {
@@ -18,12 +18,19 @@ import {
   type PaginationQuery
 } from "@lib";
 
+export type ListAccountsQuery = PaginationQuery & {
+  search?: string;
+  name?: string;
+  externalId?: string;
+  roleUuid?: string;
+};
+
 export const listAccountsResponseSchema = paginatedResponseSchema(
   accountResponseSchema
 );
 
 export async function listAccounts(
-  query: PaginationQuery = {}
+  query: ListAccountsQuery = {}
 ): Promise<PaginatedResponse<AccountResponse>> {
   const rows = await db
     .select({
@@ -32,7 +39,7 @@ export async function listAccounts(
     })
     .from(accounts)
     .innerJoin(roles, eq(accounts.roleId, roles.id))
-    .where(cursorAfter(accounts.id, query.cursor, "asc"))
+    .where(accountListWhere(query))
     .orderBy(cursorSort(accounts.id, "asc"))
     .limit(pageLimit(query));
 
@@ -50,4 +57,28 @@ export async function listAccounts(
     ),
     page: page.page
   };
+}
+
+function accountListWhere(query: ListAccountsQuery): SQL | undefined {
+  const filters: Array<SQL | undefined> = [
+    cursorAfter(accounts.id, query.cursor, "asc")
+  ];
+
+  if (query.search) {
+    filters.push(like(accounts.name, `%${query.search}%`));
+  }
+
+  if (query.name) {
+    filters.push(eq(accounts.name, query.name));
+  }
+
+  if (query.externalId) {
+    filters.push(eq(accounts.externalId, query.externalId));
+  }
+
+  if (query.roleUuid) {
+    filters.push(eq(roles.uuid, query.roleUuid));
+  }
+
+  return and(...filters.filter((filter) => filter !== undefined));
 }

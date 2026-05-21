@@ -9,11 +9,17 @@ import {
   createAccountBodySchema
 } from "@/features/accounts/create-account";
 import { getAccount } from "@/features/accounts/get-account";
+import { getAccountByExternalId } from "@/features/accounts/get-account-by-external-id";
+import { getAccountByName } from "@/features/accounts/get-account-by-name";
 import {
   listAccounts,
   listAccountsResponseSchema
 } from "@/features/accounts/list-accounts";
-import { accountUuidParamsSchema } from "@/features/accounts/_shared/http/inputs";
+import {
+  accountExternalIdSchema,
+  accountNameSchema,
+  accountUuidParamsSchema
+} from "@/features/accounts/_shared/http/inputs";
 import { accountResponseSchema } from "@/features/accounts/_shared/http/responses";
 import {
   updateAccount,
@@ -21,7 +27,23 @@ import {
 } from "@/features/accounts/update-account";
 import { roleResponseSchema } from "@/features/roles/http";
 import { notFoundErrorResponseSchema } from "@/shared/http/errors";
-import { paginationQuerySchema } from "@lib";
+
+const listAccountsQuerySchema = t.Object({
+  limit: t.Optional(t.Integer({ minimum: 1, maximum: 100 })),
+  cursor: t.Optional(t.String({ minLength: 1 })),
+  search: t.Optional(t.String({ minLength: 1, maxLength: 25 })),
+  name: t.Optional(accountNameSchema),
+  externalId: t.Optional(accountExternalIdSchema),
+  roleUuid: t.Optional(t.String({ format: "uuid" }))
+});
+
+const accountNameParamsSchema = t.Object({
+  name: accountNameSchema
+});
+
+const accountExternalIdParamsSchema = t.Object({
+  externalId: accountExternalIdSchema
+});
 
 export const accountRoutes = new Elysia({
   name: "account-routes",
@@ -38,7 +60,7 @@ export const accountRoutes = new Elysia({
     UpdateAccountBody: updateAccountBodySchema
   })
   .get("", ({ query }) => listAccounts(query), {
-    query: paginationQuerySchema,
+    query: listAccountsQuerySchema,
     response: {
       200: t.Ref("ListAccounts")
     },
@@ -47,6 +69,32 @@ export const accountRoutes = new Elysia({
       summary: "List accounts"
     }
   })
+  .get("/by-name/:name", ({ params }) => getAccountByName(params.name), {
+    params: accountNameParamsSchema,
+    response: {
+      200: t.Ref("Account"),
+      404: t.Ref("NotFoundError")
+    },
+    detail: {
+      tags: ["Accounts"],
+      summary: "Get an account by name"
+    }
+  })
+  .get(
+    "/by-external-id/:externalId",
+    ({ params }) => getAccountByExternalId(params.externalId),
+    {
+      params: accountExternalIdParamsSchema,
+      response: {
+        200: t.Ref("Account"),
+        404: t.Ref("NotFoundError")
+      },
+      detail: {
+        tags: ["Accounts"],
+        summary: "Get an account by external ID"
+      }
+    }
+  )
   .get("/:uuid", ({ params }) => getAccount(params.uuid), {
     params: accountUuidParamsSchema,
     response: {

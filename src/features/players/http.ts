@@ -9,16 +9,31 @@ import {
 } from "@/features/players/create-player";
 import { getPlayer } from "@/features/players/get-player";
 import {
+  listPlayerMatches,
+  listPlayerMatchesResponseSchema
+} from "@/features/matches/list-player-matches";
+import {
   listPlayers,
   listPlayersResponseSchema
 } from "@/features/players/list-players";
-import { playerIdParamsSchema } from "@/features/players/_shared/http/inputs";
+import {
+  playerCountrySchema,
+  playerIdParamsSchema
+} from "@/features/players/_shared/http/inputs";
 import {
   playerAccountResponseSchema,
   playerResponseSchema
 } from "@/features/players/_shared/http/responses";
 import { notFoundErrorResponseSchema } from "@/shared/http/errors";
 import { paginationQuerySchema } from "@lib";
+
+const listPlayersQuerySchema = t.Object({
+  limit: t.Optional(t.Integer({ minimum: 1, maximum: 100 })),
+  cursor: t.Optional(t.String({ minLength: 1 })),
+  search: t.Optional(t.String({ minLength: 1, maxLength: 25 })),
+  accountUuid: t.Optional(t.String({ format: "uuid" })),
+  country: t.Optional(playerCountrySchema)
+});
 
 export {
   playerIdParamsSchema,
@@ -38,13 +53,14 @@ export const playerRoutes = new Elysia({
   .model({
     AssociatePlayerAccountBody: associatePlayerAccountBodySchema,
     CreatePlayerBody: createPlayerBodySchema,
+    ListPlayerMatches: listPlayerMatchesResponseSchema,
     ListPlayers: listPlayersResponseSchema,
     NotFoundError: notFoundErrorResponseSchema,
     PlayerAccount: playerAccountResponseSchema,
     Player: playerResponseSchema
   })
   .get("", ({ query }) => listPlayers(query), {
-    query: paginationQuerySchema,
+    query: listPlayersQuerySchema,
     response: {
       200: t.Ref("ListPlayers")
     },
@@ -64,6 +80,22 @@ export const playerRoutes = new Elysia({
       summary: "Get a player"
     }
   })
+  .get(
+    "/:externalId/matches",
+    ({ params, query }) => listPlayerMatches(params.externalId, query),
+    {
+      params: playerIdParamsSchema,
+      query: paginationQuerySchema,
+      response: {
+        200: t.Ref("ListPlayerMatches"),
+        404: t.Ref("NotFoundError")
+      },
+      detail: {
+        tags: ["Players"],
+        summary: "List player matches"
+      }
+    }
+  )
   .post(
     "",
     ({ body, set }) => {

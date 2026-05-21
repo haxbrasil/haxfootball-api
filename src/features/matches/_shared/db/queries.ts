@@ -302,7 +302,7 @@ async function resolveMatchEvents(
   });
 }
 
-async function listMatchMetadata(matchId: number) {
+export async function listMatchMetadata(matchId: number) {
   return db
     .select()
     .from(matchTeamMetadata)

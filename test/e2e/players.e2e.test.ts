@@ -76,6 +76,63 @@ describe("players", () => {
     expect(await paginatedItems(listResponse)).toContainEqual(player);
   });
 
+  it("filters players by search, account, and country", async () => {
+    const accountResponse = await request("/api/accounts", {
+      method: "POST",
+      body: {
+        name: uniqueAccountName("PlayerFilter"),
+        password: "pass1234",
+        externalId: uniqueAccountExternalId()
+      }
+    });
+
+    expect(accountResponse.status).toBe(201);
+
+    const account: AccountResponse = await accountResponse.json();
+    const createResponse = await request("/api/players", {
+      method: "POST",
+      body: {
+        externalId: `filter-${crypto.randomUUID()}`,
+        name: uniquePlayerName("Filter"),
+        country: "br"
+      }
+    });
+
+    expect(createResponse.status).toBe(201);
+
+    const player: PlayerResponse = await createResponse.json();
+    const associateResponse = await request(
+      `/api/players/${player.id}/account`,
+      {
+        method: "PATCH",
+        body: {
+          accountUuid: account.uuid
+        }
+      }
+    );
+
+    expect(associateResponse.status).toBe(200);
+
+    const associatedPlayer: PlayerResponse = await associateResponse.json();
+    const searchResponse = await request(
+      `/api/players?search=${encodeURIComponent(player.name.slice(0, 8))}`
+    );
+    const accountFilterResponse = await request(
+      `/api/players?accountUuid=${account.uuid}`
+    );
+    const countryResponse = await request("/api/players?country=br");
+
+    expect(await paginatedItems(searchResponse)).toContainEqual(
+      associatedPlayer
+    );
+    expect(await paginatedItems(accountFilterResponse)).toContainEqual(
+      associatedPlayer
+    );
+    expect(await paginatedItems(countryResponse)).toContainEqual(
+      associatedPlayer
+    );
+  });
+
   it("gets a player by ID", async () => {
     const createResponse = await request("/api/players", {
       method: "POST",
@@ -93,6 +150,63 @@ describe("players", () => {
 
     expect(getResponse.status).toBe(200);
     expect(await getResponse.json()).toEqual(player);
+  });
+
+  it("lists a player's match history", async () => {
+    const playerResponse = await request("/api/players", {
+      method: "POST",
+      body: {
+        externalId: `history-${crypto.randomUUID()}`,
+        name: uniquePlayerName("History")
+      }
+    });
+
+    expect(playerResponse.status).toBe(201);
+
+    const player: PlayerResponse = await playerResponse.json();
+    const createMatchResponse = await request("/api/matches", {
+      method: "POST",
+      body: {
+        status: "completed",
+        initiatedAt: "2026-05-10T12:00:00.000Z",
+        endedAt: "2026-05-10T12:20:00.000Z",
+        score: {
+          red: 14,
+          blue: 7
+        },
+        events: [
+          {
+            type: "player_join",
+            playerId: player.id,
+            team: "red",
+            roomPlayerId: 10,
+            occurredAt: "2026-05-10T12:00:00.000Z",
+            elapsedSeconds: 0
+          }
+        ]
+      }
+    });
+
+    expect(createMatchResponse.status).toBe(201);
+
+    const match = await createMatchResponse.json();
+    const historyResponse = await request(`/api/players/${player.id}/matches`);
+
+    expect(historyResponse.status).toBe(200);
+    expect(await paginatedItems(historyResponse)).toContainEqual({
+      id: match.id,
+      status: "completed",
+      initiatedAt: "2026-05-10T12:00:00.000Z",
+      endedAt: "2026-05-10T12:20:00.000Z",
+      score: {
+        red: 14,
+        blue: 7
+      },
+      recording: null,
+      statEventSchema: null,
+      createdAt: match.createdAt,
+      updatedAt: match.updatedAt
+    });
   });
 
   it("returns 404 when a player does not exist", async () => {
@@ -414,3 +528,19 @@ describe("players", () => {
     expect(deleteResponse.status).toBe(404);
   });
 });
+
+function uniqueAccountExternalId(): string {
+  return `6${crypto
+    .randomUUID()
+    .replaceAll(/[^0-9]/g, "")
+    .padEnd(17, "0")
+    .slice(0, 17)}`;
+}
+
+function uniqueAccountName(prefix: string): string {
+  return `${prefix}${crypto.randomUUID().replaceAll("-", "").slice(0, 8)}`;
+}
+
+function uniquePlayerName(prefix: string): string {
+  return `${prefix}${crypto.randomUUID().replaceAll("-", "").slice(0, 8)}`;
+}

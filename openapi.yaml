@@ -810,6 +810,18 @@ components:
         - items
         - page
       type: object
+    ListPlayerMatches:
+      properties:
+        items:
+          items:
+            $ref: "#/components/schemas/MatchSummary"
+          type: array
+        page:
+          $ref: "#/components/schemas/PageInfo"
+      required:
+        - items
+        - page
+      type: object
     ListPlayers:
       properties:
         items:
@@ -2670,6 +2682,33 @@ paths:
           schema:
             minLength: 1
             type: string
+        - in: query
+          name: search
+          required: false
+          schema:
+            maxLength: 25
+            minLength: 1
+            type: string
+        - in: query
+          name: name
+          required: false
+          schema:
+            maxLength: 25
+            minLength: 1
+            pattern: .*[A-Za-z0-9].*
+            type: string
+        - in: query
+          name: externalId
+          required: false
+          schema:
+            pattern: ^[0-9]{17,20}$
+            type: string
+        - in: query
+          name: roleUuid
+          required: false
+          schema:
+            format: uuid
+            type: string
       responses:
         "200":
           content:
@@ -2732,6 +2771,96 @@ paths:
                 $ref: "#/components/schemas/InternalServerError"
           description: Response for status 500
       summary: Create an account
+      tags:
+        - Accounts
+  /api/accounts/by-external-id/{externalId}:
+    get:
+      operationId: getApiAccountsBy-external-idByExternalId
+      parameters:
+        - in: path
+          name: externalId
+          required: true
+          schema:
+            pattern: ^[0-9]{17,20}$
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Account"
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Get an account by external ID
+      tags:
+        - Accounts
+  /api/accounts/by-name/{name}:
+    get:
+      operationId: getApiAccountsBy-nameByName
+      parameters:
+        - in: path
+          name: name
+          required: true
+          schema:
+            maxLength: 25
+            minLength: 1
+            pattern: .*[A-Za-z0-9].*
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Account"
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Get an account by name
       tags:
         - Accounts
   /api/accounts/confirm:
@@ -3908,6 +4037,27 @@ paths:
           schema:
             minLength: 1
             type: string
+        - in: query
+          name: search
+          required: false
+          schema:
+            maxLength: 25
+            minLength: 1
+            type: string
+        - in: query
+          name: accountUuid
+          required: false
+          schema:
+            format: uuid
+            type: string
+        - in: query
+          name: country
+          required: false
+          schema:
+            maxLength: 2
+            minLength: 2
+            pattern: ^[a-z]{2}$
+            type: string
       responses:
         "200":
           content:
@@ -4066,6 +4216,70 @@ paths:
                 $ref: "#/components/schemas/InternalServerError"
           description: Response for status 500
       summary: Associate a player with an account
+      tags:
+        - Players
+  /api/players/{externalId}/matches:
+    get:
+      operationId: getApiPlayersByExternalIdMatches
+      parameters:
+        - in: path
+          name: externalId
+          required: true
+          schema:
+            maxLength: 64
+            minLength: 1
+            type: string
+        - in: query
+          name: limit
+          required: false
+          schema:
+            anyOf:
+              - default: 0
+                format: integer
+                type: string
+              - maximum: 100
+                minimum: 1
+                type: integer
+            maximum: 100
+            minimum: 1
+        - in: query
+          name: cursor
+          required: false
+          schema:
+            minLength: 1
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListPlayerMatches"
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: List player matches
       tags:
         - Players
   /api/recs:
