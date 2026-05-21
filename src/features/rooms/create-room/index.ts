@@ -102,6 +102,8 @@ export async function createRoom(
     .set({
       state: nextState,
       roomLink: nextRoomLink,
+      failedAt: null,
+      failureReason: null,
       pid: launch.pid,
       processStartedAt: launch.processStartedAt,
       invocationId: launch.invocationId,

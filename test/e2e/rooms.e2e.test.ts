@@ -1812,7 +1812,9 @@ describe("rooms", () => {
     expect(readyResponse.status).toBe(200);
     expect(await readyResponse.json()).toMatchObject({
       state: "running",
-      roomLink: "https://www.haxball.com/play?c=manual123"
+      roomLink: "https://www.haxball.com/play?c=manual123",
+      failedAt: null,
+      failureReason: null
     });
     const readyRoom = await roomResponse.json();
 
@@ -1820,7 +1822,9 @@ describe("rooms", () => {
     expect(readyRoom).toMatchObject({
       id: room.id,
       state: "running",
-      roomLink: "https://www.haxball.com/play?c=manual123"
+      roomLink: "https://www.haxball.com/play?c=manual123",
+      failedAt: null,
+      failureReason: null
     });
     expect(JSON.stringify(readyRoom)).not.toContain("manual-token");
     expect(JSON.stringify(readyRoom)).not.toContain(String(commId));
@@ -2067,7 +2071,10 @@ describe("rooms", () => {
       failureReason: "Room process exited before readiness"
     });
     expect(reconciledRunningRoom).toMatchObject({
-      roomLink: "https://www.haxball.com/play?c=fixture123"
+      state: "running",
+      roomLink: "https://www.haxball.com/play?c=fixture123",
+      failedAt: null,
+      failureReason: null
     });
     expect(signalCloseResponse.status).toBe(200);
     expect(await signalCloseResponse.json()).toMatchObject({

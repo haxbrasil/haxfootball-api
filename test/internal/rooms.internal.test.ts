@@ -239,6 +239,91 @@ describe("room internals", () => {
     });
   });
 
+  it("clears stale failure metadata when an integrated room reports ready", async () => {
+    const { db } = await import("@/db/client");
+    const { roomInstances, roomPrograms, roomProgramVersions } = await import(
+      "@/features/rooms/db"
+    );
+    const { reportRoomReady } = await import(
+      "@/features/rooms/report-room-ready"
+    );
+
+    const [program] = await db
+      .insert(roomPrograms)
+      .values({
+        uuid: crypto.randomUUID(),
+        name: `ready-${crypto.randomUUID().slice(0, 8)}`,
+        title: "Ready",
+        description: "Ready",
+        releaseSource: {
+          owner: "haxbrasil",
+          repo: "test-room",
+          assetPattern: "room-{tag}.tgz"
+        },
+        launchConfigFields: [],
+        integrationMode: "integrated",
+        haxballTokenEnvVar: "ROOM_TOKEN"
+      })
+      .returning();
+    const [version] = await db
+      .insert(roomProgramVersions)
+      .values({
+        uuid: crypto.randomUUID(),
+        programId: program.id,
+        version: `ready-${crypto.randomUUID().slice(0, 8)}`,
+        artifact: {
+          releaseId: "ready",
+          tagName: "ready",
+          assetName: "room-ready.tgz",
+          assetUrl: "https://example.com/room-ready.tgz",
+          publishedAt: "2026-05-15T00:00:00.000Z"
+        },
+        entrypoint: "dist/server.js",
+        installStrategy: "none"
+      })
+      .returning();
+    const commId = crypto.randomUUID() + crypto.randomUUID();
+    const staleFailureAt = "2026-05-15T12:00:00.000Z";
+    const [room] = await db
+      .insert(roomInstances)
+      .values({
+        uuid: crypto.randomUUID(),
+        programId: program.id,
+        versionId: version.id,
+        state: "provisioning",
+        roomLink: null,
+        launchConfig: {},
+        public: false,
+        commIdHash: await hashSecret(commId),
+        failedAt: staleFailureAt,
+        failureReason: "Room process exited before readiness",
+        updatedAt: staleFailureAt
+      })
+      .returning();
+
+    const readyRoom = await reportRoomReady(room.uuid, {
+      commId,
+      roomLink: "https://www.haxball.com/play?c=ready123"
+    });
+    const [storedRoom] = await db
+      .select()
+      .from(roomInstances)
+      .where(eq(roomInstances.id, room.id));
+
+    expect(readyRoom).toMatchObject({
+      state: "running",
+      roomLink: "https://www.haxball.com/play?c=ready123",
+      failedAt: null,
+      failureReason: null
+    });
+    expect(storedRoom).toMatchObject({
+      state: "running",
+      roomLink: "https://www.haxball.com/play?c=ready123",
+      failedAt: null,
+      failureReason: null
+    });
+  });
+
   it("marks provisioning rooms failed after readiness timeout", async () => {
     const { db } = await import("@/db/client");
     const { roomInstances, roomPrograms, roomProgramVersions } = await import(
@@ -313,3 +398,12 @@ describe("room internals", () => {
     });
   });
 });
+
+async function hashSecret(secret: string): Promise<string> {
+  const bytes = new TextEncoder().encode(secret);
+  const hash = await crypto.subtle.digest("SHA-256", bytes);
+
+  return Array.from(new Uint8Array(hash), (byte) =>
+    byte.toString(16).padStart(2, "0")
+  ).join("");
+}

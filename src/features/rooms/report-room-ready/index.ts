@@ -39,6 +39,8 @@ export async function reportRoomReady(
     .set({
       state: "running",
       roomLink: input.roomLink,
+      failedAt: null,
+      failureReason: null,
       updatedAt: new Date().toISOString()
     })
     .where(eq(roomInstances.id, row.room.id))

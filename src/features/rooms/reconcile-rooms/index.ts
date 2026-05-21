@@ -60,6 +60,8 @@ export async function reconcileOpenRooms(): Promise<ReconcileOpenRoomsResult> {
           .set({
             state: "running",
             roomLink: status.roomLink,
+            failedAt: null,
+            failureReason: null,
             updatedAt: new Date().toISOString()
           })
           .where(eq(roomInstances.id, room.id));
