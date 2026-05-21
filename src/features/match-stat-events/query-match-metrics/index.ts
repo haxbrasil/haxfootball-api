@@ -144,6 +144,12 @@ const matchMetricsMetricSchema = t.Object({
   key: t.String(),
   label: t.String(),
   description: t.Nullable(t.String()),
+  category: t.Nullable(
+    t.Object({
+      key: t.String(),
+      label: t.String()
+    })
+  ),
   valueType: t.Optional(t.String()),
   format: t.Optional(t.String()),
   precision: t.Optional(t.Number()),
@@ -665,6 +671,7 @@ async function metricMetadata(
   const metadataByKey = new Map(
     (definition.metrics ?? []).map((metric) => [metric.key, metric])
   );
+
   const labelKeys = metricKeys.flatMap((key) => {
     const metadata = metadataByKey.get(key);
 
@@ -672,18 +679,34 @@ async function metricMetadata(
       (value): value is string => !!value
     );
   });
+
+  for (const key of metricKeys) {
+    const category = metadataByKey.get(key)?.category;
+
+    if (category) {
+      labelKeys.push(category);
+    }
+  }
+
   const labels = await resolveLabels(labelKeys, language);
 
   return metricKeys.map((key) => {
     const metadata = metadataByKey.get(key);
     const labelKey = metadata?.label ?? key;
     const descriptionKey = metadata?.description;
+    const categoryKey = metadata?.category;
 
     return {
       key,
       label: labels.get(labelKey) ?? labelKey,
       description: descriptionKey
         ? (labels.get(descriptionKey) ?? descriptionKey)
+        : null,
+      category: categoryKey
+        ? {
+            key: categoryKey,
+            label: labels.get(categoryKey) ?? categoryKey
+          }
         : null,
       ...optionalMetricMetadata(metadata)
     };

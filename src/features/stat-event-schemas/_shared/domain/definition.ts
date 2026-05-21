@@ -42,6 +42,7 @@ export type StatMetricMetadata = {
   key: string;
   label?: string;
   description?: string;
+  category?: string;
   valueType?: StatMetricValueType;
   format?: string;
   precision?: number;
@@ -286,6 +287,14 @@ function toMetricMetadata(value: JsonValue): StatMetricMetadata | null {
     }
 
     metadata.description = value.description;
+  }
+
+  if (value.category !== undefined) {
+    if (!isValueKey(value.category)) {
+      return null;
+    }
+
+    metadata.category = value.category;
   }
 
   if (value.valueType !== undefined) {

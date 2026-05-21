@@ -1424,6 +1424,19 @@ components:
             availableMetrics:
               items:
                 properties:
+                  category:
+                    anyOf:
+                      - properties:
+                          key:
+                            type: string
+                          label:
+                            type: string
+                        required:
+                          - key
+                          - label
+                        type: object
+                      - type: "null"
+                    nullable: true
                   description:
                     anyOf:
                       - type: string
@@ -1445,6 +1458,7 @@ components:
                   - key
                   - label
                   - description
+                  - category
                 type: object
               type: array
             group:
