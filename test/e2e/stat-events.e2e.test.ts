@@ -219,6 +219,24 @@ describe("stat event schemas", () => {
             }
           }
         ]
+      },
+      {
+        ...baseDefinition(),
+        featuredMetrics: {
+          points: "missing"
+        }
+      },
+      {
+        ...baseDefinition(),
+        featuredMetrics: {
+          rating: "points"
+        }
+      },
+      {
+        ...baseDefinition(),
+        featuredMetrics: {
+          points: "Points"
+        }
       }
     ];
 

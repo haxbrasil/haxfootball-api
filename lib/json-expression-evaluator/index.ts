@@ -56,11 +56,13 @@ function evaluateOperation(
 
   switch (expression.op) {
     case "add":
-      return numeric(args[0]) + numeric(args[1]);
+      return args.reduce<number>((total, arg) => total + numeric(arg), 0);
     case "subtract":
       return numeric(args[0]) - numeric(args[1]);
     case "multiply":
-      return numeric(args[0]) * numeric(args[1]);
+      return args.length === 0
+        ? 0
+        : args.reduce<number>((product, arg) => product * numeric(arg), 1);
     case "divide":
       return numeric(args[1]) === 0
         ? null

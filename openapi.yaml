@@ -1473,6 +1473,11 @@ components:
                   - category
                 type: object
               type: array
+            featuredMetrics:
+              properties:
+                points:
+                  type: string
+              type: object
             group:
               properties:
                 by:
@@ -1551,6 +1556,7 @@ components:
           required:
             - schema
             - group
+            - featuredMetrics
             - availableMetrics
             - sort
             - totals

@@ -56,11 +56,16 @@ export type StatMetricCategoryMetadata = {
   primaryMetric?: string;
 };
 
+export type StatFeaturedMetricsMetadata = {
+  points?: string;
+};
+
 export type StatEventSchemaDefinition = {
   events: StatEventDefinition[];
   virtualMetrics?: StatVirtualMetricDefinition[];
   metrics?: StatMetricMetadata[];
   categories?: StatMetricCategoryMetadata[];
+  featuredMetrics?: StatFeaturedMetricsMetadata;
   presentation?: PresentationMetadata;
 };
 
@@ -94,6 +99,7 @@ export function validateStatEventSchemaDefinition(
   const virtualMetrics = definition.virtualMetrics;
   const metrics = definition.metrics;
   const categories = definition.categories;
+  const featuredMetrics = definition.featuredMetrics;
   const presentation = definition.presentation;
 
   if (virtualMetrics !== undefined) {
@@ -114,12 +120,20 @@ export function validateStatEventSchemaDefinition(
     metrics === undefined ? undefined : toMetrics(metrics);
   const categoryDefinitions =
     categories === undefined ? undefined : toCategories(categories);
+  const featuredMetricsMetadata =
+    featuredMetrics === undefined
+      ? undefined
+      : toFeaturedMetrics(featuredMetrics);
 
   if (metrics !== undefined && !metricDefinitions) {
     return null;
   }
 
   if (categories !== undefined && !categoryDefinitions) {
+    return null;
+  }
+
+  if (featuredMetrics !== undefined && !featuredMetricsMetadata) {
     return null;
   }
 
@@ -150,6 +164,17 @@ export function validateStatEventSchemaDefinition(
     return null;
   }
 
+  if (
+    featuredMetricsMetadata &&
+    !featuredMetricsMatchKnownMetrics(
+      featuredMetricsMetadata,
+      eventDefinitions,
+      virtualMetrics
+    )
+  ) {
+    return null;
+  }
+
   return {
     events: eventDefinitions,
     ...(virtualMetrics
@@ -159,6 +184,9 @@ export function validateStatEventSchemaDefinition(
       : {}),
     ...(metricDefinitions ? { metrics: metricDefinitions } : {}),
     ...(categoryDefinitions ? { categories: categoryDefinitions } : {}),
+    ...(featuredMetricsMetadata
+      ? { featuredMetrics: featuredMetricsMetadata }
+      : {}),
     ...(presentationMetadata ? { presentation: presentationMetadata } : {})
   };
 }
@@ -301,6 +329,32 @@ function toCategories(value: JsonValue): StatMetricCategoryMetadata[] | null {
   }
 
   return categories as StatMetricCategoryMetadata[];
+}
+
+function toFeaturedMetrics(
+  value: JsonValue
+): StatFeaturedMetricsMetadata | null {
+  if (!isJsonObject(value)) {
+    return null;
+  }
+
+  const allowedKeys = new Set(["points"]);
+
+  if (Object.keys(value).some((key) => !allowedKeys.has(key))) {
+    return null;
+  }
+
+  const metadata: StatFeaturedMetricsMetadata = {};
+
+  if (value.points !== undefined) {
+    if (typeof value.points !== "string" || !isPublicIdentifier(value.points)) {
+      return null;
+    }
+
+    metadata.points = value.points;
+  }
+
+  return metadata;
 }
 
 function toMetricMetadata(value: JsonValue): StatMetricMetadata | null {
@@ -458,6 +512,27 @@ function metricsMatchKnownMetrics(
   events: StatEventDefinition[],
   virtualMetrics: JsonValue | undefined
 ): boolean {
+  const knownMetrics = knownMetricKeys(events, virtualMetrics);
+
+  return metrics.every((metric) => knownMetrics.has(metric.key));
+}
+
+function featuredMetricsMatchKnownMetrics(
+  featuredMetrics: StatFeaturedMetricsMetadata,
+  events: StatEventDefinition[],
+  virtualMetrics: JsonValue | undefined
+): boolean {
+  const knownMetrics = knownMetricKeys(events, virtualMetrics);
+
+  return Object.values(featuredMetrics).every((metric) =>
+    knownMetrics.has(metric)
+  );
+}
+
+function knownMetricKeys(
+  events: StatEventDefinition[],
+  virtualMetrics: JsonValue | undefined
+): Set<string> {
   const knownMetrics = new Set<string>();
 
   for (const event of events) {
@@ -476,7 +551,7 @@ function metricsMatchKnownMetrics(
     }
   }
 
-  return metrics.every((metric) => knownMetrics.has(metric.key));
+  return knownMetrics;
 }
 
 function categoriesMatchKnownMetrics(

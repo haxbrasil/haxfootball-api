@@ -49,6 +49,9 @@ type MetricsQueryResponse = {
       version: number;
       isLatest: boolean;
     };
+    featuredMetrics: {
+      points?: string;
+    };
     availableMetrics: Array<{
       key: string;
       label: string;
@@ -215,7 +218,7 @@ describe("match metrics query", () => {
         metrics: {
           points: 5,
           assists: 2,
-          total: 7
+          total: 8
         },
         contribution: {
           matchesCount: 1,
@@ -227,6 +230,9 @@ describe("match metrics query", () => {
     expect(metricLabel(defaultQuery, "points")).toBe("Pontos");
     expect(metricDescription(defaultQuery, "points")).toBe("Total de pontos");
     expect(metricLabel(defaultQuery, "total")).toBe("metric.total");
+    expect(defaultQuery.meta.featuredMetrics).toEqual({
+      points: "total"
+    });
 
     const withOngoing = await queryMetrics({
       schema: {
@@ -962,11 +968,17 @@ function analyticsDefinition() {
             },
             {
               path: "metrics.assists"
+            },
+            {
+              path: "metrics.goals"
             }
           ]
         }
       }
     ],
+    featuredMetrics: {
+      points: "total"
+    },
     metrics: [
       {
         key: "goals",

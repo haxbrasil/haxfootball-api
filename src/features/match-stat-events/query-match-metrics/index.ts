@@ -158,6 +158,10 @@ const matchMetricsMetricSchema = t.Object({
   hidden: t.Optional(t.Boolean())
 });
 
+const matchMetricsFeaturedMetricsSchema = t.Object({
+  points: t.Optional(t.String())
+});
+
 const matchMetricsAccountGroupSchema = t.Object({
   type: t.Literal("account"),
   id: t.String({ format: "uuid" }),
@@ -201,6 +205,7 @@ export const queryMatchMetricsResponseSchema = t.Object({
       by: matchMetricsGroupBySchema,
       identityMode: t.Literal("current")
     }),
+    featuredMetrics: matchMetricsFeaturedMetricsSchema,
     availableMetrics: t.Array(matchMetricsMetricSchema),
     sort: t.Array(t.Unknown()),
     totals: t.Object({
@@ -302,6 +307,7 @@ export async function queryMatchMetrics(
         by: groupBy,
         identityMode: "current"
       },
+      featuredMetrics: definition.featuredMetrics ?? {},
       availableMetrics: await metricMetadata(
         definition,
         metricKeys,
