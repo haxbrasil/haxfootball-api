@@ -1,4 +1,7 @@
 import { db } from "@/db/client";
+import { resolveLabels } from "@/features/localization/resolve-labels";
+import type { ListRolesQuery } from "@/features/roles/_shared/http/inputs";
+import { listRolesQuerySchema } from "@/features/roles/_shared/http/inputs";
 import type { RoleResponse } from "@/features/roles/_shared/http/responses";
 import {
   roleResponseSchema,
@@ -12,15 +15,15 @@ import {
   pageItems,
   pageLimit,
   paginatedResponseSchema,
-  type PaginatedResponse,
-  type PaginationQuery
+  type PaginatedResponse
 } from "@lib";
 
 export const listRolesResponseSchema =
   paginatedResponseSchema(roleResponseSchema);
+export { listRolesQuerySchema };
 
 export async function listRoles(
-  query: PaginationQuery = {}
+  query: ListRolesQuery = {}
 ): Promise<PaginatedResponse<RoleResponse>> {
   const rows = await db
     .select()
@@ -31,9 +34,13 @@ export async function listRoles(
 
   const page = pageItems(rows, query, (role) => role.id);
   const items = await rolesWithPermissions(page.items);
+  const labels = await resolveLabels(
+    items.map((item) => item.role.title),
+    query.language
+  );
 
   return {
-    items: items.map(toRoleResponse),
+    items: items.map((item) => toRoleResponse(item, labels)),
     page: page.page
   };
 }

@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { type Static, t } from "elysia";
 import { db } from "@/db/client";
+import { resolveLabels } from "@/features/localization/resolve-labels";
 import { badRequest } from "@/shared/http/errors";
 import {
   rolePermissionInputSchema,
@@ -62,6 +63,7 @@ export async function createRole(
 
     return createdRole;
   });
+  const labels = await resolveLabels([role.title]);
 
-  return toRoleResponse(await roleWithPermissions(role));
+  return toRoleResponse(await roleWithPermissions(role), labels);
 }

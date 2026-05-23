@@ -22,7 +22,10 @@ describe("accounts", () => {
       externalId: "123456789012345678",
       role: {
         name: "default",
-        title: "Default",
+        title: {
+          value: "Default",
+          label: "Default"
+        },
         permissions: [],
         isDefault: true
       },

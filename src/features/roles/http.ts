@@ -9,11 +9,14 @@ import {
   removeRole,
   removeRoleResponseSchema
 } from "@/features/roles/remove-role";
-import { roleUuidParamsSchema } from "@/features/roles/_shared/http/inputs";
+import {
+  listRolesQuerySchema,
+  roleLanguageQuerySchema,
+  roleUuidParamsSchema
+} from "@/features/roles/_shared/http/inputs";
 import { roleResponseSchema } from "@/features/roles/_shared/http/responses";
 import { updateRole, updateRoleBodySchema } from "@/features/roles/update-role";
 import { notFoundErrorResponseSchema } from "@/shared/http/errors";
-import { paginationQuerySchema } from "@lib";
 
 export {
   allPermissionsWildcard,
@@ -22,6 +25,8 @@ export {
   rolePermissionInputSchema,
   rolePermissionsSchema,
   roleTitleSchema,
+  listRolesQuerySchema,
+  roleLanguageQuerySchema,
   roleUuidParamsSchema
 } from "@/features/roles/_shared/http/inputs";
 export {
@@ -46,7 +51,7 @@ export const roleRoutes = new Elysia({
     UpdateRoleBody: updateRoleBodySchema
   })
   .get("", ({ query }) => listRoles(query), {
-    query: paginationQuerySchema,
+    query: listRolesQuerySchema,
     response: {
       200: t.Ref("ListRoles")
     },
@@ -55,8 +60,9 @@ export const roleRoutes = new Elysia({
       summary: "List roles"
     }
   })
-  .get("/:uuid", ({ params }) => getRole(params.uuid), {
+  .get("/:uuid", ({ params, query }) => getRole(params.uuid, query), {
     params: roleUuidParamsSchema,
+    query: roleLanguageQuerySchema,
     response: {
       200: t.Ref("Role"),
       404: t.Ref("NotFoundError")

@@ -5,6 +5,7 @@ import {
   text,
   uniqueIndex
 } from "drizzle-orm/sqlite-core";
+import { gameModes } from "@/features/game-modes/db";
 import { players } from "@/features/players/db";
 import { recordings } from "@/features/recordings/db";
 import { statEventSchemaVersions } from "@/features/stat-event-schemas/db";
@@ -18,6 +19,7 @@ export const matches = sqliteTable(
     recordingId: integer("recording_id")
       .references(() => recordings.id)
       .unique(),
+    gameModeId: integer("game_mode_id").references(() => gameModes.id),
     statEventSchemaVersionId: integer(
       "stat_event_schema_version_id"
     ).references(() => statEventSchemaVersions.id),

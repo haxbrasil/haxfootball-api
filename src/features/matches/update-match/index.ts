@@ -14,12 +14,15 @@ import {
   getMatchDetail,
   getMatchSummary,
   persistMatchScore,
+  assertMatchGameModeCanChange,
   assertMatchStatEventSchemaCanChange,
   resolveMatchStatEventSchemaVersionId,
   recomputeMatchStints,
   replaceMatchEvents
 } from "@/features/matches/_shared/db/queries";
 import { statEventSchemaReferenceSchema } from "@/features/stat-event-schemas/http";
+import { gameModeReferenceSchema } from "@/features/game-modes/http";
+import { resolveGameModeId } from "@/features/game-modes/read-game-mode";
 import {
   assertCompletedMatchFields,
   assertMatchIsEditable
@@ -31,6 +34,7 @@ export const updateMatchBodySchema = t.Partial(
     initiatedAt: t.String({ minLength: 1 }),
     endedAt: t.String({ minLength: 1 }),
     score: matchScoreSchema,
+    gameMode: gameModeReferenceSchema,
     statEventSchema: statEventSchemaReferenceSchema,
     events: t.Array(matchPlayerEventInputSchema)
   })
@@ -49,6 +53,7 @@ export async function updateMatch(
   const nextStatus = input.status ?? current.match.status;
   const nextEndedAt = input.endedAt ?? current.match.endedAt;
   const nextScore = input.score ?? scoreFromMetadata(current.metadata);
+  const nextGameModeId = await resolveGameModeId(input.gameMode);
   const nextStatEventSchemaVersionId =
     await resolveMatchStatEventSchemaVersionId(input.statEventSchema);
 
@@ -65,6 +70,13 @@ export async function updateMatch(
     await assertMatchStatEventSchemaCanChange(current.match.id);
   }
 
+  if (
+    nextGameModeId !== undefined &&
+    nextGameModeId !== current.match.gameModeId
+  ) {
+    await assertMatchGameModeCanChange(current.match.id);
+  }
+
   await db
     .update(matches)
     .set({
@@ -73,6 +85,7 @@ export async function updateMatch(
         ? { initiatedAt: input.initiatedAt }
         : {}),
       ...(input.endedAt !== undefined ? { endedAt: input.endedAt } : {}),
+      ...(nextGameModeId !== undefined ? { gameModeId: nextGameModeId } : {}),
       ...(nextStatEventSchemaVersionId !== undefined
         ? { statEventSchemaVersionId: nextStatEventSchemaVersionId }
         : {}),

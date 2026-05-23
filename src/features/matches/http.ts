@@ -41,6 +41,7 @@ import {
 } from "@/features/matches/list-matches";
 import {
   matchPublicIdParamsSchema,
+  listMatchesQuerySchema,
   matchPlayerEventInputSchema,
   matchScoreSchema
 } from "@/features/matches/_shared/http/inputs";
@@ -97,7 +98,7 @@ export const matchRoutes = new Elysia({
     UpdateMatchBody: updateMatchBodySchema
   })
   .get("", ({ query }) => listMatches(query), {
-    query: paginationQuerySchema,
+    query: listMatchesQuerySchema,
     response: {
       200: t.Ref("ListMatches")
     },

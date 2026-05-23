@@ -5,7 +5,10 @@ import { rolePermissionsSchema } from "@/features/roles/_shared/http/inputs";
 export const roleResponseSchema = t.Object({
   uuid: t.String({ format: "uuid" }),
   name: t.String(),
-  title: t.String({ minLength: 1 }),
+  title: t.Object({
+    value: t.String({ minLength: 1 }),
+    label: t.String({ minLength: 1 })
+  }),
   permissions: rolePermissionsSchema,
   bypassAllPermissions: t.Boolean(),
   isDefault: t.Boolean(),
@@ -20,14 +23,17 @@ export type RoleWithPermissions = {
   permissions: string[];
 };
 
-export function toRoleResponse({
-  role,
-  permissions
-}: RoleWithPermissions): RoleResponse {
+export function toRoleResponse(
+  { role, permissions }: RoleWithPermissions,
+  labels: Map<string, string> = new Map()
+): RoleResponse {
   return {
     uuid: role.uuid,
     name: role.name,
-    title: role.title,
+    title: {
+      value: role.title,
+      label: labels.get(role.title) ?? role.title
+    },
     permissions,
     bypassAllPermissions: role.bypassAllPermissions,
     isDefault: role.name === defaultRoleName,

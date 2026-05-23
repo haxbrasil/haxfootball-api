@@ -1,5 +1,10 @@
 import { type Static, t } from "elysia";
 import type { Account } from "@/features/accounts/db";
+import {
+  gameModeResponseSchema,
+  toGameModeResponse
+} from "@/features/game-modes/http";
+import type { GameMode } from "@/features/game-modes/db";
 import type {
   Match,
   MatchPlayerEvent,
@@ -59,6 +64,7 @@ export const matchSummaryResponseSchema = t.Object({
   endedAt: t.Nullable(t.String()),
   score: t.Nullable(matchScoreSchema),
   recording: t.Nullable(recordingResponseSchema),
+  gameMode: t.Nullable(gameModeResponseSchema),
   statEventSchema: t.Nullable(statEventSchemaReferenceSchema),
   createdAt: t.String(),
   updatedAt: t.String()
@@ -87,6 +93,7 @@ type PlayerRow = {
 export type MatchSummaryRow = {
   match: Match;
   recording: Recording | null;
+  gameMode: GameMode | null;
   statEventSchemaFamily: StatEventSchemaFamily | null;
   statEventSchemaVersion: StatEventSchemaVersion | null;
   metadata: MatchTeamMetadata[];
@@ -100,6 +107,7 @@ export type MatchDetailRow = MatchSummaryRow & {
 export function toMatchSummaryResponse({
   match,
   recording,
+  gameMode,
   statEventSchemaFamily,
   statEventSchemaVersion,
   metadata
@@ -111,6 +119,7 @@ export function toMatchSummaryResponse({
     endedAt: match.endedAt,
     score: toMatchScore(metadata),
     recording: recording ? toRecordingResponse(recording) : null,
+    gameMode: gameMode ? toGameModeResponse(gameMode) : null,
     statEventSchema: toMatchStatEventSchemaReference({
       family: statEventSchemaFamily,
       version: statEventSchemaVersion

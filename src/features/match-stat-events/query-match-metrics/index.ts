@@ -2,6 +2,8 @@ import { and, eq, gte, inArray, isNull, lte, type SQL } from "drizzle-orm";
 import { type Static, t } from "elysia";
 import { db } from "@/db/client";
 import { accounts } from "@/features/accounts/db";
+import { gameModes } from "@/features/game-modes/db";
+import { gameModeNameSchema } from "@/features/game-modes/http";
 import type { MatchStatEventRow } from "@/features/match-stat-events/http";
 import { matchStatEvents } from "@/features/match-stat-events/db";
 import {
@@ -92,6 +94,12 @@ export const queryMatchMetricsBodySchema = t.Object({
       ),
       accountIds: t.Optional(
         t.Array(t.String({ format: "uuid" }), {
+          minItems: 1,
+          uniqueItems: true
+        })
+      ),
+      gameModeNames: t.Optional(
+        t.Array(gameModeNameSchema, {
           minItems: 1,
           uniqueItems: true
         })
@@ -359,6 +367,10 @@ async function listQueryEvents(
     conditions.push(inArray(accounts.uuid, filters.accountIds));
   }
 
+  if (filters.gameModeNames) {
+    conditions.push(inArray(gameModes.name, filters.gameModeNames));
+  }
+
   if (filters.eventTypes) {
     conditions.push(inArray(matchStatEvents.type, filters.eventTypes));
   }
@@ -394,6 +406,7 @@ async function listQueryEvents(
     })
     .from(matchStatEvents)
     .innerJoin(matches, eq(matchStatEvents.matchId, matches.id))
+    .leftJoin(gameModes, eq(matches.gameModeId, gameModes.id))
     .innerJoin(players, eq(matchStatEvents.playerId, players.id))
     .leftJoin(accounts, eq(players.accountId, accounts.id))
     .where(and(...conditions));

@@ -14,6 +14,8 @@
     "jobs:retry": "bun src/jobs.ts retry",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "data:ensure-haxfootball-game-mode": "bun scripts/ensure-haxfootball-game-mode.ts",
+    "data:localize-role-titles": "bun scripts/localize-role-titles.ts",
     "format": "biome format --write .",
     "format:check": "biome format .",
     "lint": "biome lint .",

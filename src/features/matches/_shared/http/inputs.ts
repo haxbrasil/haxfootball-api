@@ -1,4 +1,6 @@
 import { type Static, t } from "elysia";
+import type { GameModeReference } from "@/features/game-modes/http";
+import { gameModeNameSchema } from "@/features/game-modes/http";
 import type { StatEventSchemaReference } from "@/features/stat-event-schemas/http";
 
 export const matchStatusSchema = t.Union([
@@ -47,10 +49,18 @@ export const matchPublicIdParamsSchema = t.Object({
   id: matchPublicIdSchema
 });
 
+export const listMatchesQuerySchema = t.Object({
+  limit: t.Optional(t.Integer({ minimum: 1, maximum: 100 })),
+  cursor: t.Optional(t.String({ minLength: 1 })),
+  gameMode: t.Optional(gameModeNameSchema)
+});
+
 export type MatchStatus = Static<typeof matchStatusSchema>;
 export type MatchTeam = Static<typeof matchTeamSchema>;
 export type MatchFieldTeam = Static<typeof matchFieldTeamSchema>;
 export type MatchPlayerEventType = Static<typeof matchPlayerEventTypeSchema>;
 export type MatchScore = Static<typeof matchScoreSchema>;
 export type MatchPlayerEventInput = Static<typeof matchPlayerEventInputSchema>;
+export type ListMatchesQuery = Static<typeof listMatchesQuerySchema>;
+export type { GameModeReference };
 export type { StatEventSchemaReference };

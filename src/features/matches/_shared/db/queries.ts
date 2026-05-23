@@ -1,9 +1,11 @@
-import { asc, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db/client";
 import { accounts } from "@/features/accounts/db";
+import { gameModes } from "@/features/game-modes/db";
 import { matchStatEvents } from "@/features/match-stat-events/db";
 import { deriveMatchStints } from "@/features/matches/_shared/domain/stints";
 import type {
+  ListMatchesQuery,
   MatchPlayerEventInput,
   MatchScore
 } from "@/features/matches/_shared/http/inputs";
@@ -24,7 +26,7 @@ import {
 } from "@/features/stat-event-schemas/db";
 import { resolveStatEventSchemaVersion } from "@/features/stat-event-schemas/read-stat-event-schema";
 import { badRequest, notFound } from "@/shared/http/errors";
-import { cursorAfter, cursorSort, pageLimit, type PaginationQuery } from "@lib";
+import { cursorAfter, cursorSort, pageLimit } from "@lib";
 
 export type PersistedMatchEvent = MatchPlayerEventInput & {
   sequence: number;
@@ -32,17 +34,30 @@ export type PersistedMatchEvent = MatchPlayerEventInput & {
 };
 
 export async function listMatchSummaries(
-  query: PaginationQuery = {}
+  query: ListMatchesQuery = {}
 ): Promise<MatchSummaryRow[]> {
+  const conditions: SQL[] = [];
+  const cursorCondition = cursorAfter(matches.id, query.cursor, "desc");
+
+  if (cursorCondition) {
+    conditions.push(cursorCondition);
+  }
+
+  if (query.gameMode) {
+    conditions.push(eq(gameModes.name, query.gameMode));
+  }
+
   const rows = await db
     .select({
       match: matches,
       recording: recordings,
+      gameMode: gameModes,
       statEventSchemaFamily: statEventSchemaFamilies,
       statEventSchemaVersion: statEventSchemaVersions
     })
     .from(matches)
     .leftJoin(recordings, eq(matches.recordingId, recordings.id))
+    .leftJoin(gameModes, eq(matches.gameModeId, gameModes.id))
     .leftJoin(
       statEventSchemaVersions,
       eq(matches.statEventSchemaVersionId, statEventSchemaVersions.id)
@@ -51,7 +66,7 @@ export async function listMatchSummaries(
       statEventSchemaFamilies,
       eq(statEventSchemaVersions.familyId, statEventSchemaFamilies.id)
     )
-    .where(cursorAfter(matches.id, query.cursor, "desc"))
+    .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(cursorSort(matches.id, "desc"))
     .limit(pageLimit(query));
 
@@ -70,11 +85,13 @@ export async function getMatchSummary(
     .select({
       match: matches,
       recording: recordings,
+      gameMode: gameModes,
       statEventSchemaFamily: statEventSchemaFamilies,
       statEventSchemaVersion: statEventSchemaVersions
     })
     .from(matches)
     .leftJoin(recordings, eq(matches.recordingId, recordings.id))
+    .leftJoin(gameModes, eq(matches.gameModeId, gameModes.id))
     .leftJoin(
       statEventSchemaVersions,
       eq(matches.statEventSchemaVersionId, statEventSchemaVersions.id)
@@ -122,6 +139,21 @@ export async function assertMatchStatEventSchemaCanChange(
   if (count > 0) {
     throw badRequest(
       "Match stat event schema cannot be changed after stat events exist"
+    );
+  }
+}
+
+export async function assertMatchGameModeCanChange(
+  matchId: number
+): Promise<void> {
+  const [{ count }] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(matchStatEvents)
+    .where(eq(matchStatEvents.matchId, matchId));
+
+  if (count > 0) {
+    throw badRequest(
+      "Match game mode cannot be changed after stat events exist"
     );
   }
 }

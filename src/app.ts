@@ -7,6 +7,7 @@ import { Elysia } from "elysia";
 import { normalizeOpenApiDocument } from "@lib/openapi";
 import { authRoutes } from "@/features/auth/http";
 import { accountRoutes } from "@/features/accounts/http";
+import { gameModeRoutes } from "@/features/game-modes/http";
 import { jobRoutes } from "@/features/jobs/http";
 import { localizationRoutes } from "@/features/localization/http";
 import { matchRoutes } from "@/features/matches/http";
@@ -66,6 +67,7 @@ app
     api
       .use(withJwtGuard)
       .use(accountRoutes)
+      .use(gameModeRoutes)
       .use(permissionRoutes)
       .use(roleRoutes)
       .use(playerRoutes)

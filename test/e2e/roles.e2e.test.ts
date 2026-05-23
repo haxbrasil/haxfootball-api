@@ -8,7 +8,7 @@ import {
 type RoleResponse = {
   uuid: string;
   name: string;
-  title: string;
+  title: LocalizedTextResponse;
   permissions: string[];
   bypassAllPermissions: boolean;
   isDefault: boolean;
@@ -16,13 +16,39 @@ type RoleResponse = {
   updatedAt: string;
 };
 
+type LocalizedTextResponse = {
+  value: string;
+  label: string;
+};
+
 describe("roles", () => {
   it("creates a role", async () => {
+    const title = uniqueValueKey("role.coach.title");
+    const valuesResponse = await request("/api/values/bulk", {
+      method: "POST",
+      body: {
+        values: [
+          {
+            value: title,
+            language: "en",
+            label: "Coach"
+          },
+          {
+            value: title,
+            language: "pt-br",
+            label: "Tecnico"
+          }
+        ]
+      }
+    });
+
+    expect(valuesResponse.status).toBe(200);
+
     const response = await request("/api/roles", {
       method: "POST",
       body: {
         name: "coach",
-        title: "Coach",
+        title,
         permissions: ["rooms:create", "admin:ban"]
       }
     });
@@ -30,18 +56,27 @@ describe("roles", () => {
     expect(response.status).toBe(201);
 
     const role = await response.json();
+    const roleUuid = role.uuid;
 
-    expect(role).toMatchObject({
-      uuid: expect.any(String),
-      name: "coach",
-      title: "Coach",
-      permissions: ["rooms:create", "admin:ban"],
-      bypassAllPermissions: false,
-      isDefault: false,
-      createdAt: expect.any(String),
-      updatedAt: expect.any(String)
-    });
+    expect(typeof roleUuid).toBe("string");
+    expect(role.name).toBe("coach");
+    expect(role.title).toEqual(localizedTitle(title, "Coach"));
+    expect(role.permissions).toEqual(["rooms:create", "admin:ban"]);
+    expect(role.bypassAllPermissions).toBe(false);
+    expect(role.isDefault).toBe(false);
+    expect(typeof role.createdAt).toBe("string");
+    expect(typeof role.updatedAt).toBe("string");
     expect(role.id).toBeUndefined();
+
+    const translatedResponse = await request(
+      `/api/roles/${roleUuid}?language=pt-br`
+    );
+
+    expect(translatedResponse.status).toBe(200);
+    expect(await translatedResponse.json()).toMatchObject({
+      uuid: roleUuid,
+      title: localizedTitle(title, "Tecnico")
+    });
   });
 
   it("expands wildcard role permissions dynamically", async () => {
@@ -78,7 +113,7 @@ describe("roles", () => {
 
     expect(role).toMatchObject({
       name: "wildcard-role",
-      title: "Wildcard Role",
+      title: localizedTitle("Wildcard Role"),
       bypassAllPermissions: true
     });
     expect(role.permissions).toEqual(
@@ -191,7 +226,7 @@ describe("roles", () => {
     expect(roles).toContainEqual(
       expect.objectContaining({
         name: "default",
-        title: "Default",
+        title: localizedTitle("Default"),
         permissions: [],
         isDefault: true
       })
@@ -288,7 +323,7 @@ describe("roles", () => {
     expect(updated).toMatchObject({
       uuid: role.uuid,
       name: "editor",
-      title: "Match Editor",
+      title: localizedTitle("Match Editor"),
       permissions: ["matches:create", "matches:update"],
       isDefault: false
     });
@@ -422,7 +457,7 @@ describe("roles", () => {
       uuid: account.uuid,
       role: {
         name: "default",
-        title: "Default",
+        title: localizedTitle("Default"),
         permissions: [],
         isDefault: true
       }
@@ -592,3 +627,14 @@ describe("roles", () => {
     });
   });
 });
+
+function localizedTitle(value: string, label = value): LocalizedTextResponse {
+  return {
+    value,
+    label
+  };
+}
+
+function uniqueValueKey(prefix: string) {
+  return `${prefix}.${crypto.randomUUID()}`;
+}

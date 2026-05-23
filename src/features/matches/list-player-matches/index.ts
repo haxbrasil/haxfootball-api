@@ -6,6 +6,7 @@ import {
   listMatchesResponseSchema,
   toMatchSummaryResponse
 } from "@/features/matches/_shared/http/responses";
+import { gameModes } from "@/features/game-modes/db";
 import { matchPlayerStints, matches } from "@/features/matches/db";
 import { listMatchMetadata } from "@/features/matches/_shared/db/queries";
 import { players } from "@/features/players/db";
@@ -42,12 +43,14 @@ export async function listPlayerMatches(
     .select({
       match: matches,
       recording: recordings,
+      gameMode: gameModes,
       statEventSchemaFamily: statEventSchemaFamilies,
       statEventSchemaVersion: statEventSchemaVersions
     })
     .from(matches)
     .innerJoin(matchPlayerStints, eq(matchPlayerStints.matchId, matches.id))
     .leftJoin(recordings, eq(matches.recordingId, recordings.id))
+    .leftJoin(gameModes, eq(matches.gameModeId, gameModes.id))
     .leftJoin(
       statEventSchemaVersions,
       eq(matches.statEventSchemaVersionId, statEventSchemaVersions.id)

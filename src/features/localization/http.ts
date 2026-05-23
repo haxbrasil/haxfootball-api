@@ -13,6 +13,11 @@ import { valueParamsSchema } from "@/features/localization/_shared/http/inputs";
 import { notFoundErrorResponseSchema } from "@/shared/http/errors";
 import { paginationQuerySchema } from "@lib";
 
+export {
+  languageCodeSchema,
+  valueKeySchema
+} from "@/features/localization/_shared/http/inputs";
+
 export const localizationRoutes = new Elysia({
   name: "localization-routes"
 })

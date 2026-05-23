@@ -203,6 +203,7 @@ describe("players", () => {
         blue: 7
       },
       recording: null,
+      gameMode: null,
       statEventSchema: null,
       createdAt: match.createdAt,
       updatedAt: match.updatedAt

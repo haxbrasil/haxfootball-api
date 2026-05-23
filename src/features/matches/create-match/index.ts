@@ -21,6 +21,8 @@ import {
   resolveMatchStatEventSchemaVersionId,
   recomputeMatchStints
 } from "@/features/matches/_shared/db/queries";
+import { gameModeReferenceSchema } from "@/features/game-modes/http";
+import { resolveGameModeId } from "@/features/game-modes/read-game-mode";
 import { assertCompletedMatchFields } from "@/features/matches/_shared/domain/validation";
 import { statEventSchemaReferenceSchema } from "@/features/stat-event-schemas/http";
 import { badRequest } from "@/shared/http/errors";
@@ -31,6 +33,7 @@ export const createMatchBodySchema = t.Object({
   endedAt: t.Optional(t.String({ minLength: 1 })),
   score: t.Optional(matchScoreSchema),
   recordingId: t.Optional(t.String({ minLength: 1 })),
+  gameMode: t.Optional(gameModeReferenceSchema),
   statEventSchema: t.Optional(statEventSchemaReferenceSchema),
   events: t.Optional(t.Array(matchPlayerEventInputSchema))
 });
@@ -49,6 +52,7 @@ export async function createMatch(
     ? await getRecordingForAssociation(input.recordingId)
     : null;
   const recordingId = recording?.id;
+  const gameModeId = await resolveGameModeId(input.gameMode);
   const statEventSchemaVersionId = await resolveMatchStatEventSchemaVersionId(
     input.statEventSchema
   );
@@ -57,6 +61,7 @@ export async function createMatch(
     publicId,
     status: input.status,
     recordingId,
+    gameModeId,
     statEventSchemaVersionId,
     initiatedAt: input.initiatedAt,
     endedAt: input.endedAt
