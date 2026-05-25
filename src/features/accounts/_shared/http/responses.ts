@@ -22,15 +22,15 @@ export type AccountWithRole = {
   role: RoleWithPermissions;
 };
 
-export function toAccountResponse({
-  account,
-  role
-}: AccountWithRole): AccountResponse {
+export function toAccountResponse(
+  { account, role }: AccountWithRole,
+  labels: Map<string, string> = new Map()
+): AccountResponse {
   return {
     uuid: account.uuid,
     name: account.name,
     externalId: account.externalId,
-    role: toRoleResponse(role),
+    role: toRoleResponse(role, labels),
     createdAt: account.createdAt,
     updatedAt: account.updatedAt
   };

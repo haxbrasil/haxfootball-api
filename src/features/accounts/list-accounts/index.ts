@@ -1,5 +1,6 @@
 import { and, eq, like, type SQL } from "drizzle-orm";
 import { db } from "@/db/client";
+import { resolveLabels } from "@/features/localization/resolve-labels";
 import type { AccountResponse } from "@/features/accounts/_shared/http/responses";
 import {
   accountResponseSchema,
@@ -47,13 +48,17 @@ export async function listAccounts(
   const pageRoles = await rolesWithPermissions(
     page.items.map((row) => row.role)
   );
+  const labels = await resolveLabels(pageRoles.map((role) => role.role.title));
 
   return {
     items: page.items.map((row, index) =>
-      toAccountResponse({
-        account: row.account,
-        role: pageRoles[index]
-      })
+      toAccountResponse(
+        {
+          account: row.account,
+          role: pageRoles[index]
+        },
+        labels
+      )
     ),
     page: page.page
   };

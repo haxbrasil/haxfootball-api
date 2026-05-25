@@ -325,6 +325,87 @@ describe("accounts", () => {
     });
   });
 
+  it("resolves localized role titles in account responses", async () => {
+    const title = uniqueValueKey("role.localized-account.title");
+    const valuesResponse = await request("/api/values/bulk", {
+      method: "POST",
+      body: {
+        values: [
+          {
+            value: title,
+            language: "en",
+            label: "Localized Account Role"
+          }
+        ]
+      }
+    });
+
+    expect(valuesResponse.status).toBe(200);
+
+    const roleResponse = await request("/api/roles", {
+      method: "POST",
+      body: {
+        name: uniqueRoleName("loc-account"),
+        title,
+        permissions: ["rooms:create"]
+      }
+    });
+
+    expect(roleResponse.status).toBe(201);
+
+    const role = await roleResponse.json();
+    const name = uniqueAccountName("LocalizedAccount");
+    const externalId = uniqueAccountExternalId();
+    const createResponse = await request("/api/accounts", {
+      method: "POST",
+      body: {
+        name,
+        password: "pass1234",
+        externalId
+      }
+    });
+
+    expect(createResponse.status).toBe(201);
+
+    const account = await createResponse.json();
+    const updateResponse = await request(`/api/accounts/${account.uuid}`, {
+      method: "PATCH",
+      body: {
+        roleUuid: role.uuid
+      }
+    });
+
+    expect(updateResponse.status).toBe(200);
+
+    const expectedTitle = {
+      value: title,
+      label: "Localized Account Role"
+    };
+    const updatedAccount = await updateResponse.json();
+    const getResponse = await request(`/api/accounts/${account.uuid}`);
+    const byNameResponse = await request(
+      `/api/accounts/by-name/${encodeURIComponent(name)}`
+    );
+    const byExternalIdResponse = await request(
+      `/api/accounts/by-external-id/${externalId}`
+    );
+    const listResponse = await request(`/api/accounts?roleUuid=${role.uuid}`);
+
+    expect(updatedAccount.role.title).toEqual(expectedTitle);
+    expect((await getResponse.json()).role.title).toEqual(expectedTitle);
+    expect((await byNameResponse.json()).role.title).toEqual(expectedTitle);
+    expect((await byExternalIdResponse.json()).role.title).toEqual(
+      expectedTitle
+    );
+    const listedAccounts = (await paginatedItems(
+      listResponse
+    )) as AccountResponse[];
+
+    expect(
+      listedAccounts.find((item) => item.uuid === account.uuid)?.role.title
+    ).toEqual(expectedTitle);
+  });
+
   it("confirms a valid login", async () => {
     const createResponse = await request("/api/accounts", {
       method: "POST",
@@ -549,3 +630,17 @@ function uniqueAccountName(prefix: string): string {
 function uniqueRoleName(prefix: string): string {
   return `${prefix}-${crypto.randomUUID().slice(0, 8)}`;
 }
+
+function uniqueValueKey(prefix: string): string {
+  return `${prefix}.${crypto.randomUUID().replaceAll("-", "").slice(0, 8)}`;
+}
+
+type AccountResponse = {
+  uuid: string;
+  role: {
+    title: {
+      value: string;
+      label: string;
+    };
+  };
+};

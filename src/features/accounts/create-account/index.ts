@@ -2,6 +2,7 @@ import { password } from "bun";
 import { eq } from "drizzle-orm";
 import { type Static, t } from "elysia";
 import { db } from "@/db/client";
+import { resolveLabels } from "@/features/localization/resolve-labels";
 import { getDefaultRole } from "@/features/roles/get-default-role";
 import {
   accountExternalIdSchema,
@@ -54,5 +55,7 @@ export async function createAccount(
     })
     .returning();
 
-  return toAccountResponse({ account, role });
+  const labels = await resolveLabels([role.role.title]);
+
+  return toAccountResponse({ account, role }, labels);
 }

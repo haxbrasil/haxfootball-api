@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
+import { resolveLabels } from "@/features/localization/resolve-labels";
 import { notFound } from "@/shared/http/errors";
 import type { AccountResponse } from "@/features/accounts/_shared/http/responses";
 import { toAccountResponse } from "@/features/accounts/_shared/http/responses";
@@ -21,8 +22,8 @@ export async function getAccount(uuid: string): Promise<AccountResponse> {
     throw notFound("Account not found");
   }
 
-  return toAccountResponse({
-    account: row.account,
-    role: await roleWithPermissions(row.role)
-  });
+  const role = await roleWithPermissions(row.role);
+  const labels = await resolveLabels([role.role.title]);
+
+  return toAccountResponse({ account: row.account, role }, labels);
 }

@@ -2,6 +2,7 @@ import { password } from "bun";
 import { eq } from "drizzle-orm";
 import { type Static, t } from "elysia";
 import { db } from "@/db/client";
+import { resolveLabels } from "@/features/localization/resolve-labels";
 import { notFound } from "@/shared/http/errors";
 import { roles } from "@/features/roles/db";
 import {
@@ -67,8 +68,14 @@ export async function updateAccount(
     .innerJoin(roles, eq(accounts.roleId, roles.id))
     .where(eq(accounts.id, account.id));
 
-  return toAccountResponse({
-    account: row.account,
-    role: await roleWithPermissions(row.role)
-  });
+  const accountRole = await roleWithPermissions(row.role);
+  const labels = await resolveLabels([accountRole.role.title]);
+
+  return toAccountResponse(
+    {
+      account: row.account,
+      role: accountRole
+    },
+    labels
+  );
 }
