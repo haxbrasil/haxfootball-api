@@ -5,8 +5,7 @@ export const sessionIdentityBodySchema = t.Object({
   roomPlayerId: t.Integer({ minimum: 0 }),
   name: t.String({
     minLength: 1,
-    maxLength: 25,
-    pattern: ".*[A-Za-z0-9].*"
+    maxLength: 25
   }),
   auth: t.Nullable(t.String({ minLength: 1, maxLength: 256 })),
   conn: t.Nullable(t.String({ minLength: 1, maxLength: 256 }))

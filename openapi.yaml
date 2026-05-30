@@ -411,7 +411,6 @@ components:
         name:
           maxLength: 25
           minLength: 1
-          pattern: .*[A-Za-z0-9].*
           type: string
       required:
         - externalId
@@ -1956,7 +1955,6 @@ components:
         name:
           maxLength: 25
           minLength: 1
-          pattern: .*[A-Za-z0-9].*
           type: string
         roomId:
           maxLength: 64

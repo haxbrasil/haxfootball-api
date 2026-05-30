@@ -7,8 +7,7 @@ export const playerExternalIdSchema = t.String({
 
 export const playerNameSchema = t.String({
   minLength: 1,
-  maxLength: 25,
-  pattern: ".*[A-Za-z0-9].*"
+  maxLength: 25
 });
 
 export const playerCountrySchema = t.String({

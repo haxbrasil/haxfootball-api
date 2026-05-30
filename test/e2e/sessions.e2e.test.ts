@@ -42,6 +42,26 @@ describe("sessions", () => {
     expect(secondBody).toEqual(firstBody);
   });
 
+  it("resolves guests with non-Latin names", async () => {
+    const response = await request("/api/sessions/resolve", {
+      method: "POST",
+      body: {
+        roomId: "room-persian-guest",
+        roomPlayerId: 1,
+        name: "یارو مینیو",
+        auth: "auth-persian-guest",
+        conn: "conn-persian-guest"
+      }
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      status: "guest",
+      playerId: expect.any(String),
+      account: null
+    });
+  });
+
   it("creates distinct player identities for different room IDs", async () => {
     const firstResponse = await request("/api/sessions/resolve", {
       method: "POST",

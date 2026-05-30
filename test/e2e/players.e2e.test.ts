@@ -58,11 +58,12 @@ describe("players", () => {
   });
 
   it("lists players", async () => {
+    const name = uniquePlayerName("Keeper");
     const createResponse = await request("/api/players", {
       method: "POST",
       body: {
-        externalId: "player-2",
-        name: "Keeper",
+        externalId: `player-list-${crypto.randomUUID()}`,
+        name,
         country: "ar"
       }
     });
@@ -70,7 +71,9 @@ describe("players", () => {
     expect(createResponse.status).toBe(201);
 
     const player: PlayerResponse = await createResponse.json();
-    const listResponse = await request("/api/players");
+    const listResponse = await request(
+      `/api/players?search=${encodeURIComponent(name)}`
+    );
 
     expect(listResponse.status).toBe(200);
     expect(await paginatedItems(listResponse)).toContainEqual(player);
@@ -473,14 +476,23 @@ describe("players", () => {
     });
   });
 
-  it("rejects invalid player names and external IDs", async () => {
-    const invalidNameResponse = await request("/api/players", {
+  it("accepts player names without Latin alphanumeric characters", async () => {
+    const response = await request("/api/players", {
       method: "POST",
       body: {
-        externalId: "player-invalid-name",
-        name: "!!!"
+        externalId: "player-persian-name",
+        name: "یارو مینیو"
       }
     });
+
+    expect(response.status).toBe(201);
+    expect(await response.json()).toMatchObject({
+      id: "player-persian-name",
+      name: "یارو مینیو"
+    });
+  });
+
+  it("rejects invalid player external IDs", async () => {
     const invalidExternalIdResponse = await request("/api/players", {
       method: "POST",
       body: {
@@ -489,13 +501,7 @@ describe("players", () => {
       }
     });
 
-    expect(invalidNameResponse.status).toBe(400);
     expect(invalidExternalIdResponse.status).toBe(400);
-    expect(await invalidNameResponse.json()).toMatchObject({
-      error: {
-        code: "VALIDATION_ERROR"
-      }
-    });
     expect(await invalidExternalIdResponse.json()).toMatchObject({
       error: {
         code: "VALIDATION_ERROR"

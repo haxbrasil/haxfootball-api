@@ -94,6 +94,37 @@ describe("matches", () => {
     });
   });
 
+  it("does not persist partial match rows when initial events are invalid", async () => {
+    const initiatedAt = "2026-05-10T12:03:00.000Z";
+    const response = await request("/api/matches", {
+      method: "POST",
+      body: {
+        status: "ongoing",
+        initiatedAt,
+        score: {
+          red: 7,
+          blue: 0
+        },
+        events: [
+          {
+            type: "player_join",
+            playerId: "missing-player",
+            team: "red"
+          }
+        ]
+      }
+    });
+
+    expect(response.status).toBe(404);
+
+    const listResponse = await request("/api/matches?limit=100");
+    const matches = await paginatedItems<MatchSummaryResponse>(listResponse);
+
+    expect(matches.some((match) => match.initiatedAt === initiatedAt)).toBe(
+      false
+    );
+  });
+
   it("rejects completed matches without endedAt or score", async () => {
     const withoutEndedAtResponse = await request("/api/matches", {
       method: "POST",

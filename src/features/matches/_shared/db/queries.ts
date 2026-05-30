@@ -1,5 +1,5 @@
 import { and, asc, desc, eq, inArray, sql, type SQL } from "drizzle-orm";
-import { db } from "@/db/client";
+import { db, type DbTransaction } from "@/db/client";
 import { accounts } from "@/features/accounts/db";
 import { gameModes } from "@/features/game-modes/db";
 import { matchStatEvents } from "@/features/match-stat-events/db";
@@ -32,6 +32,8 @@ export type PersistedMatchEvent = MatchPlayerEventInput & {
   sequence: number;
   player: Player;
 };
+
+type MatchPersistenceDb = typeof db | DbTransaction;
 
 export async function listMatchSummaries(
   query: ListMatchesQuery = {}
@@ -194,9 +196,10 @@ export async function getRecordingForAssociation(publicId: string) {
 
 export async function persistMatchScore(
   matchId: number,
-  score: MatchScore | null | undefined
+  score: MatchScore | null | undefined,
+  database: MatchPersistenceDb = db
 ): Promise<void> {
-  await db
+  await database
     .delete(matchTeamMetadata)
     .where(eq(matchTeamMetadata.matchId, matchId));
 
@@ -204,7 +207,7 @@ export async function persistMatchScore(
     return;
   }
 
-  await db.insert(matchTeamMetadata).values([
+  await database.insert(matchTeamMetadata).values([
     {
       matchId,
       team: "red",
@@ -221,7 +224,8 @@ export async function persistMatchScore(
 export async function persistMatchEvents(
   matchId: number,
   events: MatchPlayerEventInput[],
-  startSequence = 1
+  startSequence = 1,
+  database: MatchPersistenceDb = db
 ): Promise<void> {
   if (events.length === 0) {
     return;
@@ -229,7 +233,19 @@ export async function persistMatchEvents(
 
   const persistedEvents = await resolveMatchEvents(events, startSequence);
 
-  await db.insert(matchPlayerEvents).values(
+  await persistResolvedMatchEvents(matchId, persistedEvents, database);
+}
+
+export async function persistResolvedMatchEvents(
+  matchId: number,
+  persistedEvents: PersistedMatchEvent[],
+  database: MatchPersistenceDb = db
+): Promise<void> {
+  if (persistedEvents.length === 0) {
+    return;
+  }
+
+  await database.insert(matchPlayerEvents).values(
     persistedEvents.map((event) => ({
       matchId,
       sequence: event.sequence,
@@ -263,11 +279,14 @@ export async function nextMatchEventSequence(matchId: number): Promise<number> {
   return (rows[0]?.sequence ?? 0) + 1;
 }
 
-export async function recomputeMatchStints(matchId: number): Promise<void> {
-  const events = await listMatchEvents(matchId);
+export async function recomputeMatchStints(
+  matchId: number,
+  database: MatchPersistenceDb = db
+): Promise<void> {
+  const events = await listMatchEvents(matchId, database);
   const stints = deriveMatchStints(events);
 
-  await db
+  await database
     .delete(matchPlayerStints)
     .where(eq(matchPlayerStints.matchId, matchId));
 
@@ -275,7 +294,7 @@ export async function recomputeMatchStints(matchId: number): Promise<void> {
     return;
   }
 
-  await db.insert(matchPlayerStints).values(
+  await database.insert(matchPlayerStints).values(
     stints.map((stint) => ({
       matchId,
       playerId: stint.playerId,
@@ -289,9 +308,10 @@ export async function recomputeMatchStints(matchId: number): Promise<void> {
   );
 }
 
-async function resolveMatchEvents(
+export async function resolveMatchEvents(
   events: MatchPlayerEventInput[],
-  startSequence: number
+  startSequence: number,
+  database: MatchPersistenceDb = db
 ): Promise<PersistedMatchEvent[]> {
   validateMatchEvents(events);
 
@@ -301,7 +321,7 @@ async function resolveMatchEvents(
 
   const playerRows =
     externalIds.length > 0
-      ? await db
+      ? await database
           .select()
           .from(players)
           .where(inArray(players.externalId, externalIds))
@@ -341,8 +361,11 @@ export async function listMatchMetadata(matchId: number) {
     .where(eq(matchTeamMetadata.matchId, matchId));
 }
 
-async function listMatchEvents(matchId: number) {
-  return db
+async function listMatchEvents(
+  matchId: number,
+  database: MatchPersistenceDb = db
+) {
+  return database
     .select({
       id: matchPlayerEvents.id,
       matchId: matchPlayerEvents.matchId,

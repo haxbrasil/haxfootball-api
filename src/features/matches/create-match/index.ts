@@ -16,8 +16,9 @@ import { createUniqueMatchPublicId } from "@/features/matches/_shared/domain/pub
 import {
   getMatchDetail,
   getRecordingForAssociation,
-  persistMatchEvents,
+  persistResolvedMatchEvents,
   persistMatchScore,
+  resolveMatchEvents,
   resolveMatchStatEventSchemaVersionId,
   recomputeMatchStints
 } from "@/features/matches/_shared/db/queries";
@@ -57,6 +58,7 @@ export async function createMatch(
     input.statEventSchema
   );
   const initialEvents = input.events ?? [];
+  const persistedInitialEvents = await resolveMatchEvents(initialEvents, 1);
   const matchValues = {
     publicId,
     status: input.status,
@@ -67,13 +69,17 @@ export async function createMatch(
     endedAt: input.endedAt
   };
 
-  const [match] = await db.insert(matches).values(matchValues).returning();
+  const createdMatch = await db.transaction(async (tx) => {
+    const [match] = await tx.insert(matches).values(matchValues).returning();
 
-  await persistMatchScore(match.id, input.score);
-  await persistMatchEvents(match.id, initialEvents);
-  await recomputeMatchStints(match.id);
+    await persistMatchScore(match.id, input.score, tx);
+    await persistResolvedMatchEvents(match.id, persistedInitialEvents, tx);
+    await recomputeMatchStints(match.id, tx);
 
-  const matchDetail = await getMatchDetail(match.publicId);
+    return match;
+  });
+
+  const matchDetail = await getMatchDetail(createdMatch.publicId);
 
   return toMatchResponse(matchDetail);
 }
