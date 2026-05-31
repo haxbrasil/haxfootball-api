@@ -134,6 +134,13 @@
       "when": 1780236550907,
       "tag": "0018_overconfident_scourge",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "6",
+      "when": 1780251300000,
+      "tag": "0019_actor_targets",
+      "breakpoints": true
     }
   ]
 }
