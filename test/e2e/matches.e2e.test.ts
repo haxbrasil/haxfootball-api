@@ -107,9 +107,12 @@ describe("matches", () => {
         },
         events: [
           {
-            type: "player_join",
-            playerId: "missing-player",
-            team: "red"
+            type: "player-joined",
+            domain: "room",
+            scope: "player",
+            actorPlayerId: "missing-player",
+            team: "red",
+            value: {}
           }
         ]
       }
@@ -285,39 +288,54 @@ describe("matches", () => {
         status: "ongoing",
         events: [
           {
-            type: "player_join",
-            playerId: firstPlayer.id,
+            type: "player-joined",
+            domain: "room",
+            scope: "player",
+            actorPlayerId: firstPlayer.id,
+            value: {},
             team: "red",
             roomPlayerId: 1,
             occurredAt: "2026-05-10T12:00:00.000Z",
             elapsedSeconds: 0
           },
           {
-            type: "player_team_change",
-            playerId: firstPlayer.id,
+            type: "player-team-changed",
+            domain: "room",
+            scope: "player",
+            actorPlayerId: firstPlayer.id,
+            value: {},
             team: "blue",
             roomPlayerId: 1,
             occurredAt: "2026-05-10T12:05:00.000Z",
             elapsedSeconds: 300
           },
           {
-            type: "player_leave",
-            playerId: firstPlayer.id,
+            type: "player-left",
+            domain: "room",
+            scope: "player",
+            actorPlayerId: firstPlayer.id,
+            value: {},
             roomPlayerId: 1,
             occurredAt: "2026-05-10T12:06:00.000Z",
             elapsedSeconds: 360
           },
           {
-            type: "player_join",
-            playerId: secondPlayer.id,
+            type: "player-joined",
+            domain: "room",
+            scope: "player",
+            actorPlayerId: secondPlayer.id,
+            value: {},
             team: "spectators",
             roomPlayerId: 2,
             occurredAt: "2026-05-10T12:07:00.000Z",
             elapsedSeconds: 420
           },
           {
-            type: "player_team_change",
-            playerId: secondPlayer.id,
+            type: "player-team-changed",
+            domain: "room",
+            scope: "player",
+            actorPlayerId: secondPlayer.id,
+            value: {},
             team: "red",
             roomPlayerId: 2,
             occurredAt: "2026-05-10T12:08:00.000Z",
@@ -384,16 +402,22 @@ describe("matches", () => {
         status: "ongoing",
         events: [
           {
-            type: "player_join",
-            playerId: player.id,
+            type: "player-joined",
+            domain: "room",
+            scope: "player",
+            actorPlayerId: player.id,
+            value: {},
             team: "red",
             roomPlayerId: 9,
             occurredAt: "2026-05-10T12:00:00.000Z",
             elapsedSeconds: 0
           },
           {
-            type: "player_team_change",
-            playerId: player.id,
+            type: "player-team-changed",
+            domain: "room",
+            scope: "player",
+            actorPlayerId: player.id,
+            value: {},
             team: "spectators",
             roomPlayerId: 9,
             occurredAt: "2026-05-10T12:03:00.000Z",
@@ -444,20 +468,29 @@ describe("matches", () => {
         status: "ongoing",
         events: [
           {
-            type: "player_join",
-            playerId: player.id,
+            type: "player-joined",
+            domain: "room",
+            scope: "player",
+            actorPlayerId: player.id,
+            value: {},
             team: "red",
             roomPlayerId: 1
           },
           {
-            type: "player_join",
-            playerId: player.id,
+            type: "player-joined",
+            domain: "room",
+            scope: "player",
+            actorPlayerId: player.id,
+            value: {},
             team: "blue",
             roomPlayerId: 2
           },
           {
-            type: "player_leave",
-            playerId: player.id,
+            type: "player-left",
+            domain: "room",
+            scope: "player",
+            actorPlayerId: player.id,
+            value: {},
             roomPlayerId: 1
           }
         ]
@@ -508,24 +541,33 @@ describe("matches", () => {
         status: "ongoing",
         events: [
           {
-            type: "player_join",
-            playerId: player.id,
+            type: "player-joined",
+            domain: "room",
+            scope: "player",
+            actorPlayerId: player.id,
+            value: {},
             team: "red",
             roomPlayerId: 3,
             occurredAt: "2026-05-10T12:00:00.000Z",
             elapsedSeconds: 0
           },
           {
-            type: "player_join",
-            playerId: player.id,
+            type: "player-joined",
+            domain: "room",
+            scope: "player",
+            actorPlayerId: player.id,
+            value: {},
             team: "blue",
             roomPlayerId: 4,
             occurredAt: "2026-05-10T12:01:00.000Z",
             elapsedSeconds: 60
           },
           {
-            type: "player_leave",
-            playerId: player.id,
+            type: "player-left",
+            domain: "room",
+            scope: "player",
+            actorPlayerId: player.id,
+            value: {},
             occurredAt: "2026-05-10T12:02:00.000Z",
             elapsedSeconds: 120
           }
@@ -571,23 +613,32 @@ describe("matches", () => {
         status: "ongoing",
         events: [
           {
-            type: "player_join",
-            playerId: player.id,
+            type: "player-joined",
+            domain: "room",
+            scope: "player",
+            actorPlayerId: player.id,
+            value: {},
             team: "red",
             roomPlayerId: 5,
             occurredAt: "2026-05-10T12:00:00.000Z",
             elapsedSeconds: 0
           },
           {
-            type: "player_leave",
-            playerId: player.id,
+            type: "player-left",
+            domain: "room",
+            scope: "player",
+            actorPlayerId: player.id,
+            value: {},
             roomPlayerId: 5,
             occurredAt: "2026-05-10T12:01:00.000Z",
             elapsedSeconds: 60
           },
           {
-            type: "player_join",
-            playerId: player.id,
+            type: "player-joined",
+            domain: "room",
+            scope: "player",
+            actorPlayerId: player.id,
+            value: {},
             team: "blue",
             roomPlayerId: 6,
             occurredAt: "2026-05-10T12:02:00.000Z",
@@ -648,24 +699,25 @@ describe("matches", () => {
     const appendResponse = await request(`/api/matches/${match.id}/events`, {
       method: "POST",
       body: {
-        events: [
-          {
-            type: "player_join",
-            playerId: player.id,
-            team: "red"
-          }
-        ]
+        type: "player-joined",
+        domain: "room",
+        scope: "player",
+        actorPlayerId: player.id,
+        value: {},
+        team: "red"
       }
     });
 
-    expect(appendResponse.status).toBe(200);
+    expect(appendResponse.status).toBe(201);
     expect(await appendResponse.json()).toMatchObject({
-      events: [
-        {
-          sequence: 1,
-          type: "player_join"
-        }
-      ],
+      sequence: 1,
+      type: "player-joined"
+    });
+
+    const matchResponse = await request(`/api/matches/${match.id}`);
+
+    expect(matchResponse.status).toBe(200);
+    expect(await matchResponse.json()).toMatchObject({
       participations: [
         {
           player: {
@@ -695,12 +747,11 @@ describe("matches", () => {
       {
         method: "POST",
         body: {
-          events: [
-            {
-              type: "player_leave",
-              playerId: player.id
-            }
-          ]
+          type: "player-left",
+          domain: "room",
+          scope: "player",
+          actorPlayerId: player.id,
+          value: {}
         }
       }
     );
@@ -726,8 +777,11 @@ describe("matches", () => {
         status: "ongoing",
         events: [
           {
-            type: "player_join",
-            playerId: player.id,
+            type: "player-joined",
+            domain: "room",
+            scope: "player",
+            actorPlayerId: player.id,
+            value: {},
             team: "red",
             occurredAt: "2026-05-10T12:00:00.000Z",
             elapsedSeconds: 0
@@ -744,21 +798,24 @@ describe("matches", () => {
       {
         method: "POST",
         body: {
-          events: [
-            {
-              type: "player_leave",
-              playerId: player.id,
-              occurredAt: "2026-05-10T12:01:00.000Z",
-              elapsedSeconds: 60
-            }
-          ]
+          type: "player-left",
+          domain: "room",
+          scope: "player",
+          actorPlayerId: player.id,
+          value: {},
+          occurredAt: "2026-05-10T12:01:00.000Z",
+          elapsedSeconds: 60
         }
       }
     );
 
-    expect(appendResponse.status).toBe(200);
+    expect(appendResponse.status).toBe(201);
 
-    const match: MatchResponse = await appendResponse.json();
+    const matchResponse = await request(`/api/matches/${createdMatch.id}`);
+
+    expect(matchResponse.status).toBe(200);
+
+    const match: MatchResponse = await matchResponse.json();
 
     expect(match.events.map((event) => event.sequence)).toEqual([1, 2]);
     expect(match.participations).toMatchObject([
@@ -800,8 +857,11 @@ describe("matches", () => {
         status: "ongoing",
         events: [
           {
-            type: "player_join",
-            playerId: firstPlayer.id,
+            type: "player-joined",
+            domain: "room",
+            scope: "player",
+            actorPlayerId: firstPlayer.id,
+            value: {},
             team: "red"
           }
         ]
@@ -816,8 +876,11 @@ describe("matches", () => {
       body: {
         events: [
           {
-            type: "player_join",
-            playerId: secondPlayer.id,
+            type: "player-joined",
+            domain: "room",
+            scope: "player",
+            actorPlayerId: secondPlayer.id,
+            value: {},
             team: "blue"
           }
         ]
@@ -831,7 +894,7 @@ describe("matches", () => {
     expect(match.events).toMatchObject([
       {
         sequence: 1,
-        player: {
+        actorPlayer: {
           id: secondPlayer.id
         },
         team: "blue"
@@ -847,7 +910,7 @@ describe("matches", () => {
     ]);
     expect(match.events).not.toContainEqual(
       expect.objectContaining({
-        player: expect.objectContaining({
+        actorPlayer: expect.objectContaining({
           id: firstPlayer.id
         })
       })
@@ -881,13 +944,24 @@ describe("matches", () => {
       {
         method: "POST",
         body: {
-          events: [
-            {
-              type: "player_leave",
-              playerId: player.id,
-              team: "red"
-            }
-          ]
+          type: "player-left",
+          domain: "room",
+          scope: "player",
+          actorPlayerId: player.id,
+          value: {},
+          team: "red"
+        }
+      }
+    );
+    const unknownRoomEventResponse = await request(
+      `/api/matches/${match.id}/events`,
+      {
+        method: "POST",
+        body: {
+          type: "room-note",
+          domain: "room",
+          scope: "match",
+          value: {}
         }
       }
     );
@@ -899,18 +973,24 @@ describe("matches", () => {
         message: "Player leave events cannot include a team"
       }
     });
+    expect(unknownRoomEventResponse.status).toBe(400);
+    expect(await unknownRoomEventResponse.json()).toEqual({
+      error: {
+        code: "BAD_REQUEST",
+        message: "Unknown room event type"
+      }
+    });
 
     const joinWithoutTeamResponse = await request(
       `/api/matches/${match.id}/events`,
       {
         method: "POST",
         body: {
-          events: [
-            {
-              type: "player_join",
-              playerId: player.id
-            }
-          ]
+          type: "player-joined",
+          domain: "room",
+          scope: "player",
+          actorPlayerId: player.id,
+          value: {}
         }
       }
     );
@@ -928,14 +1008,13 @@ describe("matches", () => {
       {
         method: "POST",
         body: {
-          events: [
-            {
-              type: "player_join",
-              playerId: player.id,
-              team: "red",
-              occurredAt: "2026-05-10T12:00:00.000Z"
-            }
-          ]
+          type: "player-joined",
+          domain: "room",
+          scope: "player",
+          actorPlayerId: player.id,
+          value: {},
+          team: "red",
+          occurredAt: "2026-05-10T12:00:00.000Z"
         }
       }
     );
@@ -957,9 +1036,12 @@ describe("matches", () => {
         status: "ongoing",
         events: [
           {
-            type: "player_join",
-            playerId: "missing-player",
-            team: "red"
+            type: "player-joined",
+            domain: "room",
+            scope: "player",
+            actorPlayerId: "missing-player",
+            team: "red",
+            value: {}
           }
         ]
       }
@@ -1152,13 +1234,12 @@ describe("matches", () => {
     const appendResponse = await request("/api/matches/aaaaaaaa/events", {
       method: "POST",
       body: {
-        events: [
-          {
-            type: "player_join",
-            playerId: "missing-player",
-            team: "red"
-          }
-        ]
+        type: "player-joined",
+        domain: "room",
+        scope: "player",
+        actorPlayerId: "missing-player",
+        team: "red",
+        value: {}
       }
     });
     const recordingResponse = await request("/api/matches/aaaaaaaa/recording", {

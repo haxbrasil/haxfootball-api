@@ -23,14 +23,56 @@ components:
         - createdAt
         - updatedAt
       type: object
-    AddMatchStatEventBody:
+    AddMatchEventBody:
       properties:
+        actorPlayerId:
+          maxLength: 64
+          minLength: 1
+          type: string
+        domain:
+          enum:
+            - room
+            - game
+            - agent
+            - system
+          type: string
+        elapsedSeconds:
+          minimum: 0
+          type: number
         occurredAt:
           minLength: 1
           type: string
-        playerId:
+        playId:
+          maxLength: 128
+          minLength: 1
+          type: string
+        roomPlayerId:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - minimum: 0
+              type: integer
+          minimum: 0
+        scope:
+          enum:
+            - player
+            - team
+            - match
+          type: string
+        sourceState:
+          maxLength: 128
+          minLength: 1
+          type: string
+        subjectPlayerId:
           maxLength: 64
           minLength: 1
+          type: string
+        team:
+          enum:
+            - spectators
+            - red
+            - blue
           type: string
         tick:
           minimum: 0
@@ -42,19 +84,10 @@ components:
           type: string
         value: {}
       required:
+        - domain
         - type
-        - playerId
+        - scope
         - value
-      type: object
-    AppendMatchEventsBody:
-      properties:
-        events:
-          items:
-            $ref: "#/components/schemas/MatchEventInput"
-          minItems: 1
-          type: array
-      required:
-        - events
       type: object
     AssociateMatchRecordingBody:
       properties:
@@ -283,6 +316,24 @@ components:
         - password
         - externalId
       type: object
+    CreateEventSchemaBody:
+      properties:
+        definition: {}
+        description:
+          minLength: 1
+          type: string
+        name:
+          maxLength: 64
+          minLength: 1
+          pattern: ^[a-z][a-z0-9-]{0,63}$
+          type: string
+        title:
+          minLength: 1
+          type: string
+      required:
+        - name
+        - definition
+      type: object
     CreateGameModeBody:
       properties:
         description:
@@ -323,6 +374,23 @@ components:
         endedAt:
           minLength: 1
           type: string
+        eventSchema:
+          properties:
+            id:
+              format: uuid
+              type: string
+            version:
+              anyOf:
+                - default: 0
+                  format: integer
+                  type: string
+                - minimum: 1
+                  type: integer
+              minimum: 1
+          required:
+            - id
+            - version
+          type: object
         events:
           items:
             $ref: "#/components/schemas/MatchEventInput"
@@ -356,23 +424,6 @@ components:
           required:
             - red
             - blue
-          type: object
-        statEventSchema:
-          properties:
-            id:
-              format: uuid
-              type: string
-            version:
-              anyOf:
-                - default: 0
-                  format: integer
-                  type: string
-                - minimum: 1
-                  type: integer
-              minimum: 1
-          required:
-            - id
-            - version
           type: object
         status:
           enum:
@@ -558,24 +609,6 @@ components:
         - outboundIp
         - proxyUrl
       type: object
-    CreateStatEventSchemaBody:
-      properties:
-        definition: {}
-        description:
-          minLength: 1
-          type: string
-        name:
-          maxLength: 64
-          minLength: 1
-          pattern: ^[a-z][a-z0-9-]{0,63}$
-          type: string
-        title:
-          minLength: 1
-          type: string
-      required:
-        - name
-        - definition
-      type: object
     CreateTokenBody:
       properties:
         apiKey:
@@ -592,7 +625,7 @@ components:
       required:
         - token
       type: object
-    DisableMatchStatEventBody:
+    DisableMatchEventBody:
       properties:
         disabled:
           const: true
@@ -619,6 +652,69 @@ components:
       items:
         $ref: "#/components/schemas/RoomProgramVersion"
       type: array
+    EventSchema:
+      properties:
+        createdAt:
+          type: string
+        definition: {}
+        description:
+          anyOf:
+            - type: string
+            - type: "null"
+          nullable: true
+        id:
+          format: uuid
+          type: string
+        isLatest:
+          type: boolean
+        name:
+          maxLength: 64
+          minLength: 1
+          pattern: ^[a-z][a-z0-9-]{0,63}$
+          type: string
+        title:
+          anyOf:
+            - type: string
+            - type: "null"
+          nullable: true
+        updatedAt:
+          type: string
+        version:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - minimum: 1
+              type: integer
+          minimum: 1
+      required:
+        - id
+        - name
+        - title
+        - description
+        - version
+        - isLatest
+        - definition
+        - createdAt
+        - updatedAt
+      type: object
+    EventSchemaReference:
+      properties:
+        id:
+          format: uuid
+          type: string
+        version:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - minimum: 1
+              type: integer
+          minimum: 1
+      required:
+        - id
+        - version
+      type: object
     GameMode:
       properties:
         createdAt:
@@ -836,6 +932,18 @@ components:
         - items
         - page
       type: object
+    ListEventSchemas:
+      properties:
+        items:
+          items:
+            $ref: "#/components/schemas/EventSchema"
+          type: array
+        page:
+          $ref: "#/components/schemas/PageInfo"
+      required:
+        - items
+        - page
+      type: object
     ListGameModes:
       properties:
         items:
@@ -901,11 +1009,11 @@ components:
         - items
         - page
       type: object
-    ListMatchStatEvents:
+    ListMatchEvents:
       properties:
         items:
           items:
-            $ref: "#/components/schemas/MatchStatEvent"
+            $ref: "#/components/schemas/MatchEvent"
           type: array
         page:
           $ref: "#/components/schemas/PageInfo"
@@ -1045,18 +1153,6 @@ components:
         - items
         - page
       type: object
-    ListStatEventSchemas:
-      properties:
-        items:
-          items:
-            $ref: "#/components/schemas/StatEventSchema"
-          type: array
-        page:
-          $ref: "#/components/schemas/PageInfo"
-      required:
-        - items
-        - page
-      type: object
     Match:
       allOf:
         - $ref: "#/components/schemas/MatchSummary"
@@ -1076,25 +1172,74 @@ components:
       type: object
     MatchEvent:
       properties:
+        actorPlayer:
+          anyOf:
+            - $ref: "#/components/schemas/Player"
+            - type: "null"
+          nullable: true
+        createdAt:
+          type: string
+        disabled:
+          type: boolean
+        disabledAt:
+          anyOf:
+            - type: string
+            - type: "null"
+          nullable: true
+        domain:
+          enum:
+            - room
+            - game
+            - agent
+            - system
+          type: string
         elapsedSeconds:
           anyOf:
             - type: number
             - type: "null"
           nullable: true
+        id:
+          format: uuid
+          type: string
         occurredAt:
           anyOf:
             - type: string
             - type: "null"
           nullable: true
-        player:
-          $ref: "#/components/schemas/Player"
+        playId:
+          anyOf:
+            - type: string
+            - type: "null"
+          nullable: true
         roomPlayerId:
           anyOf:
             - type: number
             - type: "null"
           nullable: true
+        scope:
+          enum:
+            - player
+            - team
+            - match
+          type: string
         sequence:
-          type: number
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - minimum: 1
+              type: integer
+          minimum: 1
+        sourceState:
+          anyOf:
+            - type: string
+            - type: "null"
+          nullable: true
+        subjectPlayer:
+          anyOf:
+            - $ref: "#/components/schemas/Player"
+            - type: "null"
+          nullable: true
         team:
           anyOf:
             - anyOf:
@@ -1106,31 +1251,58 @@ components:
                   type: string
             - type: "null"
           nullable: true
+        tick:
+          anyOf:
+            - type: number
+            - type: "null"
+          nullable: true
         type:
-          enum:
-            - player_join
-            - player_leave
-            - player_team_change
           type: string
+        updatedAt:
+          type: string
+        value: {}
       required:
+        - id
         - sequence
+        - domain
         - type
-        - player
+        - scope
+        - actorPlayer
+        - subjectPlayer
         - team
         - roomPlayerId
+        - playId
+        - sourceState
+        - value
         - occurredAt
         - elapsedSeconds
+        - tick
+        - disabled
+        - disabledAt
+        - createdAt
+        - updatedAt
       type: object
     MatchEventInput:
       properties:
+        actorPlayerId:
+          maxLength: 64
+          minLength: 1
+          type: string
+        domain:
+          enum:
+            - room
+            - game
+            - agent
+            - system
+          type: string
         elapsedSeconds:
           minimum: 0
           type: number
         occurredAt:
           minLength: 1
           type: string
-        playerId:
-          maxLength: 64
+        playId:
+          maxLength: 128
           minLength: 1
           type: string
         roomPlayerId:
@@ -1141,21 +1313,40 @@ components:
             - minimum: 0
               type: integer
           minimum: 0
+        scope:
+          enum:
+            - player
+            - team
+            - match
+          type: string
+        sourceState:
+          maxLength: 128
+          minLength: 1
+          type: string
+        subjectPlayerId:
+          maxLength: 64
+          minLength: 1
+          type: string
         team:
           enum:
             - spectators
             - red
             - blue
           type: string
+        tick:
+          minimum: 0
+          type: number
         type:
-          enum:
-            - player_join
-            - player_leave
-            - player_team_change
+          maxLength: 64
+          minLength: 1
+          pattern: ^[a-z][a-z0-9-]{0,63}$
           type: string
+        value: {}
       required:
+        - domain
         - type
-        - playerId
+        - scope
+        - value
       type: object
     MatchMetrics:
       items:
@@ -1192,58 +1383,6 @@ components:
       required:
         - red
         - blue
-      type: object
-    MatchStatEvent:
-      properties:
-        createdAt:
-          type: string
-        disabled:
-          type: boolean
-        disabledAt:
-          anyOf:
-            - type: string
-            - type: "null"
-          nullable: true
-        id:
-          format: uuid
-          type: string
-        occurredAt:
-          anyOf:
-            - type: string
-            - type: "null"
-          nullable: true
-        player:
-          $ref: "#/components/schemas/Player"
-        sequence:
-          anyOf:
-            - default: 0
-              format: integer
-              type: string
-            - minimum: 1
-              type: integer
-          minimum: 1
-        tick:
-          anyOf:
-            - type: number
-            - type: "null"
-          nullable: true
-        type:
-          type: string
-        updatedAt:
-          type: string
-        value: {}
-      required:
-        - id
-        - sequence
-        - type
-        - player
-        - value
-        - occurredAt
-        - tick
-        - disabled
-        - disabledAt
-        - createdAt
-        - updatedAt
       type: object
     MatchStint:
       properties:
@@ -1297,6 +1436,11 @@ components:
             - type: string
             - type: "null"
           nullable: true
+        eventSchema:
+          anyOf:
+            - $ref: "#/components/schemas/EventSchemaReference"
+            - type: "null"
+          nullable: true
         gameMode:
           anyOf:
             - $ref: "#/components/schemas/GameMode"
@@ -1322,11 +1466,6 @@ components:
             - $ref: "#/components/schemas/MatchScore"
             - type: "null"
           nullable: true
-        statEventSchema:
-          anyOf:
-            - $ref: "#/components/schemas/StatEventSchemaReference"
-            - type: "null"
-          nullable: true
         status:
           enum:
             - ongoing
@@ -1342,7 +1481,7 @@ components:
         - score
         - recording
         - gameMode
-        - statEventSchema
+        - eventSchema
         - createdAt
         - updatedAt
       type: object
@@ -1447,7 +1586,7 @@ components:
         - name
         - externalId
       type: object
-    PublishStatEventSchemaVersionBody:
+    PublishEventSchemaVersionBody:
       properties:
         definition: {}
       required:
@@ -1533,6 +1672,32 @@ components:
                       - country
                       - account
                     type: object
+                  - properties:
+                      id:
+                        type: string
+                      name:
+                        type: string
+                      type:
+                        const: team
+                        type: string
+                    required:
+                      - type
+                      - id
+                      - name
+                    type: object
+                  - properties:
+                      id:
+                        type: string
+                      name:
+                        type: string
+                      type:
+                        const: match
+                        type: string
+                    required:
+                      - type
+                      - id
+                      - name
+                    type: object
               metrics:
                 patternProperties:
                   ^(.*)$: {}
@@ -1614,10 +1779,6 @@ components:
             group:
               properties:
                 by:
-                  enum:
-                    - account
-                    - player
-                    - account-or-player
                   type: string
                 identityMode:
                   const: current
@@ -1655,6 +1816,12 @@ components:
             sort:
               items: {}
               type: array
+            target:
+              enum:
+                - player
+                - team
+                - match
+              type: string
             totals:
               properties:
                 eventsCount:
@@ -1688,6 +1855,7 @@ components:
               type: object
           required:
             - schema
+            - target
             - group
             - featuredMetrics
             - availableMetrics
@@ -1708,6 +1876,17 @@ components:
             accountIds:
               items:
                 format: uuid
+                type: string
+              minItems: 1
+              type: array
+              uniqueItems: true
+            domains:
+              items:
+                enum:
+                  - room
+                  - game
+                  - agent
+                  - system
                 type: string
               minItems: 1
               type: array
@@ -1888,6 +2067,12 @@ components:
                 type: object
           minItems: 1
           type: array
+        target:
+          enum:
+            - player
+            - team
+            - match
+          type: string
       required:
         - schema
       type: object
@@ -2496,69 +2681,6 @@ components:
         - name
         - externalId
       type: object
-    StatEventSchema:
-      properties:
-        createdAt:
-          type: string
-        definition: {}
-        description:
-          anyOf:
-            - type: string
-            - type: "null"
-          nullable: true
-        id:
-          format: uuid
-          type: string
-        isLatest:
-          type: boolean
-        name:
-          maxLength: 64
-          minLength: 1
-          pattern: ^[a-z][a-z0-9-]{0,63}$
-          type: string
-        title:
-          anyOf:
-            - type: string
-            - type: "null"
-          nullable: true
-        updatedAt:
-          type: string
-        version:
-          anyOf:
-            - default: 0
-              format: integer
-              type: string
-            - minimum: 1
-              type: integer
-          minimum: 1
-      required:
-        - id
-        - name
-        - title
-        - description
-        - version
-        - isLatest
-        - definition
-        - createdAt
-        - updatedAt
-      type: object
-    StatEventSchemaReference:
-      properties:
-        id:
-          format: uuid
-          type: string
-        version:
-          anyOf:
-            - default: 0
-              format: integer
-              type: string
-            - minimum: 1
-              type: integer
-          minimum: 1
-      required:
-        - id
-        - version
-      type: object
     UnauthorizedError:
       properties:
         error:
@@ -2592,6 +2714,12 @@ components:
         roleUuid:
           format: uuid
           type: string
+      type: object
+    UpdateEventSchemaBody:
+      properties:
+        definition: {}
+      required:
+        - definition
       type: object
     UpdateGameModeBody:
       properties:
@@ -2631,6 +2759,23 @@ components:
         endedAt:
           minLength: 1
           type: string
+        eventSchema:
+          properties:
+            id:
+              format: uuid
+              type: string
+            version:
+              anyOf:
+                - default: 0
+                  format: integer
+                  type: string
+                - minimum: 1
+                  type: integer
+              minimum: 1
+          required:
+            - id
+            - version
+          type: object
         events:
           items:
             $ref: "#/components/schemas/MatchEventInput"
@@ -2661,23 +2806,6 @@ components:
           required:
             - red
             - blue
-          type: object
-        statEventSchema:
-          properties:
-            id:
-              format: uuid
-              type: string
-            version:
-              anyOf:
-                - default: 0
-                  format: integer
-                  type: string
-                - minimum: 1
-                  type: integer
-              minimum: 1
-          required:
-            - id
-            - version
           type: object
         status:
           enum:
@@ -2782,12 +2910,6 @@ components:
         proxyUrl:
           minLength: 1
           type: string
-      type: object
-    UpdateStatEventSchemaBody:
-      properties:
-        definition: {}
-      required:
-        - definition
       type: object
     UploadRoomArtifactBody:
       properties:
@@ -3210,6 +3332,405 @@ paths:
       summary: Update an account
       tags:
         - Accounts
+  /api/event-schemas:
+    get:
+      operationId: getApiEvent-schemas
+      parameters:
+        - in: query
+          name: limit
+          required: false
+          schema:
+            anyOf:
+              - default: 0
+                format: integer
+                type: string
+              - maximum: 100
+                minimum: 1
+                type: integer
+            maximum: 100
+            minimum: 1
+        - in: query
+          name: cursor
+          required: false
+          schema:
+            minLength: 1
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListEventSchemas"
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: List event schemas
+      tags:
+        - Event Schemas
+    post:
+      operationId: postApiEvent-schemas
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateEventSchemaBody"
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventSchema"
+          description: Response for status 201
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Create event schema
+      tags:
+        - Event Schemas
+  /api/event-schemas/by-name/{name}:
+    get:
+      operationId: getApiEvent-schemasBy-nameByName
+      parameters:
+        - in: path
+          name: name
+          required: true
+          schema:
+            maxLength: 64
+            minLength: 1
+            pattern: ^[a-z][a-z0-9-]{0,63}$
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventSchema"
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Get latest event schema by name
+      tags:
+        - Event Schemas
+  /api/event-schemas/by-name/{name}/versions/{version}:
+    get:
+      operationId: getApiEvent-schemasBy-nameByNameVersionsByVersion
+      parameters:
+        - in: path
+          name: name
+          required: true
+          schema:
+            maxLength: 64
+            minLength: 1
+            pattern: ^[a-z][a-z0-9-]{0,63}$
+            type: string
+        - in: path
+          name: version
+          required: true
+          schema:
+            anyOf:
+              - default: 0
+                format: integer
+                type: string
+              - minimum: 1
+                type: integer
+            minimum: 1
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventSchema"
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Get event schema version by name
+      tags:
+        - Event Schemas
+  /api/event-schemas/{id}:
+    get:
+      operationId: getApiEvent-schemasById
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventSchema"
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Get latest event schema
+      tags:
+        - Event Schemas
+  /api/event-schemas/{id}/versions:
+    post:
+      operationId: postApiEvent-schemasByIdVersions
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PublishEventSchemaVersionBody"
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventSchema"
+          description: Response for status 201
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Publish event schema version
+      tags:
+        - Event Schemas
+  /api/event-schemas/{id}/versions/{version}:
+    get:
+      operationId: getApiEvent-schemasByIdVersionsByVersion
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+        - in: path
+          name: version
+          required: true
+          schema:
+            anyOf:
+              - default: 0
+                format: integer
+                type: string
+              - minimum: 1
+                type: integer
+            minimum: 1
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventSchema"
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Get event schema version
+      tags:
+        - Event Schemas
+    patch:
+      operationId: patchApiEvent-schemasByIdVersionsByVersion
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+        - in: path
+          name: version
+          required: true
+          schema:
+            anyOf:
+              - default: 0
+                format: integer
+                type: string
+              - minimum: 1
+                type: integer
+            minimum: 1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateEventSchemaBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventSchema"
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Update event schema version
+      tags:
+        - Event Schemas
   /api/game-modes:
     get:
       operationId: getApiGame-modes
@@ -3955,8 +4476,8 @@ paths:
       tags:
         - Matches
   /api/matches/{id}/events:
-    post:
-      operationId: postApiMatchesByIdEvents
+    get:
+      operationId: getApiMatchesByIdEvents
       parameters:
         - in: path
           name: id
@@ -3966,18 +4487,31 @@ paths:
             minLength: 8
             pattern: ^[a-z2-9]{8}$
             type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/AppendMatchEventsBody"
-        required: true
+        - in: query
+          name: limit
+          required: false
+          schema:
+            anyOf:
+              - default: 0
+                format: integer
+                type: string
+              - maximum: 100
+                minimum: 1
+                type: integer
+            maximum: 100
+            minimum: 1
+        - in: query
+          name: cursor
+          required: false
+          schema:
+            minLength: 1
+            type: string
       responses:
         "200":
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Match"
+                $ref: "#/components/schemas/ListMatchEvents"
           description: Response for status 200
         "400":
           content:
@@ -4003,9 +4537,118 @@ paths:
               schema:
                 $ref: "#/components/schemas/InternalServerError"
           description: Response for status 500
-      summary: Append match player events
+      summary: List match events
       tags:
-        - Matches
+        - Match Events
+    post:
+      operationId: postApiMatchesByIdEvents
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            maxLength: 8
+            minLength: 8
+            pattern: ^[a-z2-9]{8}$
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddMatchEventBody"
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MatchEvent"
+          description: Response for status 201
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Add match event
+      tags:
+        - Match Events
+  /api/matches/{id}/events/{eventId}:
+    patch:
+      operationId: patchApiMatchesByIdEventsByEventId
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            maxLength: 8
+            minLength: 8
+            pattern: ^[a-z2-9]{8}$
+            type: string
+        - in: path
+          name: eventId
+          required: true
+          schema:
+            format: uuid
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DisableMatchEventBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MatchEvent"
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Disable match event
+      tags:
+        - Match Events
   /api/matches/{id}/metrics:
     get:
       operationId: getApiMatchesByIdMetrics
@@ -4104,180 +4747,6 @@ paths:
       summary: Associate a match recording
       tags:
         - Matches
-  /api/matches/{id}/stat-events:
-    get:
-      operationId: getApiMatchesByIdStat-events
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            maxLength: 8
-            minLength: 8
-            pattern: ^[a-z2-9]{8}$
-            type: string
-        - in: query
-          name: limit
-          required: false
-          schema:
-            anyOf:
-              - default: 0
-                format: integer
-                type: string
-              - maximum: 100
-                minimum: 1
-                type: integer
-            maximum: 100
-            minimum: 1
-        - in: query
-          name: cursor
-          required: false
-          schema:
-            minLength: 1
-            type: string
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ListMatchStatEvents"
-          description: Response for status 200
-        "400":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/BadRequestOrValidationError"
-          description: Response for status 400
-        "401":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/UnauthorizedError"
-          description: Response for status 401
-        "404":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/NotFoundError"
-          description: Response for status 404
-        "500":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/InternalServerError"
-          description: Response for status 500
-      summary: List match stat events
-      tags:
-        - Match Stat Events
-    post:
-      operationId: postApiMatchesByIdStat-events
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            maxLength: 8
-            minLength: 8
-            pattern: ^[a-z2-9]{8}$
-            type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/AddMatchStatEventBody"
-        required: true
-      responses:
-        "201":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MatchStatEvent"
-          description: Response for status 201
-        "400":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/BadRequestOrValidationError"
-          description: Response for status 400
-        "401":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/UnauthorizedError"
-          description: Response for status 401
-        "404":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/NotFoundError"
-          description: Response for status 404
-        "500":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/InternalServerError"
-          description: Response for status 500
-      summary: Add match stat event
-      tags:
-        - Match Stat Events
-  /api/matches/{id}/stat-events/{eventId}:
-    patch:
-      operationId: patchApiMatchesByIdStat-eventsByEventId
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            maxLength: 8
-            minLength: 8
-            pattern: ^[a-z2-9]{8}$
-            type: string
-        - in: path
-          name: eventId
-          required: true
-          schema:
-            format: uuid
-            type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/DisableMatchStatEventBody"
-        required: true
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MatchStatEvent"
-          description: Response for status 200
-        "400":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/BadRequestOrValidationError"
-          description: Response for status 400
-        "401":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/UnauthorizedError"
-          description: Response for status 401
-        "404":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/NotFoundError"
-          description: Response for status 404
-        "500":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/InternalServerError"
-          description: Response for status 500
-      summary: Disable match stat event
-      tags:
-        - Match Stat Events
   /api/permissions:
     get:
       operationId: getApiPermissions
@@ -6114,405 +6583,6 @@ paths:
       summary: Resolve room player session
       tags:
         - Sessions
-  /api/stat-event-schemas:
-    get:
-      operationId: getApiStat-event-schemas
-      parameters:
-        - in: query
-          name: limit
-          required: false
-          schema:
-            anyOf:
-              - default: 0
-                format: integer
-                type: string
-              - maximum: 100
-                minimum: 1
-                type: integer
-            maximum: 100
-            minimum: 1
-        - in: query
-          name: cursor
-          required: false
-          schema:
-            minLength: 1
-            type: string
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ListStatEventSchemas"
-          description: Response for status 200
-        "400":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/BadRequestOrValidationError"
-          description: Response for status 400
-        "401":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/UnauthorizedError"
-          description: Response for status 401
-        "500":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/InternalServerError"
-          description: Response for status 500
-      summary: List stat event schemas
-      tags:
-        - Stat Event Schemas
-    post:
-      operationId: postApiStat-event-schemas
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CreateStatEventSchemaBody"
-        required: true
-      responses:
-        "201":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/StatEventSchema"
-          description: Response for status 201
-        "400":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/BadRequestOrValidationError"
-          description: Response for status 400
-        "401":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/UnauthorizedError"
-          description: Response for status 401
-        "500":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/InternalServerError"
-          description: Response for status 500
-      summary: Create stat event schema
-      tags:
-        - Stat Event Schemas
-  /api/stat-event-schemas/by-name/{name}:
-    get:
-      operationId: getApiStat-event-schemasBy-nameByName
-      parameters:
-        - in: path
-          name: name
-          required: true
-          schema:
-            maxLength: 64
-            minLength: 1
-            pattern: ^[a-z][a-z0-9-]{0,63}$
-            type: string
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/StatEventSchema"
-          description: Response for status 200
-        "400":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/BadRequestOrValidationError"
-          description: Response for status 400
-        "401":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/UnauthorizedError"
-          description: Response for status 401
-        "404":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/NotFoundError"
-          description: Response for status 404
-        "500":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/InternalServerError"
-          description: Response for status 500
-      summary: Get latest stat event schema by name
-      tags:
-        - Stat Event Schemas
-  /api/stat-event-schemas/by-name/{name}/versions/{version}:
-    get:
-      operationId: getApiStat-event-schemasBy-nameByNameVersionsByVersion
-      parameters:
-        - in: path
-          name: name
-          required: true
-          schema:
-            maxLength: 64
-            minLength: 1
-            pattern: ^[a-z][a-z0-9-]{0,63}$
-            type: string
-        - in: path
-          name: version
-          required: true
-          schema:
-            anyOf:
-              - default: 0
-                format: integer
-                type: string
-              - minimum: 1
-                type: integer
-            minimum: 1
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/StatEventSchema"
-          description: Response for status 200
-        "400":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/BadRequestOrValidationError"
-          description: Response for status 400
-        "401":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/UnauthorizedError"
-          description: Response for status 401
-        "404":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/NotFoundError"
-          description: Response for status 404
-        "500":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/InternalServerError"
-          description: Response for status 500
-      summary: Get stat event schema version by name
-      tags:
-        - Stat Event Schemas
-  /api/stat-event-schemas/{id}:
-    get:
-      operationId: getApiStat-event-schemasById
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            format: uuid
-            type: string
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/StatEventSchema"
-          description: Response for status 200
-        "400":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/BadRequestOrValidationError"
-          description: Response for status 400
-        "401":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/UnauthorizedError"
-          description: Response for status 401
-        "404":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/NotFoundError"
-          description: Response for status 404
-        "500":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/InternalServerError"
-          description: Response for status 500
-      summary: Get latest stat event schema
-      tags:
-        - Stat Event Schemas
-  /api/stat-event-schemas/{id}/versions:
-    post:
-      operationId: postApiStat-event-schemasByIdVersions
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            format: uuid
-            type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PublishStatEventSchemaVersionBody"
-        required: true
-      responses:
-        "201":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/StatEventSchema"
-          description: Response for status 201
-        "400":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/BadRequestOrValidationError"
-          description: Response for status 400
-        "401":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/UnauthorizedError"
-          description: Response for status 401
-        "404":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/NotFoundError"
-          description: Response for status 404
-        "500":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/InternalServerError"
-          description: Response for status 500
-      summary: Publish stat event schema version
-      tags:
-        - Stat Event Schemas
-  /api/stat-event-schemas/{id}/versions/{version}:
-    get:
-      operationId: getApiStat-event-schemasByIdVersionsByVersion
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            format: uuid
-            type: string
-        - in: path
-          name: version
-          required: true
-          schema:
-            anyOf:
-              - default: 0
-                format: integer
-                type: string
-              - minimum: 1
-                type: integer
-            minimum: 1
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/StatEventSchema"
-          description: Response for status 200
-        "400":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/BadRequestOrValidationError"
-          description: Response for status 400
-        "401":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/UnauthorizedError"
-          description: Response for status 401
-        "404":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/NotFoundError"
-          description: Response for status 404
-        "500":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/InternalServerError"
-          description: Response for status 500
-      summary: Get stat event schema version
-      tags:
-        - Stat Event Schemas
-    patch:
-      operationId: patchApiStat-event-schemasByIdVersionsByVersion
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            format: uuid
-            type: string
-        - in: path
-          name: version
-          required: true
-          schema:
-            anyOf:
-              - default: 0
-                format: integer
-                type: string
-              - minimum: 1
-                type: integer
-            minimum: 1
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/UpdateStatEventSchemaBody"
-        required: true
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/StatEventSchema"
-          description: Response for status 200
-        "400":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/BadRequestOrValidationError"
-          description: Response for status 400
-        "401":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/UnauthorizedError"
-          description: Response for status 401
-        "404":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/NotFoundError"
-          description: Response for status 404
-        "500":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/InternalServerError"
-          description: Response for status 500
-      summary: Update stat event schema version
-      tags:
-        - Stat Event Schemas
   /api/values/bulk:
     post:
       operationId: postApiValuesBulk

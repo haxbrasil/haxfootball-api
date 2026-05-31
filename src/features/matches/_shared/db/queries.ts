@@ -2,17 +2,16 @@ import { and, asc, desc, eq, inArray, sql, type SQL } from "drizzle-orm";
 import { db, type DbTransaction } from "@/db/client";
 import { accounts } from "@/features/accounts/db";
 import { gameModes } from "@/features/game-modes/db";
-import { matchStatEvents } from "@/features/match-stat-events/db";
+import { matchEvents } from "@/features/match-events/db";
 import { deriveMatchStints } from "@/features/matches/_shared/domain/stints";
 import type {
   ListMatchesQuery,
-  MatchPlayerEventInput,
+  MatchEventInput,
   MatchScore
 } from "@/features/matches/_shared/http/inputs";
 import type { MatchDetailRow } from "@/features/matches/_shared/http/responses";
 import type { MatchSummaryRow } from "@/features/matches/_shared/http/responses";
 import {
-  matchPlayerEvents,
   matchPlayerStints,
   matches,
   matchTeamMetadata
@@ -21,16 +20,17 @@ import { validateMatchEvents } from "@/features/matches/_shared/domain/validatio
 import { players, type Player } from "@/features/players/db";
 import { recordings } from "@/features/recordings/db";
 import {
-  statEventSchemaFamilies,
-  statEventSchemaVersions
-} from "@/features/stat-event-schemas/db";
-import { resolveStatEventSchemaVersion } from "@/features/stat-event-schemas/read-stat-event-schema";
+  eventSchemaFamilies,
+  eventSchemaVersions
+} from "@/features/event-schemas/db";
+import { resolveEventSchemaVersion } from "@/features/event-schemas/read-event-schema";
 import { badRequest, notFound } from "@/shared/http/errors";
-import { cursorAfter, cursorSort, pageLimit } from "@lib";
+import { cursorAfter, cursorSort, pageLimit, type JsonValue } from "@lib";
 
-export type PersistedMatchEvent = MatchPlayerEventInput & {
+export type PersistedMatchEvent = MatchEventInput & {
   sequence: number;
-  player: Player;
+  actorPlayer: Player | null;
+  subjectPlayer: Player | null;
 };
 
 type MatchPersistenceDb = typeof db | DbTransaction;
@@ -54,19 +54,19 @@ export async function listMatchSummaries(
       match: matches,
       recording: recordings,
       gameMode: gameModes,
-      statEventSchemaFamily: statEventSchemaFamilies,
-      statEventSchemaVersion: statEventSchemaVersions
+      eventSchemaFamily: eventSchemaFamilies,
+      eventSchemaVersion: eventSchemaVersions
     })
     .from(matches)
     .leftJoin(recordings, eq(matches.recordingId, recordings.id))
     .leftJoin(gameModes, eq(matches.gameModeId, gameModes.id))
     .leftJoin(
-      statEventSchemaVersions,
-      eq(matches.statEventSchemaVersionId, statEventSchemaVersions.id)
+      eventSchemaVersions,
+      eq(matches.eventSchemaVersionId, eventSchemaVersions.id)
     )
     .leftJoin(
-      statEventSchemaFamilies,
-      eq(statEventSchemaVersions.familyId, statEventSchemaFamilies.id)
+      eventSchemaFamilies,
+      eq(eventSchemaVersions.familyId, eventSchemaFamilies.id)
     )
     .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(cursorSort(matches.id, "desc"))
@@ -88,19 +88,19 @@ export async function getMatchSummary(
       match: matches,
       recording: recordings,
       gameMode: gameModes,
-      statEventSchemaFamily: statEventSchemaFamilies,
-      statEventSchemaVersion: statEventSchemaVersions
+      eventSchemaFamily: eventSchemaFamilies,
+      eventSchemaVersion: eventSchemaVersions
     })
     .from(matches)
     .leftJoin(recordings, eq(matches.recordingId, recordings.id))
     .leftJoin(gameModes, eq(matches.gameModeId, gameModes.id))
     .leftJoin(
-      statEventSchemaVersions,
-      eq(matches.statEventSchemaVersionId, statEventSchemaVersions.id)
+      eventSchemaVersions,
+      eq(matches.eventSchemaVersionId, eventSchemaVersions.id)
     )
     .leftJoin(
-      statEventSchemaFamilies,
-      eq(statEventSchemaVersions.familyId, statEventSchemaFamilies.id)
+      eventSchemaFamilies,
+      eq(eventSchemaVersions.familyId, eventSchemaFamilies.id)
     )
     .where(eq(matches.publicId, publicId));
 
@@ -114,7 +114,7 @@ export async function getMatchSummary(
   };
 }
 
-export async function resolveMatchStatEventSchemaVersionId(
+export async function resolveMatchEventSchemaVersionId(
   input: { id: string; version: number } | null | undefined
 ): Promise<number | null | undefined> {
   if (input === undefined) {
@@ -125,23 +125,21 @@ export async function resolveMatchStatEventSchemaVersionId(
     return null;
   }
 
-  const version = await resolveStatEventSchemaVersion(input.id, input.version);
+  const version = await resolveEventSchemaVersion(input.id, input.version);
 
   return version.id;
 }
 
-export async function assertMatchStatEventSchemaCanChange(
+export async function assertMatchEventSchemaCanChange(
   matchId: number
 ): Promise<void> {
   const [{ count }] = await db
     .select({ count: sql<number>`count(*)` })
-    .from(matchStatEvents)
-    .where(eq(matchStatEvents.matchId, matchId));
+    .from(matchEvents)
+    .where(eq(matchEvents.matchId, matchId));
 
   if (count > 0) {
-    throw badRequest(
-      "Match stat event schema cannot be changed after stat events exist"
-    );
+    throw badRequest("Match event schema cannot be changed after events exist");
   }
 }
 
@@ -150,13 +148,11 @@ export async function assertMatchGameModeCanChange(
 ): Promise<void> {
   const [{ count }] = await db
     .select({ count: sql<number>`count(*)` })
-    .from(matchStatEvents)
-    .where(eq(matchStatEvents.matchId, matchId));
+    .from(matchEvents)
+    .where(eq(matchEvents.matchId, matchId));
 
   if (count > 0) {
-    throw badRequest(
-      "Match game mode cannot be changed after stat events exist"
-    );
+    throw badRequest("Match game mode cannot be changed after events exist");
   }
 }
 
@@ -223,7 +219,7 @@ export async function persistMatchScore(
 
 export async function persistMatchEvents(
   matchId: number,
-  events: MatchPlayerEventInput[],
+  events: MatchEventInput[],
   startSequence = 1,
   database: MatchPersistenceDb = db
 ): Promise<void> {
@@ -245,36 +241,46 @@ export async function persistResolvedMatchEvents(
     return;
   }
 
-  await database.insert(matchPlayerEvents).values(
+  await database.insert(matchEvents).values(
     persistedEvents.map((event) => ({
+      uuid: crypto.randomUUID(),
       matchId,
+      schemaVersionId:
+        event.domain === "game"
+          ? sql`(select event_schema_version_id from matches where id = ${matchId})`
+          : null,
       sequence: event.sequence,
+      domain: event.domain,
       type: event.type,
-      playerId: event.player.id,
+      scope: event.scope,
+      actorPlayerId: event.actorPlayer?.id ?? null,
+      subjectPlayerId: event.subjectPlayer?.id ?? null,
       team: event.team ?? null,
       roomPlayerId: event.roomPlayerId ?? null,
+      playId: event.playId ?? null,
+      sourceState: event.sourceState ?? null,
+      value: event.value as JsonValue,
       occurredAt: event.occurredAt ?? null,
-      elapsedSeconds: event.elapsedSeconds ?? null
+      elapsedSeconds: event.elapsedSeconds ?? null,
+      tick: event.tick ?? null
     }))
   );
 }
 
 export async function replaceMatchEvents(
   matchId: number,
-  events: MatchPlayerEventInput[]
+  events: MatchEventInput[]
 ): Promise<void> {
-  await db
-    .delete(matchPlayerEvents)
-    .where(eq(matchPlayerEvents.matchId, matchId));
+  await db.delete(matchEvents).where(eq(matchEvents.matchId, matchId));
   await persistMatchEvents(matchId, events);
 }
 
 export async function nextMatchEventSequence(matchId: number): Promise<number> {
   const rows = await db
-    .select({ sequence: matchPlayerEvents.sequence })
-    .from(matchPlayerEvents)
-    .where(eq(matchPlayerEvents.matchId, matchId))
-    .orderBy(desc(matchPlayerEvents.sequence));
+    .select({ sequence: matchEvents.sequence })
+    .from(matchEvents)
+    .where(eq(matchEvents.matchId, matchId))
+    .orderBy(desc(matchEvents.sequence));
 
   return (rows[0]?.sequence ?? 0) + 1;
 }
@@ -309,14 +315,18 @@ export async function recomputeMatchStints(
 }
 
 export async function resolveMatchEvents(
-  events: MatchPlayerEventInput[],
+  events: MatchEventInput[],
   startSequence: number,
   database: MatchPersistenceDb = db
 ): Promise<PersistedMatchEvent[]> {
   validateMatchEvents(events);
 
   const externalIds = Array.from(
-    new Set(events.map((event) => event.playerId))
+    new Set(
+      events
+        .flatMap((event) => [event.actorPlayerId, event.subjectPlayerId])
+        .filter((id): id is string => !!id)
+    )
   );
 
   const playerRows =
@@ -340,16 +350,15 @@ export async function resolveMatchEvents(
   }
 
   return events.map((event, index) => {
-    const player = playerByExternalId.get(event.playerId);
-
-    if (!player) {
-      throw notFound("Player not found");
-    }
-
     return {
       ...event,
       sequence: startSequence + index,
-      player
+      actorPlayer: event.actorPlayerId
+        ? (playerByExternalId.get(event.actorPlayerId) ?? null)
+        : null,
+      subjectPlayer: event.subjectPlayerId
+        ? (playerByExternalId.get(event.subjectPlayerId) ?? null)
+        : null
     };
   });
 }
@@ -365,26 +374,47 @@ async function listMatchEvents(
   matchId: number,
   database: MatchPersistenceDb = db
 ) {
-  return database
-    .select({
-      id: matchPlayerEvents.id,
-      matchId: matchPlayerEvents.matchId,
-      sequence: matchPlayerEvents.sequence,
-      type: matchPlayerEvents.type,
-      playerId: matchPlayerEvents.playerId,
-      team: matchPlayerEvents.team,
-      roomPlayerId: matchPlayerEvents.roomPlayerId,
-      occurredAt: matchPlayerEvents.occurredAt,
-      elapsedSeconds: matchPlayerEvents.elapsedSeconds,
-      createdAt: matchPlayerEvents.createdAt,
-      player: players,
-      account: accounts
-    })
-    .from(matchPlayerEvents)
-    .innerJoin(players, eq(matchPlayerEvents.playerId, players.id))
-    .leftJoin(accounts, eq(players.accountId, accounts.id))
-    .where(eq(matchPlayerEvents.matchId, matchId))
-    .orderBy(asc(matchPlayerEvents.sequence));
+  const events = await database
+    .select()
+    .from(matchEvents)
+    .where(eq(matchEvents.matchId, matchId))
+    .orderBy(asc(matchEvents.sequence));
+  const playerIds = Array.from(
+    new Set(
+      events
+        .flatMap((event) => [event.actorPlayerId, event.subjectPlayerId])
+        .filter((id): id is number => id !== null)
+    )
+  );
+  const playerRows =
+    playerIds.length > 0
+      ? await database
+          .select({
+            player: players,
+            account: accounts
+          })
+          .from(players)
+          .leftJoin(accounts, eq(players.accountId, accounts.id))
+          .where(inArray(players.id, playerIds))
+      : [];
+  const playerById = new Map(playerRows.map((row) => [row.player.id, row]));
+
+  return events.map((event) => {
+    const actor = event.actorPlayerId
+      ? playerById.get(event.actorPlayerId)
+      : null;
+    const subject = event.subjectPlayerId
+      ? playerById.get(event.subjectPlayerId)
+      : null;
+
+    return {
+      ...event,
+      actorPlayer: actor?.player ?? null,
+      actorAccount: actor?.account ?? null,
+      subjectPlayer: subject?.player ?? null,
+      subjectAccount: subject?.account ?? null
+    };
+  });
 }
 
 async function listMatchStints(matchId: number) {

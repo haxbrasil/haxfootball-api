@@ -497,9 +497,12 @@ describe("sessions", () => {
         status: "ongoing",
         events: [
           {
-            type: "player_join",
-            playerId: session.playerId,
+            type: "player-joined",
+            domain: "room",
+            scope: "player",
+            actorPlayerId: session.playerId,
             team: "red",
+            value: {},
             roomPlayerId: 17
           }
         ]
@@ -510,7 +513,7 @@ describe("sessions", () => {
 
     const match = await createMatchResponse.json();
 
-    expect(match.events[0].player).toMatchObject({
+    expect(match.events[0].actorPlayer).toMatchObject({
       id: session.playerId,
       account
     });
@@ -520,7 +523,7 @@ describe("sessions", () => {
     });
   });
 
-  it("hydrates account data on stat events and metrics", async () => {
+  it("hydrates account data on events and metrics", async () => {
     const accountResponse = await request("/api/accounts", {
       method: "POST",
       body: {
@@ -544,7 +547,7 @@ describe("sessions", () => {
         password: "pass1234"
       }
     });
-    const schemaResponse = await request("/api/stat-event-schemas", {
+    const schemaResponse = await request("/api/event-schemas", {
       method: "POST",
       body: {
         name: uniqueName("session-stats"),
@@ -558,6 +561,7 @@ describe("sessions", () => {
               },
               aggregations: [
                 {
+                  target: "actor",
                   metric: "points",
                   initial: 0,
                   step: {
@@ -591,7 +595,7 @@ describe("sessions", () => {
       method: "POST",
       body: {
         status: "ongoing",
-        statEventSchema: {
+        eventSchema: {
           id: schema.id,
           version: schema.version
         }
@@ -601,20 +605,22 @@ describe("sessions", () => {
     expect(matchResponse.status).toBe(201);
 
     const match = await matchResponse.json();
-    const addResponse = await request(`/api/matches/${match.id}/stat-events`, {
+    const addResponse = await request(`/api/matches/${match.id}/events`, {
       method: "POST",
       body: {
         type: "touchdown",
-        playerId: session.playerId,
+        domain: "game",
+        scope: "player",
+        actorPlayerId: session.playerId,
         value: 6
       }
     });
-    const listResponse = await request(`/api/matches/${match.id}/stat-events`);
+    const listResponse = await request(`/api/matches/${match.id}/events`);
     const metricsResponse = await request(`/api/matches/${match.id}/metrics`);
 
     expect(addResponse.status).toBe(201);
     expect(await addResponse.json()).toMatchObject({
-      player: {
+      actorPlayer: {
         id: session.playerId,
         account
       }
@@ -623,7 +629,7 @@ describe("sessions", () => {
     expect(listResponse.status).toBe(200);
     expect(await paginatedItems(listResponse)).toContainEqual(
       expect.objectContaining({
-        player: expect.objectContaining({
+        actorPlayer: expect.objectContaining({
           id: session.playerId,
           account
         })

@@ -8,7 +8,7 @@ import {
 import { gameModes } from "@/features/game-modes/db";
 import { players } from "@/features/players/db";
 import { recordings } from "@/features/recordings/db";
-import { statEventSchemaVersions } from "@/features/stat-event-schemas/db";
+import { eventSchemaVersions } from "@/features/event-schemas/db";
 
 export const matches = sqliteTable(
   "matches",
@@ -20,9 +20,9 @@ export const matches = sqliteTable(
       .references(() => recordings.id)
       .unique(),
     gameModeId: integer("game_mode_id").references(() => gameModes.id),
-    statEventSchemaVersionId: integer(
-      "stat_event_schema_version_id"
-    ).references(() => statEventSchemaVersions.id),
+    eventSchemaVersionId: integer("event_schema_version_id").references(
+      () => eventSchemaVersions.id
+    ),
     initiatedAt: text("initiated_at"),
     endedAt: text("ended_at"),
     createdAt: text("created_at")
@@ -33,9 +33,9 @@ export const matches = sqliteTable(
       .$defaultFn(() => new Date().toISOString())
   },
   (table) => [
-    uniqueIndex("matches_id_stat_event_schema_version_id_unique").on(
+    uniqueIndex("matches_id_event_schema_version_id_unique").on(
       table.id,
-      table.statEventSchemaVersionId
+      table.eventSchemaVersionId
     )
   ]
 );
@@ -64,36 +64,6 @@ export const matchTeamMetadata = sqliteTable(
   ]
 );
 
-export const matchPlayerEvents = sqliteTable(
-  "match_player_events",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    matchId: integer("match_id")
-      .notNull()
-      .references(() => matches.id),
-    sequence: integer("sequence").notNull(),
-    type: text("type", {
-      enum: ["player_join", "player_leave", "player_team_change"]
-    }).notNull(),
-    playerId: integer("player_id")
-      .notNull()
-      .references(() => players.id),
-    team: text("team", { enum: ["spectators", "red", "blue"] }),
-    roomPlayerId: integer("room_player_id"),
-    occurredAt: text("occurred_at"),
-    elapsedSeconds: real("elapsed_seconds"),
-    createdAt: text("created_at")
-      .notNull()
-      .$defaultFn(() => new Date().toISOString())
-  },
-  (table) => [
-    uniqueIndex("match_player_events_match_id_sequence_unique").on(
-      table.matchId,
-      table.sequence
-    )
-  ]
-);
-
 export const matchPlayerStints = sqliteTable("match_player_stints", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   matchId: integer("match_id")
@@ -115,5 +85,4 @@ export const matchPlayerStints = sqliteTable("match_player_stints", {
 
 export type Match = typeof matches.$inferSelect;
 export type MatchTeamMetadata = typeof matchTeamMetadata.$inferSelect;
-export type MatchPlayerEvent = typeof matchPlayerEvents.$inferSelect;
 export type MatchPlayerStint = typeof matchPlayerStints.$inferSelect;

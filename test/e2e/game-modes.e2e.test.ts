@@ -30,7 +30,7 @@ type PlayerResponse = {
   id: string;
 };
 
-type StatEventSchemaResponse = {
+type EventSchemaResponse = {
   id: string;
   name: string;
   version: number;
@@ -282,7 +282,7 @@ describe("game modes", () => {
   });
 
   it("filters aggregate metrics by game mode", async () => {
-    const schemaResponse = await request("/api/stat-event-schemas", {
+    const schemaResponse = await request("/api/event-schemas", {
       method: "POST",
       body: {
         name: uniqueName("game-mode-schema"),
@@ -295,6 +295,7 @@ describe("game modes", () => {
               },
               aggregations: [
                 {
+                  target: "actor",
                   metric: "points",
                   initial: 0,
                   step: {
@@ -339,7 +340,7 @@ describe("game modes", () => {
     expect(schemaResponse.status).toBe(201);
     expect(playerResponse.status).toBe(201);
 
-    const schema: StatEventSchemaResponse = await schemaResponse.json();
+    const schema: EventSchemaResponse = await schemaResponse.json();
     const player: PlayerResponse = await playerResponse.json();
     const firstMode = await expectCreatedGameMode(firstModeResponse);
     const secondMode = await expectCreatedGameMode(secondModeResponse);
@@ -351,7 +352,7 @@ describe("game modes", () => {
         gameMode: {
           name: firstMode.name
         },
-        statEventSchema: {
+        eventSchema: {
           id: schema.id,
           version: schema.version
         }
@@ -364,7 +365,7 @@ describe("game modes", () => {
         gameMode: {
           name: secondMode.name
         },
-        statEventSchema: {
+        eventSchema: {
           id: schema.id,
           version: schema.version
         }
@@ -378,23 +379,27 @@ describe("game modes", () => {
     const secondMatch: MatchResponse = await secondMatchResponse.json();
 
     const firstStatEventResponse = await request(
-      `/api/matches/${firstMatch.id}/stat-events`,
+      `/api/matches/${firstMatch.id}/events`,
       {
         method: "POST",
         body: {
           type: "score",
-          playerId: player.id,
+          domain: "game",
+          scope: "player",
+          actorPlayerId: player.id,
           value: 3
         }
       }
     );
     const secondStatEventResponse = await request(
-      `/api/matches/${secondMatch.id}/stat-events`,
+      `/api/matches/${secondMatch.id}/events`,
       {
         method: "POST",
         body: {
           type: "score",
-          playerId: player.id,
+          domain: "game",
+          scope: "player",
+          actorPlayerId: player.id,
           value: 9
         }
       }

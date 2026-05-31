@@ -179,9 +179,12 @@ describe("players", () => {
         },
         events: [
           {
-            type: "player_join",
-            playerId: player.id,
+            type: "player-joined",
+            domain: "room",
+            scope: "player",
+            actorPlayerId: player.id,
             team: "red",
+            value: {},
             roomPlayerId: 10,
             occurredAt: "2026-05-10T12:00:00.000Z",
             elapsedSeconds: 0
@@ -207,7 +210,7 @@ describe("players", () => {
       },
       recording: null,
       gameMode: null,
-      statEventSchema: null,
+      eventSchema: null,
       createdAt: match.createdAt,
       updatedAt: match.updatedAt
     });

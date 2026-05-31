@@ -2,7 +2,7 @@ import { type Static, t } from "elysia";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import {
-  matchPlayerEventInputSchema,
+  matchEventInputSchema,
   matchScoreSchema,
   matchStatusSchema
 } from "@/features/matches/_shared/http/inputs";
@@ -19,13 +19,13 @@ import {
   persistResolvedMatchEvents,
   persistMatchScore,
   resolveMatchEvents,
-  resolveMatchStatEventSchemaVersionId,
+  resolveMatchEventSchemaVersionId,
   recomputeMatchStints
 } from "@/features/matches/_shared/db/queries";
 import { gameModeReferenceSchema } from "@/features/game-modes/http";
 import { resolveGameModeId } from "@/features/game-modes/read-game-mode";
 import { assertCompletedMatchFields } from "@/features/matches/_shared/domain/validation";
-import { statEventSchemaReferenceSchema } from "@/features/stat-event-schemas/http";
+import { eventSchemaReferenceSchema } from "@/features/event-schemas/http";
 import { badRequest } from "@/shared/http/errors";
 
 export const createMatchBodySchema = t.Object({
@@ -35,8 +35,8 @@ export const createMatchBodySchema = t.Object({
   score: t.Optional(matchScoreSchema),
   recordingId: t.Optional(t.String({ minLength: 1 })),
   gameMode: t.Optional(gameModeReferenceSchema),
-  statEventSchema: t.Optional(statEventSchemaReferenceSchema),
-  events: t.Optional(t.Array(matchPlayerEventInputSchema))
+  eventSchema: t.Optional(eventSchemaReferenceSchema),
+  events: t.Optional(t.Array(matchEventInputSchema))
 });
 
 export { matchResponseSchema as createMatchResponseSchema };
@@ -54,8 +54,8 @@ export async function createMatch(
     : null;
   const recordingId = recording?.id;
   const gameModeId = await resolveGameModeId(input.gameMode);
-  const statEventSchemaVersionId = await resolveMatchStatEventSchemaVersionId(
-    input.statEventSchema
+  const eventSchemaVersionId = await resolveMatchEventSchemaVersionId(
+    input.eventSchema
   );
   const initialEvents = input.events ?? [];
   const persistedInitialEvents = await resolveMatchEvents(initialEvents, 1);
@@ -64,7 +64,7 @@ export async function createMatch(
     status: input.status,
     recordingId,
     gameModeId,
-    statEventSchemaVersionId,
+    eventSchemaVersionId,
     initiatedAt: input.initiatedAt,
     endedAt: input.endedAt
   };

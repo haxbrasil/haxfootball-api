@@ -1,8 +1,9 @@
 import type {
-  MatchPlayerEventInput,
+  MatchEventInput,
   MatchScore,
   MatchStatus
 } from "@/features/matches/_shared/http/inputs";
+import { validateNativeRoomEvent } from "@/features/match-events/_shared/domain/native-room-events";
 import type { Match } from "@/features/matches/db";
 import { badRequest } from "@/shared/http/errors";
 
@@ -30,19 +31,7 @@ export function assertCompletedMatchFields(input: {
   }
 }
 
-export function validateMatchEvents(events: MatchPlayerEventInput[]): void {
-  const eventWithInvalidLeaveTeam = events.find(hasInvalidLeaveTeam);
-
-  if (eventWithInvalidLeaveTeam) {
-    throw badRequest("Player leave events cannot include a team");
-  }
-
-  const eventWithMissingTeam = events.find(hasMissingJoinOrTeamChangeTeam);
-
-  if (eventWithMissingTeam) {
-    throw badRequest("Player join and team change events must include a team");
-  }
-
+export function validateMatchEvents(events: MatchEventInput[]): void {
   const eventWithPartialTime = events.find(hasPartialTime);
 
   if (eventWithPartialTime) {
@@ -50,24 +39,36 @@ export function validateMatchEvents(events: MatchPlayerEventInput[]): void {
       "Player event occurredAt and elapsedSeconds must be provided together"
     );
   }
+
+  const playerScopedEventWithoutPlayer = events.find(
+    (event) =>
+      event.scope === "player" && !event.actorPlayerId && !event.subjectPlayerId
+  );
+
+  if (playerScopedEventWithoutPlayer) {
+    throw badRequest(
+      "Player-scoped events require actorPlayerId or subjectPlayerId"
+    );
+  }
+
+  const teamScopedEventWithoutTeam = events.find(
+    (event) => event.scope === "team" && !event.team
+  );
+
+  if (teamScopedEventWithoutTeam) {
+    throw badRequest("Team-scoped events require team");
+  }
+
+  for (const event of events) {
+    validateNativeRoomEvent(event);
+  }
 }
 
-function hasInvalidLeaveTeam(event: MatchPlayerEventInput): boolean {
-  const isLeaveEvent = event.type === "player_leave";
-  const hasTeam = event.team !== undefined;
+function hasPartialTime(event: MatchEventInput): boolean {
+  if (event.domain !== "room") {
+    return false;
+  }
 
-  return isLeaveEvent && hasTeam;
-}
-
-function hasMissingJoinOrTeamChangeTeam(event: MatchPlayerEventInput): boolean {
-  const isLeaveEvent = event.type === "player_leave";
-  const requiresTeam = !isLeaveEvent;
-  const hasTeam = !!event.team;
-
-  return requiresTeam && !hasTeam;
-}
-
-function hasPartialTime(event: MatchPlayerEventInput): boolean {
   const hasOccurredAt = event.occurredAt !== undefined;
   const hasElapsedSeconds = event.elapsedSeconds !== undefined;
 

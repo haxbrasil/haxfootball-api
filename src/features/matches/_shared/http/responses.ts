@@ -7,19 +7,21 @@ import {
 import type { GameMode } from "@/features/game-modes/db";
 import type {
   Match,
-  MatchPlayerEvent,
   MatchPlayerStint,
   MatchTeamMetadata
 } from "@/features/matches/db";
 import {
   matchFieldTeamSchema,
-  matchPlayerEventTypeSchema,
   matchPublicIdSchema,
   matchScoreSchema,
   matchStatusSchema,
-  matchTeamSchema,
   type MatchScore
 } from "@/features/matches/_shared/http/inputs";
+import {
+  matchEventResponseSchema,
+  toMatchEventResponse,
+  type MatchEventRow
+} from "@/features/match-events/http";
 import {
   playerResponseSchema,
   toPlayerResponse
@@ -30,22 +32,12 @@ import {
   toRecordingResponse
 } from "@/features/recordings/http";
 import type { Recording } from "@/features/recordings/db";
-import { statEventSchemaReferenceSchema } from "@/features/stat-event-schemas/http";
+import { eventSchemaReferenceSchema } from "@/features/event-schemas/http";
 import type {
-  StatEventSchemaFamily,
-  StatEventSchemaVersion
-} from "@/features/stat-event-schemas/db";
+  EventSchemaFamily,
+  EventSchemaVersion
+} from "@/features/event-schemas/db";
 import { paginatedResponseSchema } from "@lib";
-
-export const matchPlayerEventResponseSchema = t.Object({
-  sequence: t.Number(),
-  type: matchPlayerEventTypeSchema,
-  player: playerResponseSchema,
-  team: t.Nullable(matchTeamSchema),
-  roomPlayerId: t.Nullable(t.Number()),
-  occurredAt: t.Nullable(t.String()),
-  elapsedSeconds: t.Nullable(t.Number())
-});
 
 export const matchPlayerStintResponseSchema = t.Object({
   player: playerResponseSchema,
@@ -65,7 +57,7 @@ export const matchSummaryResponseSchema = t.Object({
   score: t.Nullable(matchScoreSchema),
   recording: t.Nullable(recordingResponseSchema),
   gameMode: t.Nullable(gameModeResponseSchema),
-  statEventSchema: t.Nullable(statEventSchemaReferenceSchema),
+  eventSchema: t.Nullable(eventSchemaReferenceSchema),
   createdAt: t.String(),
   updatedAt: t.String()
 });
@@ -73,7 +65,7 @@ export const matchSummaryResponseSchema = t.Object({
 export const matchResponseSchema = t.Intersect([
   matchSummaryResponseSchema,
   t.Object({
-    events: t.Array(matchPlayerEventResponseSchema),
+    events: t.Array(matchEventResponseSchema),
     participations: t.Array(matchPlayerStintResponseSchema)
   })
 ]);
@@ -94,13 +86,13 @@ export type MatchSummaryRow = {
   match: Match;
   recording: Recording | null;
   gameMode: GameMode | null;
-  statEventSchemaFamily: StatEventSchemaFamily | null;
-  statEventSchemaVersion: StatEventSchemaVersion | null;
+  eventSchemaFamily: EventSchemaFamily | null;
+  eventSchemaVersion: EventSchemaVersion | null;
   metadata: MatchTeamMetadata[];
 };
 
 export type MatchDetailRow = MatchSummaryRow & {
-  events: Array<MatchPlayerEvent & PlayerRow>;
+  events: MatchEventRow[];
   stints: Array<MatchPlayerStint & PlayerRow>;
 };
 
@@ -108,8 +100,8 @@ export function toMatchSummaryResponse({
   match,
   recording,
   gameMode,
-  statEventSchemaFamily,
-  statEventSchemaVersion,
+  eventSchemaFamily,
+  eventSchemaVersion,
   metadata
 }: MatchSummaryRow): MatchSummaryResponse {
   return {
@@ -120,9 +112,9 @@ export function toMatchSummaryResponse({
     score: toMatchScore(metadata),
     recording: recording ? toRecordingResponse(recording) : null,
     gameMode: gameMode ? toGameModeResponse(gameMode) : null,
-    statEventSchema: toMatchStatEventSchemaReference({
-      family: statEventSchemaFamily,
-      version: statEventSchemaVersion
+    eventSchema: toMatchEventSchemaReference({
+      family: eventSchemaFamily,
+      version: eventSchemaVersion
     }),
     createdAt: match.createdAt,
     updatedAt: match.updatedAt
@@ -132,18 +124,7 @@ export function toMatchSummaryResponse({
 export function toMatchResponse(row: MatchDetailRow): MatchResponse {
   return {
     ...toMatchSummaryResponse(row),
-    events: row.events.map((event) => ({
-      sequence: event.sequence,
-      type: event.type,
-      player: toPlayerResponse({
-        player: event.player,
-        account: event.account
-      }),
-      team: event.team,
-      roomPlayerId: event.roomPlayerId,
-      occurredAt: event.occurredAt,
-      elapsedSeconds: event.elapsedSeconds
-    })),
+    events: row.events.map(toMatchEventResponse),
     participations: row.stints.map((stint) => ({
       player: toPlayerResponse({
         player: stint.player,
@@ -173,10 +154,10 @@ function toMatchScore(metadata: MatchTeamMetadata[]): MatchScore | null {
   };
 }
 
-function toMatchStatEventSchemaReference(input: {
-  family: StatEventSchemaFamily | null;
-  version: StatEventSchemaVersion | null;
-}): Static<typeof statEventSchemaReferenceSchema> | null {
+function toMatchEventSchemaReference(input: {
+  family: EventSchemaFamily | null;
+  version: EventSchemaVersion | null;
+}): Static<typeof eventSchemaReferenceSchema> | null {
   if (!input.family || !input.version) {
     return null;
   }

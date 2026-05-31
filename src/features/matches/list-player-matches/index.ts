@@ -12,9 +12,9 @@ import { listMatchMetadata } from "@/features/matches/_shared/db/queries";
 import { players } from "@/features/players/db";
 import { recordings } from "@/features/recordings/db";
 import {
-  statEventSchemaFamilies,
-  statEventSchemaVersions
-} from "@/features/stat-event-schemas/db";
+  eventSchemaFamilies,
+  eventSchemaVersions
+} from "@/features/event-schemas/db";
 import { notFound } from "@/shared/http/errors";
 import {
   cursorAfter,
@@ -44,20 +44,20 @@ export async function listPlayerMatches(
       match: matches,
       recording: recordings,
       gameMode: gameModes,
-      statEventSchemaFamily: statEventSchemaFamilies,
-      statEventSchemaVersion: statEventSchemaVersions
+      eventSchemaFamily: eventSchemaFamilies,
+      eventSchemaVersion: eventSchemaVersions
     })
     .from(matches)
     .innerJoin(matchPlayerStints, eq(matchPlayerStints.matchId, matches.id))
     .leftJoin(recordings, eq(matches.recordingId, recordings.id))
     .leftJoin(gameModes, eq(matches.gameModeId, gameModes.id))
     .leftJoin(
-      statEventSchemaVersions,
-      eq(matches.statEventSchemaVersionId, statEventSchemaVersions.id)
+      eventSchemaVersions,
+      eq(matches.eventSchemaVersionId, eventSchemaVersions.id)
     )
     .leftJoin(
-      statEventSchemaFamilies,
-      eq(statEventSchemaVersions.familyId, statEventSchemaFamilies.id)
+      eventSchemaFamilies,
+      eq(eventSchemaVersions.familyId, eventSchemaFamilies.id)
     )
     .where(
       and(

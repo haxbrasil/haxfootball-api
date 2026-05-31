@@ -1,5 +1,5 @@
 import { type Static, t } from "elysia";
-import { matchPlayerEventInputSchema } from "@/features/matches/_shared/http/inputs";
+import { matchEventInputSchema } from "@/features/matches/_shared/http/inputs";
 import type { MatchResponse } from "@/features/matches/_shared/http/responses";
 import { toMatchResponse } from "@/features/matches/_shared/http/responses";
 import {
@@ -12,7 +12,7 @@ import {
 import { assertMatchIsEditable } from "@/features/matches/_shared/domain/validation";
 
 export const appendMatchEventsBodySchema = t.Object({
-  events: t.Array(matchPlayerEventInputSchema, { minItems: 1 })
+  events: t.Array(matchEventInputSchema, { minItems: 1 })
 });
 
 export type AppendMatchEventsInput = Static<typeof appendMatchEventsBodySchema>;

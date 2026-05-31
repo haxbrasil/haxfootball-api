@@ -1,14 +1,15 @@
 import type {
   MatchFieldTeam,
-  MatchPlayerEventType,
   MatchTeam
 } from "@/features/matches/_shared/http/inputs";
 
 export type MatchStintEvent = {
-  type: MatchPlayerEventType;
-  player: {
+  domain: "room" | "game" | "agent" | "system";
+  type: string;
+  disabledAt: string | null;
+  actorPlayer: {
     id: number;
-  };
+  } | null;
   team: MatchTeam | null;
   roomPlayerId: number | null;
   occurredAt: string | null;
@@ -41,12 +42,15 @@ type StintDerivationState = {
 export function deriveMatchStints(
   events: MatchStintEvent[]
 ): DerivedMatchStint[] {
+  const roomEvents = events.filter(
+    (event) => event.domain === "room" && event.disabledAt === null
+  );
   const initialState: StintDerivationState = {
     activeStints: new Map(),
     closedStints: []
   };
 
-  const finalState = events.reduce(applyStintEvent, initialState);
+  const finalState = roomEvents.reduce(applyStintEvent, initialState);
 
   const remainingOpenStints = Array.from(finalState.activeStints.values()).map(
     openStint
@@ -59,7 +63,11 @@ function applyStintEvent(
   state: StintDerivationState,
   event: MatchStintEvent
 ): StintDerivationState {
-  const eventClosesAllMatchingStints = event.type === "player_leave";
+  if (!event.actorPlayer) {
+    return state;
+  }
+
+  const eventClosesAllMatchingStints = event.type === "player-left";
 
   return eventClosesAllMatchingStints
     ? closeMatchingStints(state, event)
@@ -70,7 +78,11 @@ function closeMatchingStints(
   state: StintDerivationState,
   event: MatchStintEvent
 ): StintDerivationState {
-  const playerId = event.player.id;
+  if (!event.actorPlayer) {
+    return state;
+  }
+
+  const playerId = event.actorPlayer.id;
   const roomPlayerId = event.roomPlayerId;
 
   const activeEntries = Array.from(state.activeStints.entries());
@@ -99,7 +111,11 @@ function applyFieldTeamEvent(
   state: StintDerivationState,
   event: MatchStintEvent
 ): StintDerivationState {
-  const activeKey = activeStintKey(event.player.id, event.roomPlayerId);
+  if (!event.actorPlayer) {
+    return state;
+  }
+
+  const activeKey = activeStintKey(event.actorPlayer.id, event.roomPlayerId);
   const existingStint = state.activeStints.get(activeKey);
 
   const closedExistingStints = existingStint
@@ -123,6 +139,10 @@ function applyFieldTeamEvent(
 }
 
 function toActiveFieldStint(event: MatchStintEvent): ActiveStint | null {
+  if (!event.actorPlayer) {
+    return null;
+  }
+
   const team = event.team;
   const isFieldTeam = team === "red" || team === "blue";
 
@@ -131,7 +151,7 @@ function toActiveFieldStint(event: MatchStintEvent): ActiveStint | null {
   }
 
   return {
-    playerId: event.player.id,
+    playerId: event.actorPlayer.id,
     team,
     roomPlayerId: event.roomPlayerId,
     joinedAt: event.occurredAt,

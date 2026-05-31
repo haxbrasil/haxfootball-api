@@ -1,7 +1,8 @@
 import { type Static, t } from "elysia";
 import type { GameModeReference } from "@/features/game-modes/http";
 import { gameModeNameSchema } from "@/features/game-modes/http";
-import type { StatEventSchemaReference } from "@/features/stat-event-schemas/http";
+import type { EventSchemaReference } from "@/features/event-schemas/http";
+import { matchEventInputSchema } from "@/features/match-events/http";
 
 export const matchStatusSchema = t.Union([
   t.Literal("ongoing"),
@@ -25,24 +26,9 @@ export const matchFieldTeamSchema = t.Union([
   t.Literal("blue")
 ]);
 
-export const matchPlayerEventTypeSchema = t.Union([
-  t.Literal("player_join"),
-  t.Literal("player_leave"),
-  t.Literal("player_team_change")
-]);
-
 export const matchScoreSchema = t.Object({
   red: t.Integer({ minimum: 0 }),
   blue: t.Integer({ minimum: 0 })
-});
-
-export const matchPlayerEventInputSchema = t.Object({
-  type: matchPlayerEventTypeSchema,
-  playerId: t.String({ minLength: 1, maxLength: 64 }),
-  team: t.Optional(matchTeamSchema),
-  roomPlayerId: t.Optional(t.Integer({ minimum: 0 })),
-  occurredAt: t.Optional(t.String({ minLength: 1 })),
-  elapsedSeconds: t.Optional(t.Number({ minimum: 0 }))
 });
 
 export const matchPublicIdParamsSchema = t.Object({
@@ -58,9 +44,9 @@ export const listMatchesQuerySchema = t.Object({
 export type MatchStatus = Static<typeof matchStatusSchema>;
 export type MatchTeam = Static<typeof matchTeamSchema>;
 export type MatchFieldTeam = Static<typeof matchFieldTeamSchema>;
-export type MatchPlayerEventType = Static<typeof matchPlayerEventTypeSchema>;
 export type MatchScore = Static<typeof matchScoreSchema>;
-export type MatchPlayerEventInput = Static<typeof matchPlayerEventInputSchema>;
+export type MatchEventInput = Static<typeof matchEventInputSchema>;
 export type ListMatchesQuery = Static<typeof listMatchesQuerySchema>;
 export type { GameModeReference };
-export type { StatEventSchemaReference };
+export type { EventSchemaReference };
+export { matchEventInputSchema };

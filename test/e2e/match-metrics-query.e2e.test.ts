@@ -15,7 +15,7 @@ type PlayerResponse = {
   name: string;
 };
 
-type StatEventSchemaResponse = {
+type EventSchemaResponse = {
   id: string;
   name: string;
   version: number;
@@ -74,7 +74,9 @@ describe("match metrics query", () => {
       events: [
         {
           type: "goal",
-          playerId: player.id,
+          domain: "game",
+          scope: "player",
+          actorPlayerId: player.id,
           value: 5
         }
       ]
@@ -83,7 +85,7 @@ describe("match metrics query", () => {
     expect(firstMatch.id).toEqual(expect.any(String));
 
     const publishResponse = await request(
-      `/api/stat-event-schemas/${schema.id}/versions`,
+      `/api/event-schemas/${schema.id}/versions`,
       {
         method: "POST",
         body: {
@@ -106,7 +108,7 @@ describe("match metrics query", () => {
 
     expect(publishResponse.status).toBe(201);
 
-    const latest: StatEventSchemaResponse = await publishResponse.json();
+    const latest: EventSchemaResponse = await publishResponse.json();
     const latestQuery = await queryMetrics({
       schema: {
         name: schema.name
@@ -159,24 +161,32 @@ describe("match metrics query", () => {
       events: [
         {
           type: "goal",
-          playerId: firstPlayer.id,
+          domain: "game",
+          scope: "player",
+          actorPlayerId: firstPlayer.id,
           value: 5
         },
         {
           type: "assist",
-          playerId: secondPlayer.id,
+          domain: "game",
+          scope: "player",
+          actorPlayerId: secondPlayer.id,
           value: {
             amount: 2
           }
         },
         {
           type: "goal",
-          playerId: guestPlayer.id,
+          domain: "game",
+          scope: "player",
+          actorPlayerId: guestPlayer.id,
           value: 7
         },
         {
           type: "note",
-          playerId: guestPlayer.id,
+          domain: "game",
+          scope: "player",
+          actorPlayerId: guestPlayer.id,
           value: "ignored"
         }
       ]
@@ -188,7 +198,9 @@ describe("match metrics query", () => {
       events: [
         {
           type: "goal",
-          playerId: firstPlayer.id,
+          domain: "game",
+          scope: "player",
+          actorPlayerId: firstPlayer.id,
           value: 11
         }
       ]
@@ -408,7 +420,9 @@ describe("match metrics query", () => {
       events: [
         {
           type: "goal",
-          playerId: player.id,
+          domain: "game",
+          scope: "player",
+          actorPlayerId: player.id,
           value: 9
         }
       ]
@@ -438,7 +452,7 @@ describe("match metrics query", () => {
     expect(match.id).toEqual(expect.any(String));
   });
 
-  it("excludes disabled stat events from aggregate metrics", async () => {
+  it("excludes disabled events from aggregate metrics", async () => {
     const schema = await createSchema("metrics-disabled");
     const account = await createAccount("DisabledAcct");
     const player = await createPlayer("disabled-player");
@@ -449,7 +463,7 @@ describe("match metrics query", () => {
       method: "POST",
       body: {
         status: "ongoing",
-        statEventSchema: {
+        eventSchema: {
           id: schema.id,
           version: schema.version
         }
@@ -460,27 +474,28 @@ describe("match metrics query", () => {
 
     const match: MatchResponse = await matchResponse.json();
     const disabledEventResponse = await request(
-      `/api/matches/${match.id}/stat-events`,
+      `/api/matches/${match.id}/events`,
       {
         method: "POST",
         body: {
           type: "goal",
-          playerId: player.id,
+          domain: "game",
+          scope: "player",
+          actorPlayerId: player.id,
           value: 20
         }
       }
     );
-    const keptEventResponse = await request(
-      `/api/matches/${match.id}/stat-events`,
-      {
-        method: "POST",
-        body: {
-          type: "goal",
-          playerId: player.id,
-          value: 3
-        }
+    const keptEventResponse = await request(`/api/matches/${match.id}/events`, {
+      method: "POST",
+      body: {
+        type: "goal",
+        domain: "game",
+        scope: "player",
+        actorPlayerId: player.id,
+        value: 3
       }
-    );
+    });
 
     expect(disabledEventResponse.status).toBe(201);
     expect(keptEventResponse.status).toBe(201);
@@ -501,7 +516,7 @@ describe("match metrics query", () => {
     expect(completeResponse.status).toBe(200);
 
     const disableResponse = await request(
-      `/api/matches/${match.id}/stat-events/${disabledEvent.id}`,
+      `/api/matches/${match.id}/events/${disabledEvent.id}`,
       {
         method: "PATCH",
         body: {
@@ -541,17 +556,23 @@ describe("match metrics query", () => {
       events: [
         {
           type: "goal",
-          playerId: first.player.id,
+          domain: "game",
+          scope: "player",
+          actorPlayerId: first.player.id,
           value: 10
         },
         {
           type: "goal",
-          playerId: second.player.id,
+          domain: "game",
+          scope: "player",
+          actorPlayerId: second.player.id,
           value: 10
         },
         {
           type: "goal",
-          playerId: third.player.id,
+          domain: "game",
+          scope: "player",
+          actorPlayerId: third.player.id,
           value: 4
         }
       ]
@@ -690,8 +711,8 @@ describe("match metrics query", () => {
 async function createSchema(
   prefix: string,
   definition = analyticsDefinition()
-): Promise<StatEventSchemaResponse> {
-  const response = await request("/api/stat-event-schemas", {
+): Promise<EventSchemaResponse> {
+  const response = await request("/api/event-schemas", {
     method: "POST",
     body: {
       name: uniqueName(prefix),
@@ -760,13 +781,15 @@ async function associatePlayer(
 }
 
 async function createMatchWithEvents(input: {
-  schema: StatEventSchemaResponse;
+  schema: EventSchemaResponse;
   status?: "completed" | "ongoing";
   initiatedAt?: string;
   endedAt?: string;
   events: Array<{
     type: string;
-    playerId: string;
+    domain: "game";
+    scope: "player";
+    actorPlayerId: string;
     value: unknown;
   }>;
 }): Promise<MatchResponse> {
@@ -775,7 +798,7 @@ async function createMatchWithEvents(input: {
     body: {
       status: "ongoing",
       initiatedAt: input.initiatedAt,
-      statEventSchema: {
+      eventSchema: {
         id: input.schema.id,
         version: input.schema.version
       }
@@ -787,13 +810,10 @@ async function createMatchWithEvents(input: {
   const match: MatchResponse = await response.json();
 
   for (const event of input.events) {
-    const eventResponse = await request(
-      `/api/matches/${match.id}/stat-events`,
-      {
-        method: "POST",
-        body: event
-      }
-    );
+    const eventResponse = await request(`/api/matches/${match.id}/events`, {
+      method: "POST",
+      body: event
+    });
 
     expect(eventResponse.status).toBe(201);
   }
@@ -892,6 +912,7 @@ function analyticsDefinition() {
         },
         aggregations: [
           {
+            target: "actor",
             metric: "goals",
             initial: 0,
             step: {
@@ -905,6 +926,7 @@ function analyticsDefinition() {
             }
           },
           {
+            target: "actor",
             metric: "points",
             initial: 0,
             step: {
@@ -934,6 +956,7 @@ function analyticsDefinition() {
         },
         aggregations: [
           {
+            target: "actor",
             metric: "assists",
             initial: 0,
             step: {

@@ -1,31 +1,29 @@
 import { Elysia, t } from "elysia";
 import {
-  addMatchStatEvent,
-  addMatchStatEventBodySchema
-} from "@/features/match-stat-events/add-match-stat-event";
+  addMatchEvent,
+  addMatchEventBodySchema
+} from "@/features/match-events/add-match-event";
 import {
-  disableMatchStatEvent,
-  disableMatchStatEventBodySchema
-} from "@/features/match-stat-events/disable-match-stat-event";
+  disableMatchEvent,
+  disableMatchEventBodySchema
+} from "@/features/match-events/disable-match-event";
 import {
   getMatchMetrics,
   matchMetricsResponseSchema
-} from "@/features/match-stat-events/get-match-metrics";
+} from "@/features/match-events/get-match-metrics";
 import {
   queryMatchMetrics,
   queryMatchMetricsBodySchema,
   queryMatchMetricsResponseSchema
-} from "@/features/match-stat-events/query-match-metrics";
+} from "@/features/match-events/query-match-metrics";
 import {
-  listMatchStatEvents,
-  listMatchStatEventsResponseSchema
-} from "@/features/match-stat-events/list-match-stat-events";
-import { matchStatEventIdParamsSchema } from "@/features/match-stat-events/http";
-import { matchStatEventResponseSchema } from "@/features/match-stat-events/http";
+  listMatchEvents,
+  listMatchEventsResponseSchema
+} from "@/features/match-events/list-match-events";
 import {
-  appendMatchEvents,
-  appendMatchEventsBodySchema
-} from "@/features/matches/append-match-events";
+  matchEventIdParamsSchema,
+  matchEventResponseSchema
+} from "@/features/match-events/http";
 import {
   associateMatchRecording,
   associateMatchRecordingBodySchema
@@ -42,11 +40,10 @@ import {
 import {
   matchPublicIdParamsSchema,
   listMatchesQuerySchema,
-  matchPlayerEventInputSchema,
+  matchEventInputSchema,
   matchScoreSchema
 } from "@/features/matches/_shared/http/inputs";
 import {
-  matchPlayerEventResponseSchema,
   matchPlayerStintResponseSchema,
   matchResponseSchema,
   matchSummaryResponseSchema
@@ -56,7 +53,7 @@ import {
   playerResponseSchema
 } from "@/features/players/http";
 import { recordingResponseSchema } from "@/features/recordings/http";
-import { statEventSchemaReferenceSchema } from "@/features/stat-event-schemas/http";
+import { eventSchemaReferenceSchema } from "@/features/event-schemas/http";
 import {
   updateMatch,
   updateMatchBodySchema
@@ -77,24 +74,22 @@ export const matchRoutes = new Elysia({
     PlayerAccount: playerAccountResponseSchema,
     Player: playerResponseSchema,
     Recording: recordingResponseSchema,
-    StatEventSchemaReference: statEventSchemaReferenceSchema,
+    EventSchemaReference: eventSchemaReferenceSchema,
     MatchScore: matchScoreSchema,
-    MatchEventInput: matchPlayerEventInputSchema,
-    MatchEvent: matchPlayerEventResponseSchema,
+    MatchEventInput: matchEventInputSchema,
+    MatchEvent: matchEventResponseSchema,
     MatchStint: matchPlayerStintResponseSchema,
     MatchSummary: matchSummaryResponseSchema,
-    AddMatchStatEventBody: addMatchStatEventBodySchema,
-    AppendMatchEventsBody: appendMatchEventsBodySchema,
+    AddMatchEventBody: addMatchEventBodySchema,
     AssociateMatchRecordingBody: associateMatchRecordingBodySchema,
     CreateMatchBody: createMatchBodySchema,
-    DisableMatchStatEventBody: disableMatchStatEventBodySchema,
+    DisableMatchEventBody: disableMatchEventBodySchema,
     ListMatches: listMatchesResponseSchema,
-    ListMatchStatEvents: listMatchStatEventsResponseSchema,
+    ListMatchEvents: listMatchEventsResponseSchema,
     Match: matchResponseSchema,
     MatchMetrics: matchMetricsResponseSchema,
     QueryMatchMetricsBody: queryMatchMetricsBodySchema,
     QueryMatchMetrics: queryMatchMetricsResponseSchema,
-    MatchStatEvent: matchStatEventResponseSchema,
     UpdateMatchBody: updateMatchBodySchema
   })
   .get("", ({ query }) => listMatches(query), {
@@ -165,77 +160,60 @@ export const matchRoutes = new Elysia({
       summary: "Update a match"
     }
   })
-  .post(
-    "/:id/events",
-    ({ body, params }) => appendMatchEvents(params.id, body),
-    {
-      body: t.Ref("AppendMatchEventsBody"),
-      params: matchPublicIdParamsSchema,
-      response: {
-        200: t.Ref("Match"),
-        400: t.Ref("BadRequestError"),
-        404: t.Ref("NotFoundError")
-      },
-      detail: {
-        tags: ["Matches"],
-        summary: "Append match player events"
-      }
-    }
-  )
   .get(
-    "/:id/stat-events",
-    ({ params, query }) => listMatchStatEvents(params.id, query),
+    "/:id/events",
+    ({ params, query }) => listMatchEvents(params.id, query),
     {
       params: matchPublicIdParamsSchema,
       query: paginationQuerySchema,
       response: {
-        200: t.Ref("ListMatchStatEvents"),
+        200: t.Ref("ListMatchEvents"),
         400: t.Ref("BadRequestError"),
         404: t.Ref("NotFoundError")
       },
       detail: {
-        tags: ["Match Stat Events"],
-        summary: "List match stat events"
+        tags: ["Match Events"],
+        summary: "List match events"
       }
     }
   )
   .post(
-    "/:id/stat-events",
+    "/:id/events",
     async ({ body, params, set }) => {
-      const event = await addMatchStatEvent(params.id, body);
+      const event = await addMatchEvent(params.id, body);
 
       set.status = 201;
 
       return event;
     },
     {
-      body: t.Ref("AddMatchStatEventBody"),
+      body: t.Ref("AddMatchEventBody"),
       params: matchPublicIdParamsSchema,
       response: {
-        201: t.Ref("MatchStatEvent"),
+        201: t.Ref("MatchEvent"),
         400: t.Ref("BadRequestError"),
         404: t.Ref("NotFoundError")
       },
       detail: {
-        tags: ["Match Stat Events"],
-        summary: "Add match stat event"
+        tags: ["Match Events"],
+        summary: "Add match event"
       }
     }
   )
   .patch(
-    "/:id/stat-events/:eventId",
-    ({ params }) => disableMatchStatEvent(params.id, params.eventId),
+    "/:id/events/:eventId",
+    ({ params }) => disableMatchEvent(params.id, params.eventId),
     {
-      body: t.Ref("DisableMatchStatEventBody"),
-      params: matchStatEventIdParamsSchema,
+      body: t.Ref("DisableMatchEventBody"),
+      params: matchEventIdParamsSchema,
       response: {
-        200: t.Ref("MatchStatEvent"),
+        200: t.Ref("MatchEvent"),
         400: t.Ref("BadRequestError"),
         404: t.Ref("NotFoundError")
       },
       detail: {
-        tags: ["Match Stat Events"],
-        summary: "Disable match stat event"
+        tags: ["Match Events"],
+        summary: "Disable match event"
       }
     }
   )

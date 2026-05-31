@@ -3,7 +3,7 @@ import { type Static, t } from "elysia";
 import { db } from "@/db/client";
 import {
   type MatchScore,
-  matchPlayerEventInputSchema,
+  matchEventInputSchema,
   matchScoreSchema,
   matchStatusSchema
 } from "@/features/matches/_shared/http/inputs";
@@ -15,12 +15,12 @@ import {
   getMatchSummary,
   persistMatchScore,
   assertMatchGameModeCanChange,
-  assertMatchStatEventSchemaCanChange,
-  resolveMatchStatEventSchemaVersionId,
+  assertMatchEventSchemaCanChange,
+  resolveMatchEventSchemaVersionId,
   recomputeMatchStints,
   replaceMatchEvents
 } from "@/features/matches/_shared/db/queries";
-import { statEventSchemaReferenceSchema } from "@/features/stat-event-schemas/http";
+import { eventSchemaReferenceSchema } from "@/features/event-schemas/http";
 import { gameModeReferenceSchema } from "@/features/game-modes/http";
 import { resolveGameModeId } from "@/features/game-modes/read-game-mode";
 import {
@@ -35,8 +35,8 @@ export const updateMatchBodySchema = t.Partial(
     endedAt: t.String({ minLength: 1 }),
     score: matchScoreSchema,
     gameMode: gameModeReferenceSchema,
-    statEventSchema: statEventSchemaReferenceSchema,
-    events: t.Array(matchPlayerEventInputSchema)
+    eventSchema: eventSchemaReferenceSchema,
+    events: t.Array(matchEventInputSchema)
   })
 );
 
@@ -54,8 +54,9 @@ export async function updateMatch(
   const nextEndedAt = input.endedAt ?? current.match.endedAt;
   const nextScore = input.score ?? scoreFromMetadata(current.metadata);
   const nextGameModeId = await resolveGameModeId(input.gameMode);
-  const nextStatEventSchemaVersionId =
-    await resolveMatchStatEventSchemaVersionId(input.statEventSchema);
+  const nextEventSchemaVersionId = await resolveMatchEventSchemaVersionId(
+    input.eventSchema
+  );
 
   assertCompletedMatchFields({
     status: nextStatus,
@@ -64,10 +65,10 @@ export async function updateMatch(
   });
 
   if (
-    nextStatEventSchemaVersionId !== undefined &&
-    nextStatEventSchemaVersionId !== current.match.statEventSchemaVersionId
+    nextEventSchemaVersionId !== undefined &&
+    nextEventSchemaVersionId !== current.match.eventSchemaVersionId
   ) {
-    await assertMatchStatEventSchemaCanChange(current.match.id);
+    await assertMatchEventSchemaCanChange(current.match.id);
   }
 
   if (
@@ -86,8 +87,8 @@ export async function updateMatch(
         : {}),
       ...(input.endedAt !== undefined ? { endedAt: input.endedAt } : {}),
       ...(nextGameModeId !== undefined ? { gameModeId: nextGameModeId } : {}),
-      ...(nextStatEventSchemaVersionId !== undefined
-        ? { statEventSchemaVersionId: nextStatEventSchemaVersionId }
+      ...(nextEventSchemaVersionId !== undefined
+        ? { eventSchemaVersionId: nextEventSchemaVersionId }
         : {}),
       updatedAt: new Date().toISOString()
     })
