@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from "bun:test";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "bun:test";
 import { execFileSync } from "node:child_process";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -48,12 +48,16 @@ beforeAll(() => {
   createFixturePackage();
 });
 
-afterAll(async () => {
+afterEach(async () => {
   await Promise.all(
     launchedRoomIds.map((roomId) =>
       request(`/api/rooms/${roomId}/close`, { method: "POST" })
     )
   );
+  launchedRoomIds.length = 0;
+});
+
+afterAll(() => {
   rmSync(fixtureRoot, { force: true, recursive: true });
 });
 
