@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+import { MATCH_ROOM_EVENT } from "@/test/e2e/helpers/events";
 import { recordingFile } from "@/test/e2e/fixtures/recording";
 import { paginatedItems, request } from "@/test/e2e/helpers/helpers";
 
@@ -107,7 +108,7 @@ describe("matches", () => {
         },
         events: [
           {
-            type: "player-joined",
+            type: MATCH_ROOM_EVENT.PlayerTeamChange,
             domain: "room",
             scope: "player",
             actorPlayerId: "missing-player",
@@ -288,7 +289,7 @@ describe("matches", () => {
         status: "ongoing",
         events: [
           {
-            type: "player-joined",
+            type: MATCH_ROOM_EVENT.PlayerTeamChange,
             domain: "room",
             scope: "player",
             actorPlayerId: firstPlayer.id,
@@ -299,7 +300,7 @@ describe("matches", () => {
             elapsedSeconds: 0
           },
           {
-            type: "player-team-changed",
+            type: MATCH_ROOM_EVENT.PlayerTeamChange,
             domain: "room",
             scope: "player",
             actorPlayerId: firstPlayer.id,
@@ -310,7 +311,7 @@ describe("matches", () => {
             elapsedSeconds: 300
           },
           {
-            type: "player-left",
+            type: MATCH_ROOM_EVENT.PlayerLeave,
             domain: "room",
             scope: "player",
             actorPlayerId: firstPlayer.id,
@@ -320,7 +321,7 @@ describe("matches", () => {
             elapsedSeconds: 360
           },
           {
-            type: "player-joined",
+            type: MATCH_ROOM_EVENT.PlayerTeamChange,
             domain: "room",
             scope: "player",
             actorPlayerId: secondPlayer.id,
@@ -331,7 +332,7 @@ describe("matches", () => {
             elapsedSeconds: 420
           },
           {
-            type: "player-team-changed",
+            type: MATCH_ROOM_EVENT.PlayerTeamChange,
             domain: "room",
             scope: "player",
             actorPlayerId: secondPlayer.id,
@@ -402,7 +403,7 @@ describe("matches", () => {
         status: "ongoing",
         events: [
           {
-            type: "player-joined",
+            type: MATCH_ROOM_EVENT.PlayerTeamChange,
             domain: "room",
             scope: "player",
             actorPlayerId: player.id,
@@ -413,7 +414,7 @@ describe("matches", () => {
             elapsedSeconds: 0
           },
           {
-            type: "player-team-changed",
+            type: MATCH_ROOM_EVENT.PlayerTeamChange,
             domain: "room",
             scope: "player",
             actorPlayerId: player.id,
@@ -468,7 +469,7 @@ describe("matches", () => {
         status: "ongoing",
         events: [
           {
-            type: "player-joined",
+            type: MATCH_ROOM_EVENT.PlayerTeamChange,
             domain: "room",
             scope: "player",
             actorPlayerId: player.id,
@@ -477,7 +478,7 @@ describe("matches", () => {
             roomPlayerId: 1
           },
           {
-            type: "player-joined",
+            type: MATCH_ROOM_EVENT.PlayerTeamChange,
             domain: "room",
             scope: "player",
             actorPlayerId: player.id,
@@ -486,7 +487,7 @@ describe("matches", () => {
             roomPlayerId: 2
           },
           {
-            type: "player-left",
+            type: MATCH_ROOM_EVENT.PlayerLeave,
             domain: "room",
             scope: "player",
             actorPlayerId: player.id,
@@ -541,7 +542,7 @@ describe("matches", () => {
         status: "ongoing",
         events: [
           {
-            type: "player-joined",
+            type: MATCH_ROOM_EVENT.PlayerTeamChange,
             domain: "room",
             scope: "player",
             actorPlayerId: player.id,
@@ -552,7 +553,7 @@ describe("matches", () => {
             elapsedSeconds: 0
           },
           {
-            type: "player-joined",
+            type: MATCH_ROOM_EVENT.PlayerTeamChange,
             domain: "room",
             scope: "player",
             actorPlayerId: player.id,
@@ -563,7 +564,7 @@ describe("matches", () => {
             elapsedSeconds: 60
           },
           {
-            type: "player-left",
+            type: MATCH_ROOM_EVENT.PlayerLeave,
             domain: "room",
             scope: "player",
             actorPlayerId: player.id,
@@ -613,7 +614,7 @@ describe("matches", () => {
         status: "ongoing",
         events: [
           {
-            type: "player-joined",
+            type: MATCH_ROOM_EVENT.PlayerTeamChange,
             domain: "room",
             scope: "player",
             actorPlayerId: player.id,
@@ -624,7 +625,7 @@ describe("matches", () => {
             elapsedSeconds: 0
           },
           {
-            type: "player-left",
+            type: MATCH_ROOM_EVENT.PlayerLeave,
             domain: "room",
             scope: "player",
             actorPlayerId: player.id,
@@ -634,7 +635,7 @@ describe("matches", () => {
             elapsedSeconds: 60
           },
           {
-            type: "player-joined",
+            type: MATCH_ROOM_EVENT.PlayerTeamChange,
             domain: "room",
             scope: "player",
             actorPlayerId: player.id,
@@ -699,7 +700,7 @@ describe("matches", () => {
     const appendResponse = await request(`/api/matches/${match.id}/events`, {
       method: "POST",
       body: {
-        type: "player-joined",
+        type: MATCH_ROOM_EVENT.PlayerTeamChange,
         domain: "room",
         scope: "player",
         actorPlayerId: player.id,
@@ -711,7 +712,7 @@ describe("matches", () => {
     expect(appendResponse.status).toBe(201);
     expect(await appendResponse.json()).toMatchObject({
       sequence: 1,
-      type: "player-joined"
+      type: MATCH_ROOM_EVENT.PlayerTeamChange
     });
 
     const matchResponse = await request(`/api/matches/${match.id}`);
@@ -747,7 +748,7 @@ describe("matches", () => {
       {
         method: "POST",
         body: {
-          type: "player-left",
+          type: MATCH_ROOM_EVENT.PlayerLeave,
           domain: "room",
           scope: "player",
           actorPlayerId: player.id,
@@ -777,7 +778,7 @@ describe("matches", () => {
         status: "ongoing",
         events: [
           {
-            type: "player-joined",
+            type: MATCH_ROOM_EVENT.PlayerTeamChange,
             domain: "room",
             scope: "player",
             actorPlayerId: player.id,
@@ -798,7 +799,7 @@ describe("matches", () => {
       {
         method: "POST",
         body: {
-          type: "player-left",
+          type: MATCH_ROOM_EVENT.PlayerLeave,
           domain: "room",
           scope: "player",
           actorPlayerId: player.id,
@@ -857,7 +858,7 @@ describe("matches", () => {
         status: "ongoing",
         events: [
           {
-            type: "player-joined",
+            type: MATCH_ROOM_EVENT.PlayerTeamChange,
             domain: "room",
             scope: "player",
             actorPlayerId: firstPlayer.id,
@@ -876,7 +877,7 @@ describe("matches", () => {
       body: {
         events: [
           {
-            type: "player-joined",
+            type: MATCH_ROOM_EVENT.PlayerTeamChange,
             domain: "room",
             scope: "player",
             actorPlayerId: secondPlayer.id,
@@ -944,7 +945,7 @@ describe("matches", () => {
       {
         method: "POST",
         body: {
-          type: "player-left",
+          type: MATCH_ROOM_EVENT.PlayerLeave,
           domain: "room",
           scope: "player",
           actorPlayerId: player.id,
@@ -986,7 +987,7 @@ describe("matches", () => {
       {
         method: "POST",
         body: {
-          type: "player-joined",
+          type: MATCH_ROOM_EVENT.PlayerTeamChange,
           domain: "room",
           scope: "player",
           actorPlayerId: player.id,
@@ -999,7 +1000,7 @@ describe("matches", () => {
     expect(await joinWithoutTeamResponse.json()).toEqual({
       error: {
         code: "BAD_REQUEST",
-        message: "Player join and team change events must include a team"
+        message: "Player team change events must include a team"
       }
     });
 
@@ -1008,7 +1009,7 @@ describe("matches", () => {
       {
         method: "POST",
         body: {
-          type: "player-joined",
+          type: MATCH_ROOM_EVENT.PlayerTeamChange,
           domain: "room",
           scope: "player",
           actorPlayerId: player.id,
@@ -1036,7 +1037,7 @@ describe("matches", () => {
         status: "ongoing",
         events: [
           {
-            type: "player-joined",
+            type: MATCH_ROOM_EVENT.PlayerTeamChange,
             domain: "room",
             scope: "player",
             actorPlayerId: "missing-player",
@@ -1234,7 +1235,7 @@ describe("matches", () => {
     const appendResponse = await request("/api/matches/aaaaaaaa/events", {
       method: "POST",
       body: {
-        type: "player-joined",
+        type: MATCH_ROOM_EVENT.PlayerTeamChange,
         domain: "room",
         scope: "player",
         actorPlayerId: "missing-player",

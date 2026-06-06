@@ -1,9 +1,16 @@
+import { sql } from "drizzle-orm";
 import {
+  check,
+  foreignKey,
   integer,
+  real,
   sqliteTable,
   text,
   uniqueIndex
 } from "drizzle-orm/sqlite-core";
+import type { JsonValue } from "@lib";
+import { matches } from "@/features/matches/db";
+import { players } from "@/features/players/db";
 
 export type RoomLaunchConfigValue = string | number | boolean | null;
 
@@ -198,9 +205,59 @@ export const roomInstances = sqliteTable("room_instances", {
     .$defaultFn(() => new Date().toISOString())
 });
 
+export const roomInstanceEvents = sqliteTable(
+  "room_instance_events",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    uuid: text("uuid").notNull().unique(),
+    roomInstanceId: integer("room_instance_id").notNull(),
+    matchId: integer("match_id").references(() => matches.id),
+    sequence: integer("sequence").notNull(),
+    domain: text("domain", {
+      enum: ["room", "game", "agent", "system"]
+    }).notNull(),
+    type: text("type").notNull(),
+    scope: text("scope", {
+      enum: ["player", "team", "match"]
+    }).notNull(),
+    actorPlayerId: integer("actor_player_id").references(() => players.id),
+    subjectPlayerId: integer("subject_player_id").references(() => players.id),
+    team: text("team", { enum: ["spectators", "red", "blue"] }),
+    roomPlayerId: integer("room_player_id"),
+    playId: text("play_id"),
+    sourceState: text("source_state"),
+    value: text("value", { mode: "json" }).$type<JsonValue>(),
+    occurredAt: text("occurred_at"),
+    elapsedSeconds: real("elapsed_seconds"),
+    tick: real("tick"),
+    createdAt: text("created_at")
+      .notNull()
+      .$defaultFn(() => new Date().toISOString()),
+    updatedAt: text("updated_at")
+      .notNull()
+      .$defaultFn(() => new Date().toISOString())
+  },
+  (table) => [
+    uniqueIndex("room_instance_events_room_sequence_unique").on(
+      table.roomInstanceId,
+      table.sequence
+    ),
+    foreignKey({
+      name: "room_instance_events_room_instance_fk",
+      columns: [table.roomInstanceId],
+      foreignColumns: [roomInstances.id]
+    }),
+    check(
+      "room_instance_events_value_json_valid",
+      sql`json_valid(${table.value})`
+    )
+  ]
+);
+
 export type RoomProgram = typeof roomPrograms.$inferSelect;
 export type RoomProgramVersion = typeof roomProgramVersions.$inferSelect;
 export type RoomProgramVersionAlias =
   typeof roomProgramVersionAliases.$inferSelect;
 export type RoomProxyEndpoint = typeof roomProxyEndpoints.$inferSelect;
 export type RoomInstance = typeof roomInstances.$inferSelect;
+export type RoomInstanceEvent = typeof roomInstanceEvents.$inferSelect;

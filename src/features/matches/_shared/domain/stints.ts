@@ -2,6 +2,7 @@ import type {
   MatchFieldTeam,
   MatchTeam
 } from "@/features/matches/_shared/http/inputs";
+import { MATCH_ROOM_EVENT } from "@/features/match-events/_shared/domain/native-room-events";
 
 export type MatchStintEvent = {
   domain: "room" | "game" | "agent" | "system";
@@ -67,7 +68,8 @@ function applyStintEvent(
     return state;
   }
 
-  const eventClosesAllMatchingStints = event.type === "player-left";
+  const eventClosesAllMatchingStints =
+    event.type === MATCH_ROOM_EVENT.PlayerLeave;
 
   return eventClosesAllMatchingStints
     ? closeMatchingStints(state, event)

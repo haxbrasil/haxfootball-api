@@ -1,5 +1,10 @@
 import { Elysia, t } from "elysia";
 import {
+  addRoomEvent,
+  addRoomEventBodySchema,
+  addRoomEventResponseSchema
+} from "@/features/rooms/add-room-event";
+import {
   closeRoom,
   closeRoomResponseSchema
 } from "@/features/rooms/close-room";
@@ -30,6 +35,10 @@ import {
   listRooms,
   listRoomsResponseSchema
 } from "@/features/rooms/list-rooms";
+import {
+  listRoomEvents,
+  listRoomEventsResponseSchema
+} from "@/features/rooms/list-room-events";
 import {
   listRoomPrograms,
   listRoomProgramsResponseSchema
@@ -117,8 +126,11 @@ export const roomRoutes = new Elysia({
     ListRoomProgramVersionAliases: listRoomProgramVersionAliasesResponseSchema,
     ListRoomPrograms: listRoomProgramsResponseSchema,
     ListRoomProxyEndpoints: listRoomProxyEndpointsResponseSchema,
+    ListRoomEvents: listRoomEventsResponseSchema,
     ListRooms: listRoomsResponseSchema,
     ReportRoomReadyBody: reportRoomReadyBodySchema,
+    AddRoomEventBody: addRoomEventBodySchema,
+    RoomEvent: addRoomEventResponseSchema,
     RoomArtifact: roomArtifactResponseSchema,
     Room: roomResponseSchema,
     RoomProgram: roomProgramResponseSchema,
@@ -404,6 +416,45 @@ export const roomRoutes = new Elysia({
           summary: "Close room instance"
         }
       })
+      .get(
+        "/:id/events",
+        ({ params, query }) => listRoomEvents(params.id, query),
+        {
+          params: roomIdParamsSchema,
+          query: paginationQuerySchema,
+          response: {
+            200: t.Ref("ListRoomEvents"),
+            404: t.Ref("NotFoundError")
+          },
+          detail: {
+            tags: ["Room Events"],
+            summary: "List room instance events"
+          }
+        }
+      )
+      .post(
+        "/:id/events",
+        async ({ body, params, set }) => {
+          const event = await addRoomEvent(params.id, body);
+
+          set.status = 201;
+
+          return event;
+        },
+        {
+          body: t.Ref("AddRoomEventBody"),
+          params: roomIdParamsSchema,
+          response: {
+            201: t.Ref("RoomEvent"),
+            400: t.Ref("BadRequestError"),
+            404: t.Ref("NotFoundError")
+          },
+          detail: {
+            tags: ["Room Events"],
+            summary: "Add room instance event"
+          }
+        }
+      )
       .post(
         "/:id/ready",
         ({ body, params }) => reportRoomReady(params.id, body),

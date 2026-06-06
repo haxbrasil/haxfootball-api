@@ -1,5 +1,6 @@
 import { type Static, t } from "elysia";
 import type {
+  RoomInstanceEvent,
   RoomInstance,
   RoomLaunchConfig,
   RoomLaunchConfigField,
@@ -11,6 +12,17 @@ import type {
   RoomProgramVersionArtifact,
   RoomProxyEndpoint
 } from "@/features/rooms/db";
+import type { Account } from "@/features/accounts/db";
+import type { Player } from "@/features/players/db";
+import {
+  matchEventDomainSchema,
+  matchEventScopeSchema,
+  matchEventTeamSchema
+} from "@/features/match-events/_shared/http/inputs";
+import {
+  playerResponseSchema,
+  toPlayerResponse
+} from "@/features/players/responses";
 import { paginatedResponseSchema } from "@lib";
 
 export const roomUuidSchema = t.String({ format: "uuid" });
@@ -317,6 +329,52 @@ export const roomResponseSchema = t.Object({
 export const listRoomsResponseSchema =
   paginatedResponseSchema(roomResponseSchema);
 
+export const roomInstanceEventInputSchema = t.Object({
+  domain: matchEventDomainSchema,
+  type: t.String({
+    minLength: 1,
+    maxLength: 64,
+    pattern: "^[a-z][a-z0-9-]{0,63}$"
+  }),
+  scope: matchEventScopeSchema,
+  actorPlayerId: t.Optional(t.String({ minLength: 1, maxLength: 64 })),
+  subjectPlayerId: t.Optional(t.String({ minLength: 1, maxLength: 64 })),
+  team: t.Optional(matchEventTeamSchema),
+  roomPlayerId: t.Optional(t.Integer({ minimum: 0 })),
+  matchId: t.Optional(t.String({ minLength: 8, maxLength: 8 })),
+  playId: t.Optional(t.String({ minLength: 1, maxLength: 128 })),
+  sourceState: t.Optional(t.String({ minLength: 1, maxLength: 128 })),
+  value: t.Unknown(),
+  occurredAt: t.Optional(t.String({ minLength: 1 })),
+  elapsedSeconds: t.Optional(t.Number({ minimum: 0 })),
+  tick: t.Optional(t.Number({ minimum: 0 }))
+});
+
+export const roomInstanceEventResponseSchema = t.Object({
+  id: t.String({ format: "uuid" }),
+  sequence: t.Integer({ minimum: 1 }),
+  domain: matchEventDomainSchema,
+  type: t.String(),
+  scope: matchEventScopeSchema,
+  actorPlayer: t.Nullable(playerResponseSchema),
+  subjectPlayer: t.Nullable(playerResponseSchema),
+  team: t.Nullable(matchEventTeamSchema),
+  roomPlayerId: t.Nullable(t.Number()),
+  matchId: t.Nullable(t.String()),
+  playId: t.Nullable(t.String()),
+  sourceState: t.Nullable(t.String()),
+  value: t.Unknown(),
+  occurredAt: t.Nullable(t.String()),
+  elapsedSeconds: t.Nullable(t.Number()),
+  tick: t.Nullable(t.Number()),
+  createdAt: t.String(),
+  updatedAt: t.String()
+});
+
+export const listRoomInstanceEventsResponseSchema = paginatedResponseSchema(
+  roomInstanceEventResponseSchema
+);
+
 export const roomIdParamsSchema = t.Object({
   id: roomUuidSchema
 });
@@ -376,6 +434,54 @@ export type CreateRoomInput = Static<typeof createRoomBodySchema>;
 export type RoomResponse = Static<typeof roomResponseSchema>;
 export type ListRoomsQuery = Static<typeof listRoomsQuerySchema>;
 export type ReportRoomReadyInput = Static<typeof reportRoomReadyBodySchema>;
+export type RoomInstanceEventInput = Static<
+  typeof roomInstanceEventInputSchema
+>;
+export type RoomInstanceEventResponse = Static<
+  typeof roomInstanceEventResponseSchema
+>;
+export type RoomInstanceEventRow = RoomInstanceEvent & {
+  actorPlayer: Player | null;
+  actorAccount: Account | null;
+  subjectPlayer: Player | null;
+  subjectAccount: Account | null;
+  matchPublicId: string | null;
+};
+
+export function toRoomInstanceEventResponse(
+  row: RoomInstanceEventRow
+): RoomInstanceEventResponse {
+  return {
+    id: row.uuid,
+    sequence: row.sequence,
+    domain: row.domain,
+    type: row.type,
+    scope: row.scope,
+    actorPlayer: row.actorPlayer
+      ? toPlayerResponse({
+          player: row.actorPlayer,
+          account: row.actorAccount
+        })
+      : null,
+    subjectPlayer: row.subjectPlayer
+      ? toPlayerResponse({
+          player: row.subjectPlayer,
+          account: row.subjectAccount
+        })
+      : null,
+    team: row.team,
+    roomPlayerId: row.roomPlayerId,
+    matchId: row.matchPublicId,
+    playId: row.playId,
+    sourceState: row.sourceState,
+    value: row.value,
+    occurredAt: row.occurredAt,
+    elapsedSeconds: row.elapsedSeconds,
+    tick: row.tick,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt
+  };
+}
 
 export const defaultLaunchConfigFields: RoomLaunchConfigField[] = [
   {

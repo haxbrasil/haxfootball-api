@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+import { MATCH_ROOM_EVENT } from "@/test/e2e/helpers/events";
 import { paginatedItems, request } from "@/test/e2e/helpers/helpers";
 
 type AccountResponse = {
@@ -179,7 +180,7 @@ describe("players", () => {
         },
         events: [
           {
-            type: "player-joined",
+            type: MATCH_ROOM_EVENT.PlayerTeamChange,
             domain: "room",
             scope: "player",
             actorPlayerId: player.id,
