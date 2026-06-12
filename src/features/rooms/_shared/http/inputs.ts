@@ -375,6 +375,46 @@ export const listRoomInstanceEventsResponseSchema = paginatedResponseSchema(
   roomInstanceEventResponseSchema
 );
 
+export const roomIncidentKindSchema = t.Union([
+  t.Literal("desync"),
+  t.Literal("uncaught-exception"),
+  t.Literal("unhandled-rejection")
+]);
+
+export const roomIncidentRecordSchema = t.Object({
+  at: t.String({ minLength: 1 }),
+  type: t.String({ minLength: 1, maxLength: 128 }),
+  data: t.Unknown()
+});
+
+export const roomIncidentInputSchema = t.Object({
+  commId: t.String({ minLength: 32 }),
+  kind: roomIncidentKindSchema,
+  occurredAt: t.String({ minLength: 1 }),
+  reason: t.Optional(t.String({ minLength: 1, maxLength: 500 })),
+  playerId: t.Optional(t.Integer({ minimum: 0 })),
+  tick: t.Optional(t.Number({ minimum: 0 })),
+  records: t.Array(roomIncidentRecordSchema, {
+    minItems: 1,
+    maxItems: 5_000
+  }),
+  snapshot: t.Optional(t.Unknown())
+});
+
+export const roomIncidentResponseSchema = t.Object({
+  id: roomUuidSchema,
+  kind: roomIncidentKindSchema,
+  url: t.String({ minLength: 1 }),
+  sizeBytes: t.Integer({ minimum: 0 }),
+  sha256: t.String({ minLength: 64, maxLength: 64 }),
+  occurredAt: t.String(),
+  createdAt: t.String()
+});
+
+export const listRoomIncidentsResponseSchema = paginatedResponseSchema(
+  roomIncidentResponseSchema
+);
+
 export const roomIdParamsSchema = t.Object({
   id: roomUuidSchema
 });
@@ -440,6 +480,8 @@ export type RoomInstanceEventInput = Static<
 export type RoomInstanceEventResponse = Static<
   typeof roomInstanceEventResponseSchema
 >;
+export type RoomIncidentInput = Static<typeof roomIncidentInputSchema>;
+export type RoomIncidentResponse = Static<typeof roomIncidentResponseSchema>;
 export type RoomInstanceEventRow = RoomInstanceEvent & {
   actorPlayer: Player | null;
   actorAccount: Account | null;

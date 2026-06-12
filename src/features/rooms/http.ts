@@ -5,6 +5,11 @@ import {
   addRoomEventResponseSchema
 } from "@/features/rooms/add-room-event";
 import {
+  addRoomIncident,
+  addRoomIncidentBodySchema,
+  addRoomIncidentResponseSchema
+} from "@/features/rooms/add-room-incident";
+import {
   closeRoom,
   closeRoomResponseSchema
 } from "@/features/rooms/close-room";
@@ -39,6 +44,10 @@ import {
   listRoomEvents,
   listRoomEventsResponseSchema
 } from "@/features/rooms/list-room-events";
+import {
+  listRoomIncidents,
+  listRoomIncidentsResponseSchema
+} from "@/features/rooms/list-room-incidents";
 import {
   listRoomPrograms,
   listRoomProgramsResponseSchema
@@ -127,10 +136,13 @@ export const roomRoutes = new Elysia({
     ListRoomPrograms: listRoomProgramsResponseSchema,
     ListRoomProxyEndpoints: listRoomProxyEndpointsResponseSchema,
     ListRoomEvents: listRoomEventsResponseSchema,
+    ListRoomIncidents: listRoomIncidentsResponseSchema,
     ListRooms: listRoomsResponseSchema,
     ReportRoomReadyBody: reportRoomReadyBodySchema,
     AddRoomEventBody: addRoomEventBodySchema,
+    AddRoomIncidentBody: addRoomIncidentBodySchema,
     RoomEvent: addRoomEventResponseSchema,
+    RoomIncident: addRoomIncidentResponseSchema,
     RoomArtifact: roomArtifactResponseSchema,
     Room: roomResponseSchema,
     RoomProgram: roomProgramResponseSchema,
@@ -452,6 +464,45 @@ export const roomRoutes = new Elysia({
           detail: {
             tags: ["Room Events"],
             summary: "Add room instance event"
+          }
+        }
+      )
+      .get(
+        "/:id/incidents",
+        ({ params, query }) => listRoomIncidents(params.id, query),
+        {
+          params: roomIdParamsSchema,
+          query: paginationQuerySchema,
+          response: {
+            200: t.Ref("ListRoomIncidents"),
+            404: t.Ref("NotFoundError")
+          },
+          detail: {
+            tags: ["Room Incidents"],
+            summary: "List room incidents"
+          }
+        }
+      )
+      .post(
+        "/:id/incidents",
+        async ({ body, params, set }) => {
+          const incident = await addRoomIncident(params.id, body);
+
+          set.status = 201;
+
+          return incident;
+        },
+        {
+          body: t.Ref("AddRoomIncidentBody"),
+          params: roomIdParamsSchema,
+          response: {
+            201: t.Ref("RoomIncident"),
+            400: t.Ref("BadRequestError"),
+            404: t.Ref("NotFoundError")
+          },
+          detail: {
+            tags: ["Room Incidents"],
+            summary: "Add room incident"
           }
         }
       )

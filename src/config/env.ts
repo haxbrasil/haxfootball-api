@@ -20,6 +20,10 @@ const envSchema = Type.Object({
     default: 25 * 1024 * 1024,
     minimum: 1
   }),
+  roomIncidentMaxBytes: Type.Integer({
+    default: 1024 * 1024,
+    minimum: 1
+  }),
   roomGithubApiBaseUrl: Type.String({
     default: "https://api.github.com",
     minLength: 1
@@ -91,6 +95,7 @@ const envInput = {
   r2AccessKeyId: Bun.env.R2_ACCESS_KEY_ID,
   r2SecretAccessKey: Bun.env.R2_SECRET_ACCESS_KEY,
   recordingMaxBytes: Bun.env.RECORDING_MAX_BYTES,
+  roomIncidentMaxBytes: Bun.env.ROOM_INCIDENT_MAX_BYTES,
   roomGithubApiBaseUrl: Bun.env.ROOM_GITHUB_API_BASE_URL,
   publicBaseUrl: Bun.env.PUBLIC_BASE_URL,
   roomArtifactStorageDir: Bun.env.ROOM_ARTIFACT_STORAGE_DIR,

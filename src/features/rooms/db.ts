@@ -41,6 +41,10 @@ export type RoomInstanceState =
   | "running"
   | "closed"
   | "failed";
+export type RoomInstanceIncidentKind =
+  | "desync"
+  | "uncaught-exception"
+  | "unhandled-rejection";
 
 export type RoomProgramVersionArtifact = {
   releaseId: string;
@@ -254,6 +258,38 @@ export const roomInstanceEvents = sqliteTable(
   ]
 );
 
+export const roomInstanceIncidents = sqliteTable(
+  "room_instance_incidents",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    uuid: text("uuid").notNull().unique(),
+    roomInstanceId: integer("room_instance_id").notNull(),
+    kind: text("kind", {
+      enum: ["desync", "uncaught-exception", "unhandled-rejection"]
+    }).notNull(),
+    objectKey: text("object_key").notNull(),
+    sizeBytes: integer("size_bytes").notNull(),
+    sha256: text("sha256").notNull(),
+    playerId: integer("player_id"),
+    tick: real("tick"),
+    reason: text("reason"),
+    occurredAt: text("occurred_at").notNull(),
+    createdAt: text("created_at")
+      .notNull()
+      .$defaultFn(() => new Date().toISOString()),
+    updatedAt: text("updated_at")
+      .notNull()
+      .$defaultFn(() => new Date().toISOString())
+  },
+  (table) => [
+    foreignKey({
+      name: "room_instance_incidents_room_instance_fk",
+      columns: [table.roomInstanceId],
+      foreignColumns: [roomInstances.id]
+    })
+  ]
+);
+
 export type RoomProgram = typeof roomPrograms.$inferSelect;
 export type RoomProgramVersion = typeof roomProgramVersions.$inferSelect;
 export type RoomProgramVersionAlias =
@@ -261,3 +297,4 @@ export type RoomProgramVersionAlias =
 export type RoomProxyEndpoint = typeof roomProxyEndpoints.$inferSelect;
 export type RoomInstance = typeof roomInstances.$inferSelect;
 export type RoomInstanceEvent = typeof roomInstanceEvents.$inferSelect;
+export type RoomInstanceIncident = typeof roomInstanceIncidents.$inferSelect;

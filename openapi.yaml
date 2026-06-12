@@ -159,6 +159,61 @@ components:
         - scope
         - value
       type: object
+    AddRoomIncidentBody:
+      properties:
+        commId:
+          minLength: 32
+          type: string
+        kind:
+          enum:
+            - desync
+            - uncaught-exception
+            - unhandled-rejection
+          type: string
+        occurredAt:
+          minLength: 1
+          type: string
+        playerId:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - minimum: 0
+              type: integer
+          minimum: 0
+        reason:
+          maxLength: 500
+          minLength: 1
+          type: string
+        records:
+          items:
+            properties:
+              at:
+                minLength: 1
+                type: string
+              data: {}
+              type:
+                maxLength: 128
+                minLength: 1
+                type: string
+            required:
+              - at
+              - type
+              - data
+            type: object
+          maxItems: 5000
+          minItems: 1
+          type: array
+        snapshot: {}
+        tick:
+          minimum: 0
+          type: number
+      required:
+        - commId
+        - kind
+        - occurredAt
+        - records
+      type: object
     AssociateMatchRecordingBody:
       properties:
         recordingId:
@@ -1168,6 +1223,18 @@ components:
         items:
           items:
             $ref: "#/components/schemas/RoomEvent"
+          type: array
+        page:
+          $ref: "#/components/schemas/PageInfo"
+      required:
+        - items
+        - page
+      type: object
+    ListRoomIncidents:
+      properties:
+        items:
+          items:
+            $ref: "#/components/schemas/RoomIncident"
           type: array
         page:
           $ref: "#/components/schemas/PageInfo"
@@ -2551,6 +2618,45 @@ components:
         - tick
         - createdAt
         - updatedAt
+      type: object
+    RoomIncident:
+      properties:
+        createdAt:
+          type: string
+        id:
+          format: uuid
+          type: string
+        kind:
+          enum:
+            - desync
+            - uncaught-exception
+            - unhandled-rejection
+          type: string
+        occurredAt:
+          type: string
+        sha256:
+          maxLength: 64
+          minLength: 64
+          type: string
+        sizeBytes:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - minimum: 0
+              type: integer
+          minimum: 0
+        url:
+          minLength: 1
+          type: string
+      required:
+        - id
+        - kind
+        - url
+        - sizeBytes
+        - sha256
+        - occurredAt
+        - createdAt
       type: object
     RoomLaunchConfigField:
       properties:
@@ -6762,6 +6868,118 @@ paths:
       summary: Add room instance event
       tags:
         - Room Events
+  /api/rooms/{id}/incidents:
+    get:
+      operationId: getApiRoomsByIdIncidents
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+        - in: query
+          name: limit
+          required: false
+          schema:
+            anyOf:
+              - default: 0
+                format: integer
+                type: string
+              - maximum: 100
+                minimum: 1
+                type: integer
+            maximum: 100
+            minimum: 1
+        - in: query
+          name: cursor
+          required: false
+          schema:
+            minLength: 1
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListRoomIncidents"
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: List room incidents
+      tags:
+        - Room Incidents
+    post:
+      operationId: postApiRoomsByIdIncidents
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddRoomIncidentBody"
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoomIncident"
+          description: Response for status 201
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Add room incident
+      tags:
+        - Room Incidents
   /api/rooms/{id}/ready:
     post:
       operationId: postApiRoomsByIdReady

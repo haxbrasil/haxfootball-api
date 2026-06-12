@@ -1,4 +1,3 @@
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { validateAsync } from "@hax-brasil/replay-decoder";
 import { eq } from "drizzle-orm";
 import { type Static, t } from "elysia";
@@ -8,6 +7,8 @@ import type { RecordingResponse } from "@/features/recordings/_shared/http/respo
 import { toRecordingResponse } from "@/features/recordings/_shared/http/responses";
 import { recordings } from "@/features/recordings/db";
 import { badRequest } from "@/shared/http/errors";
+import { sha256Hex } from "@/shared/crypto/sha256";
+import { putR2Object } from "@/shared/storage/r2";
 
 export const createRecordingBodySchema = t.Object({
   file: t.File({
@@ -22,16 +23,6 @@ export type CreateRecordingResult = {
   created: boolean;
 };
 
-const r2Client = new S3Client({
-  endpoint: env.r2Endpoint,
-  region: "auto",
-  forcePathStyle: true,
-  credentials: {
-    accessKeyId: env.r2AccessKeyId,
-    secretAccessKey: env.r2SecretAccessKey
-  }
-});
-
 export async function createRecording(
   input: CreateRecordingInput
 ): Promise<CreateRecordingResult> {
@@ -41,7 +32,7 @@ export async function createRecording(
     throw badRequest("Invalid recording file");
   }
 
-  const sha256 = await hashBytes(bytes);
+  const sha256 = await sha256Hex(bytes);
   const [existingRecording] = await db
     .select()
     .from(recordings)
@@ -57,7 +48,11 @@ export async function createRecording(
   const publicId = await createUniquePublicId(sha256);
   const objectKey = `${publicId}.hbr2`;
 
-  await putRecordingObject(objectKey, bytes);
+  await putR2Object({
+    key: objectKey,
+    body: bytes,
+    contentType: "application/octet-stream"
+  });
 
   const [recording] = await db
     .insert(recordings)
@@ -79,33 +74,6 @@ async function isValidRecording(bytes: Uint8Array): Promise<boolean> {
   const report = await validateAsync(bytes, "strict");
 
   return !report.issues.some((issue) => issue.severity === "error");
-}
-
-async function putRecordingObject(
-  key: string,
-  bytes: Uint8Array
-): Promise<void> {
-  await r2Client.send(
-    new PutObjectCommand({
-      Bucket: env.r2Bucket,
-      Key: key,
-      Body: bytes,
-      ContentType: "application/octet-stream"
-    })
-  );
-}
-
-async function hashBytes(bytes: Uint8Array): Promise<string> {
-  const buffer = new ArrayBuffer(bytes.byteLength);
-  const view = new Uint8Array(buffer);
-
-  view.set(bytes);
-
-  const hash = await crypto.subtle.digest("SHA-256", buffer);
-
-  return Array.from(new Uint8Array(hash), (byte) =>
-    byte.toString(16).padStart(2, "0")
-  ).join("");
 }
 
 export async function createUniquePublicId(sha256: string): Promise<string> {

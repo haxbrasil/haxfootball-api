@@ -9,6 +9,7 @@ import {
 } from "@/features/rooms/_shared/http/inputs";
 import { roomInstances } from "@/features/rooms/db";
 import { getRoomRow } from "@/features/rooms/_shared/db/queries";
+import { assertRoomCommunicationId } from "@/features/rooms/_shared/domain/room-communication";
 import { badRequest } from "@/shared/http/errors";
 
 export {
@@ -30,9 +31,7 @@ export async function reportRoomReady(
     throw badRequest("Terminal room cannot be marked ready");
   }
 
-  if ((await hashSecret(input.commId)) !== row.room.commIdHash) {
-    throw badRequest("Invalid room communication ID");
-  }
+  await assertRoomCommunicationId(row.room, input.commId);
 
   const [updatedRoom] = await db
     .update(roomInstances)
@@ -50,13 +49,4 @@ export async function reportRoomReady(
     ...row,
     room: updatedRoom
   });
-}
-
-async function hashSecret(secret: string): Promise<string> {
-  const bytes = new TextEncoder().encode(secret);
-  const hash = await crypto.subtle.digest("SHA-256", bytes);
-
-  return Array.from(new Uint8Array(hash), (byte) =>
-    byte.toString(16).padStart(2, "0")
-  ).join("");
 }
