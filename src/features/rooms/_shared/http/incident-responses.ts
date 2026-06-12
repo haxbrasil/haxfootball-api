@@ -1,6 +1,4 @@
-import type {
-  RoomIncidentResponse,
-} from "@/features/rooms/_shared/http/inputs";
+import type { RoomIncidentResponse } from "@/features/rooms/_shared/http/inputs";
 import type { RoomInstanceIncident } from "@/features/rooms/db";
 import { r2PublicUrl } from "@/shared/storage/r2";
 
