@@ -1,4 +1,8 @@
 import { password } from "bun";
+import {
+  ACCOUNT_PASSWORD_MAX_LENGTH,
+  ACCOUNT_PASSWORD_MIN_LENGTH
+} from "@/features/accounts/password-policy";
 import type {
   ConfirmSessionInput,
   SessionIdentityInput
@@ -67,6 +71,13 @@ export async function confirmSession(
   const account = await findSessionAccountByName(identity.name);
 
   if (!account) {
+    return { valid: false };
+  }
+
+  if (
+    input.password.length < ACCOUNT_PASSWORD_MIN_LENGTH ||
+    input.password.length > ACCOUNT_PASSWORD_MAX_LENGTH
+  ) {
     return { valid: false };
   }
 

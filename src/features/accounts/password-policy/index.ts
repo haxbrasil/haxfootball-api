@@ -1,0 +1,2 @@
+export const ACCOUNT_PASSWORD_MIN_LENGTH = 4;
+export const ACCOUNT_PASSWORD_MAX_LENGTH = 19;

@@ -390,8 +390,8 @@ components:
         - $ref: "#/components/schemas/ResolveSessionBody"
         - properties:
             password:
-              maxLength: 19
-              minLength: 4
+              maxLength: 256
+              minLength: 1
               type: string
           required:
             - password

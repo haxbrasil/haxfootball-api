@@ -1,4 +1,8 @@
 import { t } from "elysia";
+import {
+  ACCOUNT_PASSWORD_MAX_LENGTH,
+  ACCOUNT_PASSWORD_MIN_LENGTH
+} from "@/features/accounts/password-policy";
 
 export const accountNameSchema = t.String({
   minLength: 1,
@@ -7,8 +11,8 @@ export const accountNameSchema = t.String({
 });
 
 export const accountPasswordSchema = t.String({
-  minLength: 4,
-  maxLength: 19
+  minLength: ACCOUNT_PASSWORD_MIN_LENGTH,
+  maxLength: ACCOUNT_PASSWORD_MAX_LENGTH
 });
 
 export const accountExternalIdSchema = t.String({

@@ -14,7 +14,7 @@ export const sessionIdentityBodySchema = t.Object({
 export const confirmSessionBodySchema = t.Intersect([
   sessionIdentityBodySchema,
   t.Object({
-    password: t.String({ minLength: 4, maxLength: 19 })
+    password: t.String({ minLength: 1, maxLength: 256 })
   })
 ]);
 

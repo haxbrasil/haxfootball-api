@@ -236,6 +236,50 @@ describe("sessions", () => {
     expect(authResolve.status).toBe("guest");
   });
 
+  it("returns invalid password instead of rejecting malformed password length", async () => {
+    const accountResponse = await request("/api/accounts", {
+      method: "POST",
+      body: {
+        name: uniqueName("BadLength"),
+        password: "pass1234",
+        externalId: uniqueAccountExternalId()
+      }
+    });
+
+    expect(accountResponse.status).toBe(201);
+
+    const account = sessionAccount(await accountResponse.json());
+    const response = await request("/api/sessions/confirm", {
+      method: "POST",
+      body: {
+        roomId: "room-invalid-password-length",
+        roomPlayerId: 8,
+        name: account.name,
+        auth: "auth-invalid-password-length",
+        conn: "conn-invalid-password-length",
+        password: "x"
+      }
+    });
+    const authResolveResponse = await request("/api/sessions/resolve", {
+      method: "POST",
+      body: {
+        roomId: "room-invalid-password-length-check",
+        roomPlayerId: 9,
+        name: "DifferentName",
+        auth: "auth-invalid-password-length",
+        conn: "conn-invalid-password-length-check"
+      }
+    });
+
+    expect(response.status).toBe(200);
+    expect(authResolveResponse.status).toBe(200);
+    expect(await response.json()).toEqual({ valid: false });
+
+    const authResolve = await authResolveResponse.json();
+
+    expect(authResolve.status).toBe("guest");
+  });
+
   it("confirms a valid password, associates the player, and enables auth auto sign-in", async () => {
     const accountResponse = await request("/api/accounts", {
       method: "POST",
