@@ -396,7 +396,7 @@ export const roomIncidentInputSchema = t.Object({
   tick: t.Optional(t.Number({ minimum: 0 })),
   records: t.Array(roomIncidentRecordSchema, {
     minItems: 1,
-    maxItems: 5_000
+    maxItems: 30_000
   }),
   snapshot: t.Optional(t.Unknown())
 });

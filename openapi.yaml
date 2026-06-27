@@ -201,7 +201,7 @@ components:
               - type
               - data
             type: object
-          maxItems: 5000
+          maxItems: 30000
           minItems: 1
           type: array
         snapshot: {}

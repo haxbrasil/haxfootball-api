@@ -21,7 +21,7 @@ const envSchema = Type.Object({
     minimum: 1
   }),
   roomIncidentMaxBytes: Type.Integer({
-    default: 1024 * 1024,
+    default: 50 * 1024 * 1024,
     minimum: 1
   }),
   roomGithubApiBaseUrl: Type.String({
