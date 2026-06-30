@@ -53,10 +53,23 @@ type LaunchConfigFieldInput = Record<string, unknown>;
 
 type RoomLaunchConfigPayload = Record<string, unknown>;
 
+type LocalizedTextSummary = {
+  value: string;
+  label: string;
+};
+
 type LaunchConfigFieldSummary = {
   key: string;
+  label: LocalizedTextSummary;
+  description?: LocalizedTextSummary;
+  category: string;
+  valueType: string;
+  defaultValue?: unknown;
+  minimum?: number;
+  maximum?: number;
   envVar: string;
   secret: boolean;
+  requiredPermission?: string;
 };
 
 type RoomProxyEndpointSummary = {
@@ -272,7 +285,8 @@ describe("rooms", () => {
         launchConfigFields: [
           {
             key: "arenaName",
-            displayName: "Arena name",
+            label: "Arena name",
+            category: "room",
             valueType: "string",
             required: false,
             defaultValue: "academy",
@@ -303,7 +317,8 @@ describe("rooms", () => {
         launchConfigFields: [
           {
             key: "roomName",
-            displayName: "Room title",
+            label: "Room title",
+            category: "room",
             valueType: "string",
             required: false,
             secret: false,
@@ -311,7 +326,8 @@ describe("rooms", () => {
           },
           {
             key: "maxPlayers",
-            displayName: "Max players",
+            label: "Max players",
+            category: "room",
             valueType: "number",
             required: false,
             defaultValue: 8,
@@ -389,7 +405,11 @@ describe("rooms", () => {
       launchConfigFields: expect.arrayContaining([
         expect.objectContaining({
           key: "arenaName",
-          displayName: "Arena name",
+          label: expect.objectContaining({
+            value: "Arena name",
+            label: "Arena name"
+          }),
+          category: "room",
           envVar: "ARENA_NAME"
         })
       ])
@@ -431,6 +451,161 @@ describe("rooms", () => {
         message: "Room program name already exists"
       }
     });
+  });
+
+  it("returns localized launch field metadata and default generic room fields", async () => {
+    const labelPrefix = `room.launch.e2e.${crypto.randomUUID().slice(0, 8)}`;
+    const labelKey = `${labelPrefix}.incident-level`;
+    const descriptionKey = `${labelPrefix}.incident-level.description`;
+    const labelsResponse = await request("/api/values/bulk", {
+      method: "POST",
+      body: {
+        values: [
+          {
+            value: labelKey,
+            language: "pt",
+            label: "Nível de incidente"
+          },
+          {
+            value: descriptionKey,
+            language: "pt",
+            label: "Controla a coleta detalhada de diagnóstico"
+          },
+          {
+            value: labelKey,
+            language: "en",
+            label: "Incident level"
+          }
+        ]
+      }
+    });
+
+    expect(labelsResponse.status).toBe(200);
+
+    const createResponse = await request("/api/room-programs", {
+      method: "POST",
+      body: roomProgramBody({
+        launchConfigFields: [
+          {
+            key: "incidentLevel",
+            label: labelKey,
+            description: descriptionKey,
+            category: "diagnostics",
+            valueType: "string",
+            required: false,
+            defaultValue: "normal",
+            enumValues: ["normal", "full"],
+            secret: false,
+            envVar: "HAXFOOTBALL_INCIDENT_LEVEL",
+            requiredPermission: "room-launch:diagnostics"
+          }
+        ]
+      })
+    });
+
+    expect(createResponse.status).toBe(201);
+
+    const program: RoomProgramResponse = await createResponse.json();
+    const getResponse = await request(
+      `/api/room-programs/${program.id}?language=pt`
+    );
+    const listResponse = await request(
+      `/api/room-programs?language=pt&limit=100`
+    );
+
+    expect(getResponse.status).toBe(200);
+    expect(listResponse.status).toBe(200);
+
+    const localizedProgram: RoomProgramResponse = await getResponse.json();
+    const listedProgram = (
+      await paginatedItems<RoomProgramResponse>(listResponse)
+    ).find((item) => item.id === program.id);
+
+    expect(listedProgram).toBeDefined();
+    expect(launchField(localizedProgram, "incidentLevel")).toMatchObject({
+      key: "incidentLevel",
+      label: {
+        value: labelKey,
+        label: "Nível de incidente"
+      },
+      description: {
+        value: descriptionKey,
+        label: "Controla a coleta detalhada de diagnóstico"
+      },
+      category: "diagnostics",
+      defaultValue: "normal",
+      envVar: "HAXFOOTBALL_INCIDENT_LEVEL",
+      requiredPermission: "room-launch:diagnostics"
+    });
+    expect(
+      launchField(listedProgram as RoomProgramResponse, "incidentLevel")
+    ).toMatchObject({
+      label: {
+        value: labelKey,
+        label: "Nível de incidente"
+      },
+      description: {
+        value: descriptionKey,
+        label: "Controla a coleta detalhada de diagnóstico"
+      }
+    });
+
+    expect(localizedProgram.launchConfigFields).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: "roomName",
+          category: "room",
+          envVar: "ROOM_NAME"
+        }),
+        expect.objectContaining({
+          key: "roomPublic",
+          category: "room",
+          defaultValue: true,
+          envVar: "ROOM_PUBLIC"
+        }),
+        expect.objectContaining({
+          key: "maxPlayers",
+          category: "room",
+          defaultValue: 25,
+          minimum: 1,
+          maximum: 30,
+          envVar: "MAX_PLAYERS"
+        }),
+        expect.objectContaining({
+          key: "roomPassword",
+          category: "room",
+          secret: true,
+          envVar: "ROOM_PASSWORD"
+        }),
+        expect.objectContaining({
+          key: "noPlayer",
+          category: "room",
+          defaultValue: true,
+          envVar: "NO_PLAYER"
+        }),
+        expect.objectContaining({
+          key: "geoCode",
+          category: "room",
+          envVar: "GEO_CODE"
+        }),
+        expect.objectContaining({
+          key: "geoLat",
+          category: "room",
+          envVar: "GEO_LAT"
+        }),
+        expect.objectContaining({
+          key: "geoLon",
+          category: "room",
+          envVar: "GEO_LON"
+        }),
+        expect.objectContaining({
+          key: "proxy",
+          category: "infrastructure",
+          envVar: "PROXY",
+          requiredPermission: "room-launch:infra"
+        })
+      ])
+    );
   });
 
   it("creates, lists, updates, and validates room proxy endpoints", async () => {
@@ -540,7 +715,8 @@ describe("rooms", () => {
         launchConfigFields: [
           {
             key: "roomName",
-            displayName: "Room name",
+            label: "Room name",
+            category: "room",
             valueType: "number",
             required: false,
             defaultValue: "wrong",
@@ -563,7 +739,8 @@ describe("rooms", () => {
         launchConfigFields: [
           {
             key: "mode",
-            displayName: "Mode",
+            label: "Mode",
+            category: "room",
             valueType: "string",
             required: false,
             secret: false,
@@ -571,7 +748,8 @@ describe("rooms", () => {
           },
           {
             key: "mode",
-            displayName: "Mode duplicate",
+            label: "Mode duplicate",
+            category: "room",
             valueType: "string",
             required: false,
             secret: false,
@@ -593,7 +771,8 @@ describe("rooms", () => {
         launchConfigFields: [
           {
             key: "mode",
-            displayName: "Mode",
+            label: "Mode",
+            category: "room",
             valueType: "string",
             required: false,
             secret: false,
@@ -601,7 +780,8 @@ describe("rooms", () => {
           },
           {
             key: "players",
-            displayName: "Players",
+            label: "Players",
+            category: "room",
             valueType: "number",
             required: false,
             secret: false,
@@ -623,7 +803,8 @@ describe("rooms", () => {
         launchConfigFields: [
           {
             key: "players",
-            displayName: "Players",
+            label: "Players",
+            category: "room",
             valueType: "number",
             required: false,
             enumValues: ["8"],
@@ -633,6 +814,56 @@ describe("rooms", () => {
         ]
       }
     });
+    const invalidCategoryResponse = await request("/api/room-programs", {
+      method: "POST",
+      body: {
+        name: uniqueName("bad-category"),
+        integrationMode: "external",
+        releaseSource: {
+          owner: "haxbrasil",
+          repo: "test-room",
+          assetPattern: "room-{tag}.tgz"
+        },
+        launchConfigFields: [
+          {
+            key: "mode",
+            label: "Mode",
+            category: "danger-zone",
+            valueType: "string",
+            required: false,
+            secret: false,
+            envVar: "ROOM_MODE"
+          }
+        ]
+      }
+    });
+    const invalidRequiredPermissionResponse = await request(
+      "/api/room-programs",
+      {
+        method: "POST",
+        body: {
+          name: uniqueName("bad-permission"),
+          integrationMode: "external",
+          releaseSource: {
+            owner: "haxbrasil",
+            repo: "test-room",
+            assetPattern: "room-{tag}.tgz"
+          },
+          launchConfigFields: [
+            {
+              key: "mode",
+              label: "Mode",
+              category: "game",
+              valueType: "string",
+              required: false,
+              secret: false,
+              envVar: "ROOM_MODE",
+              requiredPermission: "Room Launch"
+            }
+          ]
+        }
+      }
+    );
     const invalidProxyResponse = await request("/api/room-proxy-endpoints", {
       method: "POST",
       body: {
@@ -648,6 +879,8 @@ describe("rooms", () => {
     expect(duplicateLaunchKeyResponse.status).toBe(400);
     expect(duplicateLaunchEnvResponse.status).toBe(400);
     expect(invalidEnumFieldResponse.status).toBe(400);
+    expect(invalidCategoryResponse.status).toBe(400);
+    expect(invalidRequiredPermissionResponse.status).toBe(400);
     expect(invalidProxyResponse.status).toBe(400);
     expect(await invalidProgramResponse.json()).toMatchObject({
       error: {
@@ -678,6 +911,16 @@ describe("rooms", () => {
         message: "Launch config enum fields must use string values"
       }
     });
+    expect(await invalidCategoryResponse.json()).toMatchObject({
+      error: {
+        code: "VALIDATION_ERROR"
+      }
+    });
+    expect(await invalidRequiredPermissionResponse.json()).toMatchObject({
+      error: {
+        code: "VALIDATION_ERROR"
+      }
+    });
     expect(await invalidProxyResponse.json()).toMatchObject({
       error: {
         code: "VALIDATION_ERROR"
@@ -695,7 +938,8 @@ describe("rooms", () => {
         launchConfigFields: [
           {
             key: "mode",
-            displayName: "Mode",
+            label: "Mode",
+            category: "room",
             valueType: "string",
             required: true,
             enumValues: ["arcade", "league"],
@@ -704,7 +948,8 @@ describe("rooms", () => {
           },
           {
             key: "players",
-            displayName: "Players",
+            label: "Players",
+            category: "room",
             valueType: "number",
             required: false,
             defaultValue: 8,
@@ -938,7 +1183,8 @@ describe("rooms", () => {
         launchConfigFields: [
           {
             key: "envCapture",
-            displayName: "Environment capture",
+            label: "Environment capture",
+            category: "room",
             valueType: "string",
             required: true,
             secret: true,
@@ -1032,7 +1278,8 @@ describe("rooms", () => {
         launchConfigFields: [
           {
             key: "envCapture",
-            displayName: "Environment capture",
+            label: "Environment capture",
+            category: "room",
             valueType: "string",
             required: true,
             secret: true,
@@ -1256,7 +1503,8 @@ describe("rooms", () => {
         launchConfigFields: [
           {
             key: "envCapture",
-            displayName: "Environment capture",
+            label: "Environment capture",
+            category: "room",
             valueType: "string",
             required: true,
             secret: true,
@@ -1488,7 +1736,8 @@ describe("rooms", () => {
         launchConfigFields: [
           {
             key: "envCapture",
-            displayName: "Environment capture",
+            label: "Environment capture",
+            category: "room",
             valueType: "string",
             required: true,
             secret: true,
@@ -1585,7 +1834,8 @@ describe("rooms", () => {
         launchConfigFields: [
           {
             key: "roomName",
-            displayName: "Room title",
+            label: "Room title",
+            category: "room",
             valueType: "string",
             required: false,
             secret: false,
@@ -1593,7 +1843,8 @@ describe("rooms", () => {
           },
           {
             key: "roomPublic",
-            displayName: "Visible",
+            label: "Visible",
+            category: "room",
             valueType: "boolean",
             required: false,
             defaultValue: false,
@@ -1602,7 +1853,8 @@ describe("rooms", () => {
           },
           {
             key: "maxPlayers",
-            displayName: "Max players",
+            label: "Max players",
+            category: "room",
             valueType: "number",
             required: false,
             defaultValue: 12,
@@ -1613,7 +1865,8 @@ describe("rooms", () => {
           },
           {
             key: "envCapture",
-            displayName: "Environment capture",
+            label: "Environment capture",
+            category: "room",
             valueType: "string",
             required: true,
             secret: true,
@@ -1677,6 +1930,98 @@ describe("rooms", () => {
     expect(closeResponse.status).toBe(200);
   });
 
+  it("maps generic HaxBall room launch fields to explicit environment variables", async () => {
+    const envPath = fixtureEnvPath();
+    const programResponse = await request("/api/room-programs", {
+      method: "POST",
+      body: roomProgramBody({
+        launchConfigFields: [
+          {
+            key: "envCapture",
+            label: "Environment capture",
+            category: "diagnostics",
+            valueType: "string",
+            required: true,
+            secret: true,
+            envVar: "ROOM_E2E_ENV_OUT"
+          }
+        ]
+      })
+    });
+
+    expect(programResponse.status).toBe(201);
+
+    const program: RoomProgramResponse = await programResponse.json();
+    const versionResponse = await request(
+      `/api/room-programs/${program.id}/versions`,
+      {
+        method: "POST",
+        body: roomVersionBody("v1.0.0")
+      }
+    );
+
+    expect(versionResponse.status).toBe(201);
+
+    const launchResponse = await request("/api/rooms", {
+      method: "POST",
+      body: {
+        programId: program.id,
+        version: "v1.0.0",
+        haxballToken: "token",
+        launchConfig: {
+          roomName: "Explicit room",
+          roomPublic: false,
+          maxPlayers: 18,
+          roomPassword: "closed-practice",
+          noPlayer: false,
+          geoCode: "BR",
+          geoLat: -23.5,
+          geoLon: -46.6,
+          envCapture: envPath
+        }
+      }
+    });
+
+    expect(launchResponse.status).toBe(201);
+
+    const room = (await launchResponse.json()) as RoomLaunchResponse;
+    const capturedEnv = await readFixtureEnv(envPath);
+
+    expect(room).toMatchObject({
+      public: false,
+      launchConfig: {
+        roomName: "Explicit room",
+        roomPublic: false,
+        maxPlayers: 18,
+        roomPassword: null,
+        noPlayer: false,
+        geoCode: "BR",
+        geoLat: -23.5,
+        geoLon: -46.6,
+        envCapture: null
+      }
+    });
+    expect(capturedEnv).toMatchObject({
+      ROOM_NAME: "Explicit room",
+      ROOM_PUBLIC: "0",
+      MAX_PLAYERS: "18",
+      ROOM_PASSWORD: "closed-practice",
+      NO_PLAYER: "0",
+      GEO_CODE: "BR",
+      GEO_LAT: "-23.5",
+      GEO_LON: "-46.6",
+      ROOM_E2E_ENV_OUT: envPath
+    });
+    expect(JSON.stringify(room)).not.toContain("closed-practice");
+    expect(JSON.stringify(room)).not.toContain(envPath);
+
+    const closeResponse = await request(`/api/rooms/${room.id}/close`, {
+      method: "POST"
+    });
+
+    expect(closeResponse.status).toBe(200);
+  });
+
   it("launches integrated rooms and reports readiness only with the matching comm ID", async () => {
     const envPath = fixtureEnvPath();
     const programResponse = await request("/api/room-programs", {
@@ -1686,7 +2031,8 @@ describe("rooms", () => {
         launchConfigFields: [
           {
             key: "envCapture",
-            displayName: "Environment capture",
+            label: "Environment capture",
+            category: "room",
             valueType: "string",
             required: true,
             secret: true,
@@ -1694,7 +2040,8 @@ describe("rooms", () => {
           },
           {
             key: "autoLink",
-            displayName: "Automatic link",
+            label: "Automatic link",
+            category: "room",
             valueType: "string",
             required: false,
             defaultValue: "0",
@@ -1863,7 +2210,8 @@ describe("rooms", () => {
         launchConfigFields: [
           {
             key: "envCapture",
-            displayName: "Environment capture",
+            label: "Environment capture",
+            category: "room",
             valueType: "string",
             required: true,
             secret: true,
@@ -1871,7 +2219,8 @@ describe("rooms", () => {
           },
           {
             key: "autoLink",
-            displayName: "Automatic link",
+            label: "Automatic link",
+            category: "room",
             valueType: "string",
             required: false,
             secret: false,
@@ -1879,7 +2228,8 @@ describe("rooms", () => {
           },
           {
             key: "autoLinkDelay",
-            displayName: "Automatic link delay",
+            label: "Automatic link delay",
+            category: "room",
             valueType: "number",
             required: false,
             secret: false,
@@ -1887,7 +2237,8 @@ describe("rooms", () => {
           },
           {
             key: "exitAfterEnvCapture",
-            displayName: "Exit after env capture",
+            label: "Exit after env capture",
+            category: "room",
             valueType: "boolean",
             required: false,
             secret: false,
@@ -1895,7 +2246,8 @@ describe("rooms", () => {
           },
           {
             key: "sigtermOut",
-            displayName: "SIGTERM output",
+            label: "SIGTERM output",
+            category: "room",
             valueType: "string",
             required: false,
             secret: true,
@@ -2114,7 +2466,8 @@ describe("rooms", () => {
         launchConfigFields: [
           {
             key: "envCapture",
-            displayName: "Environment capture",
+            label: "Environment capture",
+            category: "room",
             valueType: "string",
             required: true,
             secret: true,
@@ -2437,7 +2790,8 @@ describe("rooms", () => {
         launchConfigFields: [
           {
             key: "envCapture",
-            displayName: "Environment capture",
+            label: "Environment capture",
+            category: "room",
             valueType: "string",
             required: true,
             secret: true,
@@ -2468,7 +2822,8 @@ describe("rooms", () => {
         launchConfigFields: [
           {
             key: "envCapture",
-            displayName: "Environment capture",
+            label: "Environment capture",
+            category: "room",
             valueType: "string",
             required: true,
             secret: true,
@@ -2476,7 +2831,8 @@ describe("rooms", () => {
           },
           {
             key: "autoLink",
-            displayName: "Automatic link",
+            label: "Automatic link",
+            category: "room",
             valueType: "string",
             required: false,
             defaultValue: "0",
@@ -2787,6 +3143,16 @@ function roomLaunchBody(input: LaunchRoomInput) {
     haxballToken: "token",
     launchConfig: input.launchConfig
   };
+}
+
+function launchField(program: RoomProgramResponse, key: string) {
+  const field = program.launchConfigFields.find((candidate) => {
+    return candidate.key === key;
+  });
+
+  expect(field).toBeDefined();
+
+  return field as LaunchConfigFieldSummary;
 }
 
 function createFixturePackage(): void {

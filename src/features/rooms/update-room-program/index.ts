@@ -8,6 +8,7 @@ import {
 } from "@/features/rooms/_shared/http/inputs";
 import { roomPrograms } from "@/features/rooms/db";
 import { getRoomProgramByUuid } from "@/features/rooms/_shared/db/queries";
+import { resolveLabels } from "@/features/localization/resolve-labels";
 import { normalizeLaunchConfigFields } from "@/features/rooms/_shared/domain/launch-config";
 
 export { updateRoomProgramBodySchema };
@@ -17,6 +18,9 @@ export async function updateRoomProgram(
   input: UpdateRoomProgramInput
 ): Promise<RoomProgramResponse> {
   const program = await getRoomProgramByUuid(uuid);
+  const launchConfigFields = input.launchConfigFields
+    ? normalizeLaunchConfigFields(input.launchConfigFields)
+    : program.launchConfigFields;
 
   const [updatedProgram] = await db
     .update(roomPrograms)
@@ -27,9 +31,7 @@ export async function updateRoomProgram(
           ? program.description
           : input.description,
       releaseSource: input.releaseSource ?? program.releaseSource,
-      launchConfigFields: input.launchConfigFields
-        ? normalizeLaunchConfigFields(input.launchConfigFields)
-        : program.launchConfigFields,
+      launchConfigFields,
       integrationMode: input.integrationMode ?? program.integrationMode,
       haxballTokenEnvVar:
         input.haxballTokenEnvVar ?? program.haxballTokenEnvVar,
@@ -37,6 +39,11 @@ export async function updateRoomProgram(
     })
     .where(eq(roomPrograms.id, program.id))
     .returning();
+  const labels = await resolveLabels(
+    launchConfigFields.flatMap((field) =>
+      field.description ? [field.label, field.description] : [field.label]
+    )
+  );
 
-  return toRoomProgramResponse(updatedProgram);
+  return toRoomProgramResponse(updatedProgram, labels);
 }

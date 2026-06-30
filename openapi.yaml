@@ -2660,6 +2660,13 @@ components:
       type: object
     RoomLaunchConfigField:
       properties:
+        category:
+          enum:
+            - room
+            - game
+            - diagnostics
+            - infrastructure
+          type: string
         defaultValue:
           anyOf:
             - type: string
@@ -2667,10 +2674,7 @@ components:
             - type: boolean
             - type: "null"
         description:
-          minLength: 1
-          type: string
-        displayName:
-          maxLength: 80
+          maxLength: 160
           minLength: 1
           type: string
         enumValues:
@@ -2689,12 +2693,21 @@ components:
           minLength: 1
           pattern: ^[a-z][A-Za-z0-9]{0,63}$
           type: string
+        label:
+          maxLength: 160
+          minLength: 1
+          type: string
         maximum:
           type: number
         minimum:
           type: number
         required:
           type: boolean
+        requiredPermission:
+          maxLength: 80
+          minLength: 1
+          pattern: ^[a-z][a-z0-9-]*:[a-z][a-z0-9-]*$
+          type: string
         secret:
           default: false
           type: boolean
@@ -2706,7 +2719,8 @@ components:
           type: string
       required:
         - key
-        - displayName
+        - label
+        - category
         - valueType
         - required
         - secret
@@ -2736,7 +2750,91 @@ components:
           type: string
         launchConfigFields:
           items:
-            $ref: "#/components/schemas/RoomLaunchConfigField"
+            properties:
+              category:
+                enum:
+                  - room
+                  - game
+                  - diagnostics
+                  - infrastructure
+                type: string
+              defaultValue:
+                anyOf:
+                  - type: string
+                  - type: number
+                  - type: boolean
+                  - type: "null"
+              description:
+                properties:
+                  label:
+                    minLength: 1
+                    type: string
+                  value:
+                    maxLength: 160
+                    minLength: 1
+                    type: string
+                required:
+                  - value
+                  - label
+                type: object
+              enumValues:
+                items:
+                  minLength: 1
+                  type: string
+                minItems: 1
+                type: array
+              envVar:
+                maxLength: 64
+                minLength: 1
+                pattern: ^[A-Z_][A-Z0-9_]*$
+                type: string
+              key:
+                maxLength: 64
+                minLength: 1
+                pattern: ^[a-z][A-Za-z0-9]{0,63}$
+                type: string
+              label:
+                properties:
+                  label:
+                    minLength: 1
+                    type: string
+                  value:
+                    maxLength: 160
+                    minLength: 1
+                    type: string
+                required:
+                  - value
+                  - label
+                type: object
+              maximum:
+                type: number
+              minimum:
+                type: number
+              required:
+                type: boolean
+              requiredPermission:
+                maxLength: 80
+                minLength: 1
+                pattern: ^[a-z][a-z0-9-]*:[a-z][a-z0-9-]*$
+                type: string
+              secret:
+                default: false
+                type: boolean
+              valueType:
+                enum:
+                  - string
+                  - number
+                  - boolean
+                type: string
+            required:
+              - key
+              - label
+              - category
+              - valueType
+              - required
+              - secret
+              - envVar
+            type: object
           type: array
         name:
           maxLength: 64
@@ -5936,6 +6034,12 @@ paths:
           schema:
             minLength: 1
             type: string
+        - in: query
+          name: language
+          required: false
+          schema:
+            minLength: 1
+            type: string
       responses:
         "200":
           content:
@@ -6009,6 +6113,12 @@ paths:
           required: true
           schema:
             format: uuid
+            type: string
+        - in: query
+          name: language
+          required: false
+          schema:
+            minLength: 1
             type: string
       responses:
         "200":

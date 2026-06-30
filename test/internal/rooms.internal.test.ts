@@ -15,7 +15,8 @@ describe("room internals", () => {
     const fields = [
       {
         key: "roomPublic",
-        displayName: "Public room",
+        label: "room.launch.field.public-room",
+        category: "room" as const,
         valueType: "boolean" as const,
         required: false,
         defaultValue: true,

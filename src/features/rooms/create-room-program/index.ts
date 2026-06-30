@@ -7,6 +7,7 @@ import {
   type RoomProgramResponse
 } from "@/features/rooms/_shared/http/inputs";
 import { roomPrograms } from "@/features/rooms/db";
+import { resolveLabels } from "@/features/localization/resolve-labels";
 import { normalizeLaunchConfigFields } from "@/features/rooms/_shared/domain/launch-config";
 import { badRequest } from "@/shared/http/errors";
 
@@ -24,6 +25,9 @@ export async function createRoomProgram(
     throw badRequest("Room program name already exists");
   }
 
+  const launchConfigFields = normalizeLaunchConfigFields(
+    input.launchConfigFields
+  );
   const [program] = await db
     .insert(roomPrograms)
     .values({
@@ -32,11 +36,16 @@ export async function createRoomProgram(
       title: input.title ?? null,
       description: input.description ?? null,
       releaseSource: input.releaseSource,
-      launchConfigFields: normalizeLaunchConfigFields(input.launchConfigFields),
+      launchConfigFields,
       integrationMode: input.integrationMode,
       haxballTokenEnvVar: input.haxballTokenEnvVar ?? "ROOM_TOKEN"
     })
     .returning();
+  const labels = await resolveLabels(
+    launchConfigFields.flatMap((field) =>
+      field.description ? [field.label, field.description] : [field.label]
+    )
+  );
 
-  return toRoomProgramResponse(program);
+  return toRoomProgramResponse(program, labels);
 }

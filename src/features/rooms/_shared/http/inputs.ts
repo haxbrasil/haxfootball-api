@@ -23,7 +23,7 @@ import {
   playerResponseSchema,
   toPlayerResponse
 } from "@/features/players/responses";
-import { paginatedResponseSchema } from "@lib";
+import { paginationQuerySchema, paginatedResponseSchema } from "@lib";
 
 export const roomUuidSchema = t.String({ format: "uuid" });
 
@@ -45,6 +45,29 @@ const envVarSchema = t.String({
   pattern: "^[A-Z_][A-Z0-9_]*$"
 });
 
+const localizedTextValueSchema = t.String({
+  minLength: 1,
+  maxLength: 160
+});
+
+const localizedTextResponseSchema = t.Object({
+  value: localizedTextValueSchema,
+  label: t.String({ minLength: 1 })
+});
+
+const roomLaunchConfigCategorySchema = t.Union([
+  t.Literal("room"),
+  t.Literal("game"),
+  t.Literal("diagnostics"),
+  t.Literal("infrastructure")
+]);
+
+const roomLaunchConfigPermissionSchema = t.String({
+  minLength: 1,
+  maxLength: 80,
+  pattern: "^[a-z][a-z0-9-]*:[a-z][a-z0-9-]*$"
+});
+
 const launchConfigValueSchema = t.Union([
   t.String(),
   t.Number(),
@@ -59,7 +82,8 @@ const roomProgramIntegrationModeSchema = t.Union([
 
 export const roomLaunchConfigFieldSchema = t.Object({
   key: roomLaunchConfigKeySchema,
-  displayName: t.String({ minLength: 1, maxLength: 80 }),
+  label: localizedTextValueSchema,
+  category: roomLaunchConfigCategorySchema,
   valueType: t.Union([
     t.Literal("string"),
     t.Literal("number"),
@@ -70,9 +94,30 @@ export const roomLaunchConfigFieldSchema = t.Object({
   enumValues: t.Optional(t.Array(t.String({ minLength: 1 }), { minItems: 1 })),
   minimum: t.Optional(t.Number()),
   maximum: t.Optional(t.Number()),
-  description: t.Optional(t.String({ minLength: 1 })),
+  description: t.Optional(localizedTextValueSchema),
   secret: t.Boolean({ default: false }),
-  envVar: envVarSchema
+  envVar: envVarSchema,
+  requiredPermission: t.Optional(roomLaunchConfigPermissionSchema)
+});
+
+export const roomLaunchConfigFieldResponseSchema = t.Object({
+  key: roomLaunchConfigKeySchema,
+  label: localizedTextResponseSchema,
+  category: roomLaunchConfigCategorySchema,
+  valueType: t.Union([
+    t.Literal("string"),
+    t.Literal("number"),
+    t.Literal("boolean")
+  ]),
+  required: t.Boolean(),
+  defaultValue: t.Optional(launchConfigValueSchema),
+  enumValues: t.Optional(t.Array(t.String({ minLength: 1 }), { minItems: 1 })),
+  minimum: t.Optional(t.Number()),
+  maximum: t.Optional(t.Number()),
+  description: t.Optional(localizedTextResponseSchema),
+  secret: t.Boolean({ default: false }),
+  envVar: envVarSchema,
+  requiredPermission: t.Optional(roomLaunchConfigPermissionSchema)
 });
 
 export const roomProgramReleaseSourceSchema = t.Object({
@@ -87,7 +132,7 @@ export const roomProgramResponseSchema = t.Object({
   title: t.Nullable(t.String()),
   description: t.Nullable(t.String()),
   releaseSource: roomProgramReleaseSourceSchema,
-  launchConfigFields: t.Array(roomLaunchConfigFieldSchema),
+  launchConfigFields: t.Array(roomLaunchConfigFieldResponseSchema),
   integrationMode: roomProgramIntegrationModeSchema,
   haxballTokenEnvVar: envVarSchema,
   createdAt: t.String(),
@@ -97,6 +142,17 @@ export const roomProgramResponseSchema = t.Object({
 export const listRoomProgramsResponseSchema = paginatedResponseSchema(
   roomProgramResponseSchema
 );
+
+export const listRoomProgramsQuerySchema = t.Composite([
+  paginationQuerySchema,
+  t.Object({
+    language: t.Optional(t.String({ minLength: 1 }))
+  })
+]);
+
+export const roomProgramLanguageQuerySchema = t.Object({
+  language: t.Optional(t.String({ minLength: 1 }))
+});
 
 export const roomProgramIdParamsSchema = t.Object({
   id: roomUuidSchema
@@ -440,6 +496,9 @@ export const reportRoomReadyBodySchema = t.Object({
 });
 
 export type RoomProgramResponse = Static<typeof roomProgramResponseSchema>;
+export type RoomLaunchConfigFieldResponse = Static<
+  typeof roomLaunchConfigFieldResponseSchema
+>;
 export type CreateRoomProgramInput = Static<typeof createRoomProgramBodySchema>;
 export type UpdateRoomProgramInput = Static<typeof updateRoomProgramBodySchema>;
 export type RoomProgramVersionResponse = Static<
@@ -528,7 +587,8 @@ export function toRoomInstanceEventResponse(
 export const defaultLaunchConfigFields: RoomLaunchConfigField[] = [
   {
     key: "roomName",
-    displayName: "Room name",
+    label: "room.launch.field.room-name",
+    category: "room",
     valueType: "string",
     required: false,
     secret: false,
@@ -536,25 +596,87 @@ export const defaultLaunchConfigFields: RoomLaunchConfigField[] = [
   },
   {
     key: "proxy",
-    displayName: "Proxy",
+    label: "room.launch.field.proxy",
+    category: "infrastructure",
     valueType: "string",
     required: false,
     secret: false,
-    envVar: "PROXY"
+    envVar: "PROXY",
+    requiredPermission: "room-launch:infra"
   },
   {
     key: "roomPublic",
-    displayName: "Public room",
+    label: "room.launch.field.public-room",
+    category: "room",
     valueType: "boolean",
     required: false,
     defaultValue: true,
     secret: false,
     envVar: "ROOM_PUBLIC"
+  },
+  {
+    key: "maxPlayers",
+    label: "room.launch.field.max-players",
+    category: "room",
+    valueType: "number",
+    required: false,
+    defaultValue: 25,
+    minimum: 1,
+    maximum: 30,
+    secret: false,
+    envVar: "MAX_PLAYERS"
+  },
+  {
+    key: "roomPassword",
+    label: "room.launch.field.password",
+    category: "room",
+    valueType: "string",
+    required: false,
+    secret: true,
+    envVar: "ROOM_PASSWORD"
+  },
+  {
+    key: "noPlayer",
+    label: "room.launch.field.no-player",
+    category: "room",
+    valueType: "boolean",
+    required: false,
+    defaultValue: true,
+    secret: false,
+    envVar: "NO_PLAYER"
+  },
+  {
+    key: "geoCode",
+    label: "room.launch.field.geo-code",
+    category: "room",
+    valueType: "string",
+    required: false,
+    secret: false,
+    envVar: "GEO_CODE"
+  },
+  {
+    key: "geoLat",
+    label: "room.launch.field.geo-latitude",
+    category: "room",
+    valueType: "number",
+    required: false,
+    secret: false,
+    envVar: "GEO_LAT"
+  },
+  {
+    key: "geoLon",
+    label: "room.launch.field.geo-longitude",
+    category: "room",
+    valueType: "number",
+    required: false,
+    secret: false,
+    envVar: "GEO_LON"
   }
 ];
 
 export function toRoomProgramResponse(
-  program: RoomProgram
+  program: RoomProgram,
+  labels: Map<string, string> = new Map()
 ): RoomProgramResponse {
   return {
     id: program.uuid,
@@ -562,11 +684,36 @@ export function toRoomProgramResponse(
     title: program.title,
     description: program.description,
     releaseSource: program.releaseSource,
-    launchConfigFields: program.launchConfigFields,
+    launchConfigFields: program.launchConfigFields.map((field) =>
+      toRoomLaunchConfigFieldResponse(field, labels)
+    ),
     integrationMode: program.integrationMode,
     haxballTokenEnvVar: program.haxballTokenEnvVar,
     createdAt: program.createdAt,
     updatedAt: program.updatedAt
+  };
+}
+
+export function toRoomLaunchConfigFieldResponse(
+  field: RoomLaunchConfigField,
+  labels: Map<string, string> = new Map()
+): RoomLaunchConfigFieldResponse {
+  const { description, ...baseField } = field;
+
+  return {
+    ...baseField,
+    label: {
+      value: field.label,
+      label: labels.get(field.label) ?? field.label
+    },
+    ...(description
+      ? {
+          description: {
+            value: description,
+            label: labels.get(description) ?? description
+          }
+        }
+      : {})
   };
 }
 

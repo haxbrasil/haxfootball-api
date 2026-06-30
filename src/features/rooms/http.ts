@@ -34,6 +34,7 @@ import {
 import { getRoom, roomResponseSchema } from "@/features/rooms/get-room";
 import {
   getRoomProgram,
+  roomProgramLanguageQuerySchema,
   roomProgramResponseSchema
 } from "@/features/rooms/get-room-program";
 import {
@@ -50,6 +51,7 @@ import {
 } from "@/features/rooms/list-room-incidents";
 import {
   listRoomPrograms,
+  listRoomProgramsQuerySchema,
   listRoomProgramsResponseSchema
 } from "@/features/rooms/list-room-programs";
 import {
@@ -157,7 +159,7 @@ export const roomRoutes = new Elysia({
   .group("/room-programs", (app) =>
     app
       .get("", ({ query }) => listRoomPrograms(query), {
-        query: paginationQuerySchema,
+        query: listRoomProgramsQuerySchema,
         response: {
           200: t.Ref("ListRoomPrograms")
         },
@@ -166,8 +168,9 @@ export const roomRoutes = new Elysia({
           summary: "List room programs"
         }
       })
-      .get("/:id", ({ params }) => getRoomProgram(params.id), {
+      .get("/:id", ({ params, query }) => getRoomProgram(params.id, query), {
         params: roomProgramIdParamsSchema,
+        query: roomProgramLanguageQuerySchema,
         response: {
           200: t.Ref("RoomProgram"),
           404: t.Ref("NotFoundError")

@@ -13,10 +13,16 @@ import { matches } from "@/features/matches/db";
 import { players } from "@/features/players/db";
 
 export type RoomLaunchConfigValue = string | number | boolean | null;
+export type RoomLaunchConfigCategory =
+  | "room"
+  | "game"
+  | "diagnostics"
+  | "infrastructure";
 
 export type RoomLaunchConfigField = {
   key: string;
-  displayName: string;
+  label: string;
+  category: RoomLaunchConfigCategory;
   valueType: "string" | "number" | "boolean";
   required: boolean;
   defaultValue?: RoomLaunchConfigValue;
@@ -26,6 +32,7 @@ export type RoomLaunchConfigField = {
   description?: string;
   secret: boolean;
   envVar: string;
+  requiredPermission?: string;
 };
 
 export type RoomProgramReleaseSource = {
