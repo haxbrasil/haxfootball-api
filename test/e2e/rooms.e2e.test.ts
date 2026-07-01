@@ -121,6 +121,11 @@ type RoomVersionAliasResponse = {
   version: RoomVersionReferenceSummary;
 };
 
+type PermissionSummary = {
+  key: string;
+  title: string | null;
+};
+
 type RoomLaunchResponse = {
   id: string;
   state: string;
@@ -512,14 +517,45 @@ describe("rooms", () => {
     const listResponse = await request(
       `/api/room-programs?language=pt&limit=100`
     );
+    const updateRequiredPermission = `room-launch:update-${crypto
+      .randomUUID()
+      .slice(0, 8)
+      .toLowerCase()}`;
+    const updateResponse = await request(`/api/room-programs/${program.id}`, {
+      method: "PATCH",
+      body: {
+        launchConfigFields: [
+          {
+            key: "incidentLevel",
+            label: labelKey,
+            description: descriptionKey,
+            category: "diagnostics",
+            valueType: "string",
+            required: false,
+            defaultValue: "normal",
+            enumValues: ["normal", "full"],
+            secret: false,
+            envVar: "HAXFOOTBALL_INCIDENT_LEVEL",
+            requiredPermission: updateRequiredPermission
+          }
+        ]
+      }
+    });
+    const permissionsResponse = await request("/api/permissions?limit=100");
 
     expect(getResponse.status).toBe(200);
     expect(listResponse.status).toBe(200);
+    expect(updateResponse.status).toBe(200);
+    expect(permissionsResponse.status).toBe(200);
 
     const localizedProgram: RoomProgramResponse = await getResponse.json();
+    const updatedProgram: RoomProgramResponse = await updateResponse.json();
     const listedProgram = (
       await paginatedItems<RoomProgramResponse>(listResponse)
     ).find((item) => item.id === program.id);
+    const permissionKeys = (
+      await paginatedItems<PermissionSummary>(permissionsResponse)
+    ).map((permission) => permission.key);
 
     expect(listedProgram).toBeDefined();
     expect(launchField(localizedProgram, "incidentLevel")).toMatchObject({
@@ -536,6 +572,9 @@ describe("rooms", () => {
       defaultValue: "normal",
       envVar: "HAXFOOTBALL_INCIDENT_LEVEL",
       requiredPermission: "room-launch:diagnostics"
+    });
+    expect(launchField(updatedProgram, "incidentLevel")).toMatchObject({
+      requiredPermission: updateRequiredPermission
     });
     expect(
       launchField(listedProgram as RoomProgramResponse, "incidentLevel")
@@ -604,6 +643,13 @@ describe("rooms", () => {
           envVar: "PROXY",
           requiredPermission: "room-launch:infra"
         })
+      ])
+    );
+    expect(permissionKeys).toEqual(
+      expect.arrayContaining([
+        "room-launch:diagnostics",
+        "room-launch:infra",
+        updateRequiredPermission
       ])
     );
   });

@@ -1,53 +1,10 @@
 import { asc, eq, inArray } from "drizzle-orm";
 import { db, type DbTransaction } from "@/db/client";
 import { type Permission, permissions } from "@/features/permissions/db";
+import { ensurePermissionsByKeys } from "@/features/permissions/ensure-permissions";
 import { allPermissionsWildcard } from "@/features/roles/_shared/http/inputs";
 import type { RoleWithPermissions } from "@/features/roles/_shared/http/responses";
 import { type Role, rolePermissions } from "@/features/roles/db";
-
-export async function ensurePermissionsByKeys(
-  database: DbTransaction,
-  keys: string[]
-): Promise<Permission[]> {
-  if (keys.length === 0) {
-    return [];
-  }
-
-  const existingPermissions = await database
-    .select()
-    .from(permissions)
-    .where(inArray(permissions.key, keys));
-
-  const existingKeys = new Set(
-    existingPermissions.map((permission) => permission.key)
-  );
-  const missingKeys = keys.filter((key) => !existingKeys.has(key));
-
-  const createdPermissions =
-    missingKeys.length > 0
-      ? await database
-          .insert(permissions)
-          .values(missingKeys.map((key) => ({ key })))
-          .returning()
-      : [];
-
-  const permissionsByKey = new Map(
-    [...existingPermissions, ...createdPermissions].map((permission) => [
-      permission.key,
-      permission
-    ])
-  );
-
-  return keys.map((key) => {
-    const permission = permissionsByKey.get(key);
-
-    if (!permission) {
-      throw new Error(`Permission was not found after ensuring key ${key}`);
-    }
-
-    return permission;
-  });
-}
 
 export async function resolveRolePermissionInput(
   database: DbTransaction,

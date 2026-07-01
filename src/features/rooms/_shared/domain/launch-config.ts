@@ -72,6 +72,18 @@ export function normalizeLaunchConfigFields(
   return normalized;
 }
 
+export function launchConfigRequiredPermissions(
+  fields: RoomLaunchConfigField[]
+): string[] {
+  return Array.from(
+    new Set(
+      fields
+        .map((field) => field.requiredPermission)
+        .filter((permission): permission is string => !!permission)
+    )
+  );
+}
+
 export function assertLaunchConfigFields(
   fields: RoomLaunchConfigField[]
 ): void {
