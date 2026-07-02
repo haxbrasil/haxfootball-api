@@ -10,6 +10,7 @@ import { accountRoutes } from "@/features/accounts/http";
 import { gameModeRoutes } from "@/features/game-modes/http";
 import { jobRoutes } from "@/features/jobs/http";
 import { localizationRoutes } from "@/features/localization/http";
+import { liveStateRoutes } from "@/features/live-state/http";
 import { matchRoutes } from "@/features/matches/http";
 import { permissionRoutes } from "@/features/permissions/http";
 import { playerRoutes } from "@/features/players/http";
@@ -74,6 +75,7 @@ app
       .use(sessionRoutes)
       .use(jobRoutes)
       .use(localizationRoutes)
+      .use(liveStateRoutes)
       .use(matchRoutes)
       .use(recordingRoutes)
       .use(roomRoutes)

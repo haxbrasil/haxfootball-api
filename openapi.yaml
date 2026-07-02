@@ -672,6 +672,75 @@ components:
           items:
             $ref: "#/components/schemas/RoomLaunchConfigField"
           type: array
+        liveStateContract:
+          anyOf:
+            - properties:
+                documents:
+                  items:
+                    properties:
+                      name:
+                        maxLength: 64
+                        minLength: 1
+                        pattern: ^[a-z][a-z0-9-]{0,63}$
+                        type: string
+                      schema: {}
+                      version:
+                        anyOf:
+                          - default: 0
+                            format: integer
+                            type: string
+                          - minimum: 1
+                            type: integer
+                        minimum: 1
+                    required:
+                      - name
+                      - version
+                      - schema
+                    type: object
+                  type: array
+                facts:
+                  items:
+                    properties:
+                      document:
+                        maxLength: 64
+                        minLength: 1
+                        pattern: ^[a-z][a-z0-9-]{0,63}$
+                        type: string
+                      key:
+                        maxLength: 128
+                        minLength: 1
+                        pattern: ^[a-z][a-z0-9.-]{0,127}$
+                        type: string
+                      pointer:
+                        maxLength: 240
+                        type: string
+                      type:
+                        anyOf:
+                          - const: string
+                            type: string
+                          - const: number
+                            type: string
+                          - const: boolean
+                            type: string
+                    required:
+                      - key
+                      - type
+                      - document
+                      - pointer
+                    type: object
+                  type: array
+                namespace:
+                  maxLength: 80
+                  minLength: 1
+                  pattern: ^[a-z][a-z0-9.-]{0,79}$
+                  type: string
+              required:
+                - namespace
+                - documents
+                - facts
+              type: object
+            - type: "null"
+          nullable: true
         name:
           maxLength: 64
           minLength: 1
@@ -2836,6 +2905,75 @@ components:
               - envVar
             type: object
           type: array
+        liveStateContract:
+          anyOf:
+            - properties:
+                documents:
+                  items:
+                    properties:
+                      name:
+                        maxLength: 64
+                        minLength: 1
+                        pattern: ^[a-z][a-z0-9-]{0,63}$
+                        type: string
+                      schema: {}
+                      version:
+                        anyOf:
+                          - default: 0
+                            format: integer
+                            type: string
+                          - minimum: 1
+                            type: integer
+                        minimum: 1
+                    required:
+                      - name
+                      - version
+                      - schema
+                    type: object
+                  type: array
+                facts:
+                  items:
+                    properties:
+                      document:
+                        maxLength: 64
+                        minLength: 1
+                        pattern: ^[a-z][a-z0-9-]{0,63}$
+                        type: string
+                      key:
+                        maxLength: 128
+                        minLength: 1
+                        pattern: ^[a-z][a-z0-9.-]{0,127}$
+                        type: string
+                      pointer:
+                        maxLength: 240
+                        type: string
+                      type:
+                        anyOf:
+                          - const: string
+                            type: string
+                          - const: number
+                            type: string
+                          - const: boolean
+                            type: string
+                    required:
+                      - key
+                      - type
+                      - document
+                      - pointer
+                    type: object
+                  type: array
+                namespace:
+                  maxLength: 80
+                  minLength: 1
+                  pattern: ^[a-z][a-z0-9.-]{0,79}$
+                  type: string
+              required:
+                - namespace
+                - documents
+                - facts
+              type: object
+            - type: "null"
+          nullable: true
         name:
           maxLength: 64
           minLength: 1
@@ -2857,6 +2995,7 @@ components:
         - description
         - releaseSource
         - launchConfigFields
+        - liveStateContract
         - integrationMode
         - haxballTokenEnvVar
         - createdAt
@@ -3266,6 +3405,75 @@ components:
           items:
             $ref: "#/components/schemas/RoomLaunchConfigField"
           type: array
+        liveStateContract:
+          anyOf:
+            - properties:
+                documents:
+                  items:
+                    properties:
+                      name:
+                        maxLength: 64
+                        minLength: 1
+                        pattern: ^[a-z][a-z0-9-]{0,63}$
+                        type: string
+                      schema: {}
+                      version:
+                        anyOf:
+                          - default: 0
+                            format: integer
+                            type: string
+                          - minimum: 1
+                            type: integer
+                        minimum: 1
+                    required:
+                      - name
+                      - version
+                      - schema
+                    type: object
+                  type: array
+                facts:
+                  items:
+                    properties:
+                      document:
+                        maxLength: 64
+                        minLength: 1
+                        pattern: ^[a-z][a-z0-9-]{0,63}$
+                        type: string
+                      key:
+                        maxLength: 128
+                        minLength: 1
+                        pattern: ^[a-z][a-z0-9.-]{0,127}$
+                        type: string
+                      pointer:
+                        maxLength: 240
+                        type: string
+                      type:
+                        anyOf:
+                          - const: string
+                            type: string
+                          - const: number
+                            type: string
+                          - const: boolean
+                            type: string
+                    required:
+                      - key
+                      - type
+                      - document
+                      - pointer
+                    type: object
+                  type: array
+                namespace:
+                  maxLength: 80
+                  minLength: 1
+                  pattern: ^[a-z][a-z0-9.-]{0,79}$
+                  type: string
+              required:
+                - namespace
+                - documents
+                - facts
+              type: object
+            - type: "null"
+          nullable: true
         releaseSource:
           properties:
             assetPattern:
@@ -4388,6 +4596,175 @@ paths:
       summary: Update a game mode
       tags:
         - Game Modes
+  /api/graphql:
+    delete:
+      operationId: allApiGraphql
+      responses:
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+    get:
+      operationId: allApiGraphql
+      responses:
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+    head:
+      operationId: allApiGraphql
+      responses:
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+    options:
+      operationId: allApiGraphql
+      responses:
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+    patch:
+      operationId: allApiGraphql
+      responses:
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+    post:
+      operationId: allApiGraphql
+      responses:
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+    put:
+      operationId: allApiGraphql
+      responses:
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+    trace:
+      operationId: allApiGraphql
+      responses:
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
   /api/job-schedules:
     get:
       operationId: getApiJob-schedules
@@ -6866,6 +7243,35 @@ paths:
       summary: Close room instance
       tags:
         - Rooms
+  /api/rooms/{id}/control:
+    ws:
+      operationId: wsApiRoomsByIdControl
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+      responses:
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
   /api/rooms/{id}/events:
     get:
       operationId: getApiRoomsByIdEvents

@@ -8,6 +8,7 @@
       "!data",
       "!openapi.yaml",
       "!bun.lock",
+      "!src/features/live-state/_graphql/generated.ts",
       "!drizzle/meta/*.json",
       "!drizzle/*.sql"
     ]

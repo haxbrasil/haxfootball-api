@@ -155,6 +155,20 @@
       "when": 1781227023826,
       "tag": "0021_shocking_deadpool",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "6",
+      "when": 1782944293255,
+      "tag": "0022_normal_prowler",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "6",
+      "when": 1782945237685,
+      "tag": "0023_red_the_hand",
+      "breakpoints": true
     }
   ]
 }

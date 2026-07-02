@@ -1,0 +1,1 @@
+ALTER TABLE `room_programs` ADD `live_state_contract` text;

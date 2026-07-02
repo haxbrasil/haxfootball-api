@@ -80,6 +80,45 @@ const roomProgramIntegrationModeSchema = t.Union([
   t.Literal("integrated")
 ]);
 
+const roomProgramLiveStateFactSchema = t.Object({
+  key: t.String({
+    minLength: 1,
+    maxLength: 128,
+    pattern: "^[a-z][a-z0-9.-]{0,127}$"
+  }),
+  type: t.Union([
+    t.Literal("string"),
+    t.Literal("number"),
+    t.Literal("boolean")
+  ]),
+  document: t.String({
+    minLength: 1,
+    maxLength: 64,
+    pattern: "^[a-z][a-z0-9-]{0,63}$"
+  }),
+  pointer: t.String({ maxLength: 240 })
+});
+
+const roomProgramLiveStateDocumentSchema = t.Object({
+  name: t.String({
+    minLength: 1,
+    maxLength: 64,
+    pattern: "^[a-z][a-z0-9-]{0,63}$"
+  }),
+  version: t.Integer({ minimum: 1 }),
+  schema: t.Any()
+});
+
+export const roomProgramLiveStateContractSchema = t.Object({
+  namespace: t.String({
+    minLength: 1,
+    maxLength: 80,
+    pattern: "^[a-z][a-z0-9.-]{0,79}$"
+  }),
+  documents: t.Array(roomProgramLiveStateDocumentSchema),
+  facts: t.Array(roomProgramLiveStateFactSchema)
+});
+
 export const roomLaunchConfigFieldSchema = t.Object({
   key: roomLaunchConfigKeySchema,
   label: localizedTextValueSchema,
@@ -133,6 +172,7 @@ export const roomProgramResponseSchema = t.Object({
   description: t.Nullable(t.String()),
   releaseSource: roomProgramReleaseSourceSchema,
   launchConfigFields: t.Array(roomLaunchConfigFieldResponseSchema),
+  liveStateContract: t.Nullable(roomProgramLiveStateContractSchema),
   integrationMode: roomProgramIntegrationModeSchema,
   haxballTokenEnvVar: envVarSchema,
   createdAt: t.String(),
@@ -164,6 +204,7 @@ export const createRoomProgramBodySchema = t.Object({
   description: t.Optional(t.String({ minLength: 1 })),
   releaseSource: roomProgramReleaseSourceSchema,
   launchConfigFields: t.Optional(t.Array(roomLaunchConfigFieldSchema)),
+  liveStateContract: t.Optional(t.Nullable(roomProgramLiveStateContractSchema)),
   integrationMode: roomProgramIntegrationModeSchema,
   haxballTokenEnvVar: t.Optional(envVarSchema)
 });
@@ -174,6 +215,7 @@ export const updateRoomProgramBodySchema = t.Partial(
     description: t.Nullable(t.String({ minLength: 1 })),
     releaseSource: roomProgramReleaseSourceSchema,
     launchConfigFields: t.Array(roomLaunchConfigFieldSchema),
+    liveStateContract: t.Nullable(roomProgramLiveStateContractSchema),
     integrationMode: roomProgramIntegrationModeSchema,
     haxballTokenEnvVar: envVarSchema
   })
@@ -687,6 +729,7 @@ export function toRoomProgramResponse(
     launchConfigFields: program.launchConfigFields.map((field) =>
       toRoomLaunchConfigFieldResponse(field, labels)
     ),
+    liveStateContract: program.liveStateContract,
     integrationMode: program.integrationMode,
     haxballTokenEnvVar: program.haxballTokenEnvVar,
     createdAt: program.createdAt,

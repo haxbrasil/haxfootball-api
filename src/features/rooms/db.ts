@@ -43,6 +43,20 @@ export type RoomProgramReleaseSource = {
 
 export type RoomProgramInstallStrategy = "none" | "npm-ci" | "npm-install";
 export type RoomProgramIntegrationMode = "external" | "integrated";
+export type RoomProgramLiveStateContract = {
+  namespace: string;
+  documents: Array<{
+    name: string;
+    version: number;
+    schema: JsonValue;
+  }>;
+  facts: Array<{
+    key: string;
+    type: "string" | "number" | "boolean";
+    document: string;
+    pointer: string;
+  }>;
+};
 export type RoomInstanceState =
   | "provisioning"
   | "running"
@@ -52,6 +66,7 @@ export type RoomInstanceIncidentKind =
   | "desync"
   | "uncaught-exception"
   | "unhandled-rejection";
+export type RoomCommandStatus = "queued" | "sent" | "acknowledged" | "failed";
 
 export type RoomProgramVersionArtifact = {
   releaseId: string;
@@ -78,6 +93,9 @@ export const roomPrograms = sqliteTable(
     launchConfigFields: text("launch_config_fields", { mode: "json" })
       .$type<RoomLaunchConfigField[]>()
       .notNull(),
+    liveStateContract: text("live_state_contract", {
+      mode: "json"
+    }).$type<RoomProgramLiveStateContract | null>(),
     integrationMode: text("integration_mode", {
       enum: ["external", "integrated"]
     })
@@ -297,6 +315,31 @@ export const roomInstanceIncidents = sqliteTable(
   ]
 );
 
+export const roomCommands = sqliteTable("room_commands", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  uuid: text("uuid").notNull().unique(),
+  roomId: integer("room_id")
+    .notNull()
+    .references(() => roomInstances.id),
+  name: text("name").notNull(),
+  payload: text("payload", { mode: "json" }).$type<JsonValue>(),
+  status: text("status", {
+    enum: ["queued", "sent", "acknowledged", "failed"]
+  })
+    .notNull()
+    .$default(() => "queued"),
+  result: text("result", { mode: "json" }).$type<JsonValue | null>(),
+  error: text("error"),
+  createdAt: text("created_at")
+    .notNull()
+    .$defaultFn(() => new Date().toISOString()),
+  updatedAt: text("updated_at")
+    .notNull()
+    .$defaultFn(() => new Date().toISOString()),
+  sentAt: text("sent_at"),
+  completedAt: text("completed_at")
+});
+
 export type RoomProgram = typeof roomPrograms.$inferSelect;
 export type RoomProgramVersion = typeof roomProgramVersions.$inferSelect;
 export type RoomProgramVersionAlias =
@@ -305,3 +348,4 @@ export type RoomProxyEndpoint = typeof roomProxyEndpoints.$inferSelect;
 export type RoomInstance = typeof roomInstances.$inferSelect;
 export type RoomInstanceEvent = typeof roomInstanceEvents.$inferSelect;
 export type RoomInstanceIncident = typeof roomInstanceIncidents.$inferSelect;
+export type RoomCommand = typeof roomCommands.$inferSelect;

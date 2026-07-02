@@ -14,6 +14,7 @@ import {
   launchConfigRequiredPermissions,
   normalizeLaunchConfigFields
 } from "@/features/rooms/_shared/domain/launch-config";
+import { normalizeLiveStateContract } from "@/features/rooms/_shared/domain/live-state-contract";
 
 export { updateRoomProgramBodySchema };
 
@@ -25,6 +26,10 @@ export async function updateRoomProgram(
   const launchConfigFields = input.launchConfigFields
     ? normalizeLaunchConfigFields(input.launchConfigFields)
     : program.launchConfigFields;
+  const liveStateContract =
+    input.liveStateContract === undefined
+      ? program.liveStateContract
+      : normalizeLiveStateContract(input.liveStateContract);
 
   const updatedProgram = await db.transaction(async (tx) => {
     await ensurePermissionsByKeys(
@@ -42,6 +47,7 @@ export async function updateRoomProgram(
             : input.description,
         releaseSource: input.releaseSource ?? program.releaseSource,
         launchConfigFields,
+        liveStateContract,
         integrationMode: input.integrationMode ?? program.integrationMode,
         haxballTokenEnvVar:
           input.haxballTokenEnvVar ?? program.haxballTokenEnvVar,

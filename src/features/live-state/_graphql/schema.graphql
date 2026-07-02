@@ -1,0 +1,247 @@
+scalar DateTime
+scalar JSON
+
+type Query {
+  liveRooms(
+    where: LiveRoomWhereInput
+    first: Int = 50
+    after: String
+  ): LiveRoomConnection!
+  liveRoom(id: ID!): LiveRoom
+  liveRoomCommands(
+    roomId: ID!
+    status: LiveRoomCommandStatus
+    first: Int = 50
+    after: String
+  ): LiveRoomCommandConnection!
+}
+
+type Mutation {
+  enqueueLiveRoomCommand(input: EnqueueLiveRoomCommandInput!): LiveRoomCommand!
+}
+
+type LiveRoomConnection {
+  edges: [LiveRoomEdge!]!
+  pageInfo: PageInfo!
+}
+
+type LiveRoomEdge {
+  cursor: String!
+  node: LiveRoom!
+}
+
+type LiveRoom {
+  id: ID!
+  connected: Boolean!
+  revision: Int!
+  lastSeenAt: DateTime!
+  room: LiveNativeRoom!
+  players(
+    where: LivePlayerWhereInput
+    first: Int = 50
+    after: String
+  ): LivePlayerConnection!
+  stateDocuments(where: LiveStateDocumentWhereInput): [LiveStateDocument!]!
+  stateFacts(where: LiveStateFactWhereInput): [LiveStateFact!]!
+}
+
+type LiveNativeRoom {
+  name: String
+  teamsLocked: Boolean
+  gameStatus: LiveGameStatus!
+  scores: LiveNativeScore
+}
+
+type LiveNativeScore {
+  red: Int!
+  blue: Int!
+}
+
+type LivePlayerConnection {
+  edges: [LivePlayerEdge!]!
+  pageInfo: PageInfo!
+}
+
+type LivePlayerEdge {
+  cursor: String!
+  node: LivePlayer!
+}
+
+type LivePlayer {
+  roomPlayerId: Int!
+  name: String!
+  team: LiveTeam!
+  admin: Boolean!
+  avatar: String
+  desynced: Boolean
+  sessionKind: LivePlayerSessionKind
+  playable: Boolean
+  playBlockedReason: String
+}
+
+type LiveStateDocument {
+  namespace: String!
+  name: String!
+  version: Int!
+  revision: Int!
+  updatedAt: DateTime!
+  payload: JSON!
+}
+
+type LiveStateFact {
+  namespace: String!
+  key: String!
+  type: LiveStateFactType!
+  stringValue: String
+  numberValue: Float
+  booleanValue: Boolean
+}
+
+type LiveRoomCommandConnection {
+  edges: [LiveRoomCommandEdge!]!
+  pageInfo: PageInfo!
+}
+
+type LiveRoomCommandEdge {
+  cursor: String!
+  node: LiveRoomCommand!
+}
+
+type LiveRoomCommand {
+  id: ID!
+  roomId: ID!
+  name: String!
+  payload: JSON
+  status: LiveRoomCommandStatus!
+  result: JSON
+  error: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  sentAt: DateTime
+  completedAt: DateTime
+}
+
+type PageInfo {
+  hasNextPage: Boolean!
+  endCursor: String
+}
+
+enum LiveGameStatus {
+  STOPPED
+  RUNNING
+  PAUSED
+  RESUMING
+}
+
+enum LiveTeam {
+  SPECTATORS
+  RED
+  BLUE
+}
+
+enum LivePlayerSessionKind {
+  GUEST
+  RESOLVING
+  SIGNING_IN
+  SIGNED_IN
+}
+
+enum LiveStateFactType {
+  STRING
+  NUMBER
+  BOOLEAN
+}
+
+enum LiveRoomCommandStatus {
+  QUEUED
+  SENT
+  ACKNOWLEDGED
+  FAILED
+}
+
+input EnqueueLiveRoomCommandInput {
+  roomId: ID!
+  name: String!
+  payload: JSON
+}
+
+input LiveRoomWhereInput {
+  id: StringFilter
+  connected: BooleanFilter
+  players: LivePlayerListRelationFilter
+  stateDocuments: LiveStateDocumentListRelationFilter
+  stateFacts: LiveStateFactListRelationFilter
+  AND: [LiveRoomWhereInput!]
+  OR: [LiveRoomWhereInput!]
+  NOT: [LiveRoomWhereInput!]
+}
+
+input LivePlayerWhereInput {
+  roomPlayerId: IntFilter
+  name: StringFilter
+  team: StringFilter
+  admin: BooleanFilter
+  desynced: BooleanFilter
+  sessionKind: StringFilter
+  playable: BooleanFilter
+  AND: [LivePlayerWhereInput!]
+  OR: [LivePlayerWhereInput!]
+  NOT: [LivePlayerWhereInput!]
+}
+
+input LiveStateDocumentWhereInput {
+  namespace: StringFilter
+  name: StringFilter
+  version: IntFilter
+  AND: [LiveStateDocumentWhereInput!]
+  OR: [LiveStateDocumentWhereInput!]
+  NOT: [LiveStateDocumentWhereInput!]
+}
+
+input LiveStateFactWhereInput {
+  namespace: StringFilter
+  key: StringFilter
+  type: StringFilter
+  stringValue: StringFilter
+  numberValue: FloatFilter
+  booleanValue: BooleanFilter
+  AND: [LiveStateFactWhereInput!]
+  OR: [LiveStateFactWhereInput!]
+  NOT: [LiveStateFactWhereInput!]
+}
+
+input LivePlayerListRelationFilter {
+  some: LivePlayerWhereInput
+  every: LivePlayerWhereInput
+  none: LivePlayerWhereInput
+}
+
+input LiveStateDocumentListRelationFilter {
+  some: LiveStateDocumentWhereInput
+  every: LiveStateDocumentWhereInput
+  none: LiveStateDocumentWhereInput
+}
+
+input LiveStateFactListRelationFilter {
+  some: LiveStateFactWhereInput
+  every: LiveStateFactWhereInput
+  none: LiveStateFactWhereInput
+}
+
+input StringFilter {
+  equals: String
+  contains: String
+  startsWith: String
+}
+
+input BooleanFilter {
+  equals: Boolean
+}
+
+input IntFilter {
+  equals: Int
+}
+
+input FloatFilter {
+  equals: Float
+}

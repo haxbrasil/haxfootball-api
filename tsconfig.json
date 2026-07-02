@@ -19,6 +19,7 @@
     "src/**/*.ts",
     "lib/**/*.ts",
     "test/**/*.ts",
+    "codegen.ts",
     "scripts/**/*.ts",
     "drizzle.config.ts"
   ]

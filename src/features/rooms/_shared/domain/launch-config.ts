@@ -167,6 +167,12 @@ export function buildEffectiveRoomEnvironment(
     environment.__ROOM_API_JWT = input.roomApiJwt;
     environment.__ROOM_ID = input.roomId;
     environment.__ROOM_COMM_ID = input.commId;
+
+    if (input.program.liveStateContract) {
+      environment.ROOM_LIVE_STATE_CONTRACT_JSON = JSON.stringify(
+        input.program.liveStateContract
+      );
+    }
   }
 
   for (const field of input.fields) {

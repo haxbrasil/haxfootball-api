@@ -53,6 +53,21 @@ type LaunchConfigFieldInput = Record<string, unknown>;
 
 type RoomLaunchConfigPayload = Record<string, unknown>;
 
+type LiveStateContractSummary = {
+  namespace: string;
+  documents: Array<{
+    name: string;
+    version: number;
+    schema: Record<string, unknown>;
+  }>;
+  facts: Array<{
+    key: string;
+    type: "string" | "number" | "boolean";
+    document: string;
+    pointer: string;
+  }>;
+};
+
 type LocalizedTextSummary = {
   value: string;
   label: string;
@@ -85,6 +100,7 @@ type RoomProgramResponse = {
   description: string | null;
   releaseSource: ProgramReleaseSource;
   launchConfigFields: LaunchConfigFieldSummary[];
+  liveStateContract: LiveStateContractSummary | null;
   integrationMode: "external" | "integrated";
   haxballTokenEnvVar: string;
 };
@@ -145,6 +161,7 @@ type CreateRoomProgramInput = {
   description?: string;
   releaseSource?: ProgramReleaseSource;
   launchConfigFields?: LaunchConfigFieldInput[];
+  liveStateContract?: LiveStateContractSummary | null;
   integrationMode?: "external" | "integrated";
   haxballTokenEnvVar?: string;
 };
@@ -270,6 +287,7 @@ afterAll(async () => {
 
 describe("rooms", () => {
   it("creates, lists, gets, and updates room programs", async () => {
+    const liveStateContract = testLiveStateContract();
     const alphaCreateResponse = await request("/api/room-programs", {
       method: "POST",
       body: roomProgramBody({
@@ -287,6 +305,7 @@ describe("rooms", () => {
         description: "Second room program",
         integrationMode: "integrated",
         haxballTokenEnvVar: "ROOM_ZETA_TOKEN",
+        liveStateContract,
         launchConfigFields: [
           {
             key: "arenaName",
@@ -342,6 +361,7 @@ describe("rooms", () => {
             envVar: "MAX_PLAYERS"
           }
         ],
+        liveStateContract,
         integrationMode: "integrated",
         haxballTokenEnvVar: "ROOM_ALPHA_ACCESS_TOKEN"
       }
@@ -385,6 +405,7 @@ describe("rooms", () => {
       description: "First room program",
       integrationMode: "external",
       haxballTokenEnvVar: "ROOM_ALPHA_TOKEN",
+      liveStateContract: null,
       launchConfigFields: expect.arrayContaining([
         expect.objectContaining({
           key: "roomName",
@@ -407,6 +428,7 @@ describe("rooms", () => {
       description: "Second room program",
       integrationMode: "integrated",
       haxballTokenEnvVar: "ROOM_ZETA_TOKEN",
+      liveStateContract,
       launchConfigFields: expect.arrayContaining([
         expect.objectContaining({
           key: "arenaName",
@@ -437,6 +459,7 @@ describe("rooms", () => {
           envVar: "MAX_PLAYERS"
         })
       ]),
+      liveStateContract,
       integrationMode: "integrated",
       haxballTokenEnvVar: "ROOM_ALPHA_ACCESS_TOKEN"
     });
@@ -447,6 +470,7 @@ describe("rooms", () => {
       releaseSource: {
         repo: "latest-room"
       },
+      liveStateContract,
       integrationMode: "integrated",
       haxballTokenEnvVar: "ROOM_ALPHA_ACCESS_TOKEN"
     });
@@ -2070,10 +2094,12 @@ describe("rooms", () => {
 
   it("launches integrated rooms and reports readiness only with the matching comm ID", async () => {
     const envPath = fixtureEnvPath();
+    const liveStateContract = testLiveStateContract();
     const programResponse = await request("/api/room-programs", {
       method: "POST",
       body: roomProgramBody({
         integrationMode: "integrated",
+        liveStateContract,
         launchConfigFields: [
           {
             key: "envCapture",
@@ -2146,7 +2172,8 @@ describe("rooms", () => {
       __ROOM_API_URL: "http://0.0.0.0:3000/api",
       __ROOM_API_JWT: expect.any(String),
       __ROOM_ID: room.id,
-      __ROOM_COMM_ID: commId
+      __ROOM_COMM_ID: commId,
+      ROOM_LIVE_STATE_CONTRACT_JSON: JSON.stringify(liveStateContract)
     });
     expect(capturedEnv.ROOM_NAME).toBeUndefined();
     expect(capturedEnv.ROOM_TOKEN).toBe("manual-token");
@@ -3149,8 +3176,43 @@ function roomProgramBody(input: CreateRoomProgramInput = {}) {
       assetPattern: "room-{tag}.tgz"
     },
     launchConfigFields: input.launchConfigFields,
+    liveStateContract: input.liveStateContract,
     integrationMode: input.integrationMode ?? "external",
     haxballTokenEnvVar: input.haxballTokenEnvVar
+  };
+}
+
+function testLiveStateContract(): LiveStateContractSummary {
+  return {
+    namespace: "test-room",
+    documents: [
+      {
+        name: "players",
+        version: 1,
+        schema: {
+          type: "object",
+          properties: {
+            registeredPlayers: { type: "number" },
+            acceptingRegistrations: { type: "boolean" }
+          },
+          required: ["registeredPlayers", "acceptingRegistrations"]
+        }
+      }
+    ],
+    facts: [
+      {
+        key: "registered-players",
+        type: "number",
+        document: "players",
+        pointer: "/registeredPlayers"
+      },
+      {
+        key: "accepting-registrations",
+        type: "boolean",
+        document: "players",
+        pointer: "/acceptingRegistrations"
+      }
+    ]
   };
 }
 

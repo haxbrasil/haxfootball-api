@@ -13,6 +13,7 @@ import {
   launchConfigRequiredPermissions,
   normalizeLaunchConfigFields
 } from "@/features/rooms/_shared/domain/launch-config";
+import { normalizeLiveStateContract } from "@/features/rooms/_shared/domain/live-state-contract";
 import { badRequest } from "@/shared/http/errors";
 
 export { createRoomProgramBodySchema };
@@ -32,6 +33,7 @@ export async function createRoomProgram(
   const launchConfigFields = normalizeLaunchConfigFields(
     input.launchConfigFields
   );
+  const liveStateContract = normalizeLiveStateContract(input.liveStateContract);
   const program = await db.transaction(async (tx) => {
     await ensurePermissionsByKeys(
       tx,
@@ -47,6 +49,7 @@ export async function createRoomProgram(
         description: input.description ?? null,
         releaseSource: input.releaseSource,
         launchConfigFields,
+        liveStateContract,
         integrationMode: input.integrationMode,
         haxballTokenEnvVar: input.haxballTokenEnvVar ?? "ROOM_TOKEN"
       })

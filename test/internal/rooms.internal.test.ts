@@ -73,6 +73,7 @@ describe("room internals", () => {
           assetPattern: "room-{tag}.tgz"
         },
         launchConfigFields: fields,
+        liveStateContract: null,
         integrationMode: "external",
         haxballTokenEnvVar: "TOKEN",
         createdAt: new Date().toISOString(),
@@ -106,6 +107,7 @@ describe("room internals", () => {
           assetPattern: "room-{tag}.tgz"
         },
         launchConfigFields: fields,
+        liveStateContract: null,
         integrationMode: "integrated",
         haxballTokenEnvVar: "TOKEN",
         createdAt: new Date().toISOString(),
@@ -129,6 +131,372 @@ describe("room internals", () => {
     expect(integratedEnvironment.ROOM_API_URL).toBeUndefined();
     expect(integratedEnvironment.ROOM_API_JWT).toBeUndefined();
     expect(integratedEnvironment.ROOM_COMM_ID).toBeUndefined();
+  });
+
+  it("stores validated live room snapshots and exposes generic state facts", async () => {
+    const { connectLiveRoom, replaceLiveRoomSnapshot } = await import(
+      "@/features/live-state/_shared/domain/registry"
+    );
+    const { liveStateGraphql } = await import("@/features/live-state/graphql");
+    const roomId = crypto.randomUUID();
+    const contract = {
+      namespace: "test-room",
+      documents: [
+        {
+          name: "session",
+          version: 1,
+          schema: {
+            type: "object",
+            properties: {
+              registeredPlayers: { type: "number" },
+              acceptingRegistrations: { type: "boolean" }
+            },
+            required: ["registeredPlayers", "acceptingRegistrations"]
+          }
+        }
+      ],
+      facts: [
+        {
+          key: "registered-players",
+          type: "number" as const,
+          document: "session",
+          pointer: "/registeredPlayers"
+        },
+        {
+          key: "accepting-registrations",
+          type: "boolean" as const,
+          document: "session",
+          pointer: "/acceptingRegistrations"
+        }
+      ]
+    };
+
+    connectLiveRoom({
+      roomId,
+      contract,
+      connection: {
+        send: () => {}
+      }
+    });
+
+    expect(() =>
+      replaceLiveRoomSnapshot(roomId, {
+        revision: 1,
+        room: {
+          name: "Invalid",
+          teamsLocked: null,
+          gameStatus: "running",
+          scores: null
+        },
+        players: [],
+        stateDocuments: [
+          {
+            name: "session",
+            version: 1,
+            payload: {
+              registeredPlayers: "wrong",
+              acceptingRegistrations: true
+            }
+          }
+        ]
+      })
+    ).toThrow("Invalid live state document payload 'session'");
+
+    replaceLiveRoomSnapshot(roomId, {
+      revision: 2,
+      room: {
+        name: "Live test",
+        teamsLocked: false,
+        gameStatus: "running",
+        scores: {
+          red: 7,
+          blue: 3
+        }
+      },
+      players: [
+        {
+          roomPlayerId: 1,
+          name: "Gabriel",
+          team: "red",
+          admin: true,
+          avatar: null,
+          desynced: false,
+          sessionKind: "signed-in",
+          playable: true,
+          playBlockedReason: null
+        }
+      ],
+      stateDocuments: [
+        {
+          name: "session",
+          version: 1,
+          payload: {
+            registeredPlayers: 12,
+            acceptingRegistrations: false
+          }
+        }
+      ]
+    });
+
+    const graphqlResponse = await liveStateGraphql.handle(
+      new Request("http://localhost/api/graphql", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json"
+        },
+        body: JSON.stringify({
+          query: `
+            query LiveRoom($id: ID!) {
+              liveRoom(id: $id) {
+                id
+                room {
+                  name
+                  gameStatus
+                  scores {
+                    red
+                    blue
+                  }
+                }
+                players(where: { desynced: { equals: false }, name: { equals: "Gabriel" } }) {
+                  edges {
+                    node {
+                      name
+                      team
+                      desynced
+                      sessionKind
+                      playable
+                    }
+                  }
+                }
+                stateFacts(where: { key: { startsWith: "registered" } }) {
+                  key
+                  type
+                  numberValue
+                }
+              }
+            }
+          `,
+          variables: { id: roomId }
+        })
+      }),
+      {}
+    );
+
+    expect(await graphqlResponse.json()).toEqual({
+      data: {
+        liveRoom: {
+          id: roomId,
+          room: {
+            name: "Live test",
+            gameStatus: "RUNNING",
+            scores: {
+              red: 7,
+              blue: 3
+            }
+          },
+          players: {
+            edges: [
+              {
+                node: {
+                  name: "Gabriel",
+                  team: "RED",
+                  desynced: false,
+                  sessionKind: "SIGNED_IN",
+                  playable: true
+                }
+              }
+            ]
+          },
+          stateFacts: [
+            {
+              key: "registered-players",
+              type: "NUMBER",
+              numberValue: 12
+            }
+          ]
+        }
+      }
+    });
+  });
+
+  it("persists live room commands and delivers them to connected rooms", async () => {
+    const { db } = await import("@/db/client");
+    const { roomCommands, roomInstances, roomPrograms, roomProgramVersions } =
+      await import("@/features/rooms/db");
+    const { connectLiveRoom } = await import(
+      "@/features/live-state/_shared/domain/registry"
+    );
+    const { completeLiveRoomCommand } = await import(
+      "@/features/live-state/complete-live-room-command"
+    );
+    const { liveStateGraphql } = await import("@/features/live-state/graphql");
+    const [program] = await db
+      .insert(roomPrograms)
+      .values({
+        uuid: crypto.randomUUID(),
+        name: `command-${crypto.randomUUID().slice(0, 8)}`,
+        title: "Command test",
+        description: "Command test",
+        releaseSource: {
+          owner: "haxbrasil",
+          repo: "test-room",
+          assetPattern: "room-{tag}.tgz"
+        },
+        launchConfigFields: [],
+        integrationMode: "integrated",
+        haxballTokenEnvVar: "ROOM_TOKEN"
+      })
+      .returning();
+    const [version] = await db
+      .insert(roomProgramVersions)
+      .values({
+        uuid: crypto.randomUUID(),
+        programId: program.id,
+        version: "v1.0.0",
+        artifact: {
+          releaseId: "command-test",
+          tagName: "v1.0.0",
+          assetName: "room-v1.0.0.tgz",
+          assetUrl: "https://example.com/room-v1.0.0.tgz",
+          publishedAt: "2026-05-15T00:00:00.000Z"
+        },
+        entrypoint: "dist/server.js",
+        installStrategy: "none"
+      })
+      .returning();
+    const [room] = await db
+      .insert(roomInstances)
+      .values({
+        uuid: crypto.randomUUID(),
+        programId: program.id,
+        versionId: version.id,
+        state: "running",
+        roomLink: null,
+        launchConfig: {},
+        public: false,
+        commIdHash: "command-test",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      })
+      .returning();
+    const deliveredMessages: unknown[] = [];
+
+    connectLiveRoom({
+      roomId: room.uuid,
+      contract: null,
+      connection: {
+        send: (message) => deliveredMessages.push(message)
+      }
+    });
+
+    const enqueueResponse = await liveStateGraphql.handle(
+      new Request("http://localhost/api/graphql", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json"
+        },
+        body: JSON.stringify({
+          query: `
+            mutation Enqueue($input: EnqueueLiveRoomCommandInput!) {
+              enqueueLiveRoomCommand(input: $input) {
+                id
+                roomId
+                name
+                payload
+                status
+                sentAt
+              }
+            }
+          `,
+          variables: {
+            input: {
+              roomId: room.uuid,
+              name: "ping",
+              payload: { nonce: "abc" }
+            }
+          }
+        })
+      }),
+      {}
+    );
+    const enqueueBody = await enqueueResponse.json();
+    const command = enqueueBody.data.enqueueLiveRoomCommand;
+
+    expect(command).toMatchObject({
+      roomId: room.uuid,
+      name: "ping",
+      payload: { nonce: "abc" },
+      status: "SENT",
+      sentAt: expect.any(String)
+    });
+    expect(deliveredMessages).toEqual([
+      {
+        type: "api.command",
+        command: expect.objectContaining({
+          id: command.id,
+          roomId: room.uuid,
+          name: "ping",
+          payload: { nonce: "abc" }
+        })
+      }
+    ]);
+
+    await completeLiveRoomCommand({
+      commandId: command.id,
+      ok: true,
+      result: { pong: true }
+    });
+
+    const listResponse = await liveStateGraphql.handle(
+      new Request("http://localhost/api/graphql", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json"
+        },
+        body: JSON.stringify({
+          query: `
+            query Commands($roomId: ID!) {
+              liveRoomCommands(roomId: $roomId, status: ACKNOWLEDGED) {
+                edges {
+                  node {
+                    id
+                    status
+                    result
+                  }
+                }
+              }
+            }
+          `,
+          variables: { roomId: room.uuid }
+        })
+      }),
+      {}
+    );
+
+    expect(await listResponse.json()).toEqual({
+      data: {
+        liveRoomCommands: {
+          edges: [
+            {
+              node: {
+                id: command.id,
+                status: "ACKNOWLEDGED",
+                result: { pong: true }
+              }
+            }
+          ]
+        }
+      }
+    });
+
+    const storedCommands = await db.select().from(roomCommands);
+    expect(
+      storedCommands.some(
+        (storedCommand) =>
+          storedCommand.uuid === command.id &&
+          storedCommand.status === "acknowledged"
+      )
+    ).toBe(true);
   });
 
   it("closes stale open rooms only when cleanup is configured", async () => {
