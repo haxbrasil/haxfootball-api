@@ -9,9 +9,8 @@ beforeAll(async () => {
 describe("job internals", () => {
   it("enqueues and claims only due queued jobs", async () => {
     const { getJobByUuid } = await import("@/features/jobs/_shared/db/queries");
-    const { enqueueKnownJob, runNextDueJob } = await import(
-      "@/features/jobs/_shared/domain/execution"
-    );
+    const { enqueueKnownJob, runNextDueJob } =
+      await import("@/features/jobs/_shared/domain/execution");
 
     const type = `test.due-${crypto.randomUUID()}`;
     const handlers = {
@@ -44,12 +43,10 @@ describe("job internals", () => {
   });
 
   it("does not double-claim a running job", async () => {
-    const { enqueueKnownJob } = await import(
-      "@/features/jobs/_shared/domain/execution"
-    );
-    const { claimNextDueJob, markJobSucceeded } = await import(
-      "@/features/jobs/_shared/db/queries"
-    );
+    const { enqueueKnownJob } =
+      await import("@/features/jobs/_shared/domain/execution");
+    const { claimNextDueJob, markJobSucceeded } =
+      await import("@/features/jobs/_shared/db/queries");
 
     const type = `test.claim-${crypto.randomUUID()}`;
     const handlers = {
@@ -74,9 +71,8 @@ describe("job internals", () => {
   });
 
   it("requeues failing jobs until attempts are exhausted", async () => {
-    const { enqueueKnownJob, runNextDueJob } = await import(
-      "@/features/jobs/_shared/domain/execution"
-    );
+    const { enqueueKnownJob, runNextDueJob } =
+      await import("@/features/jobs/_shared/domain/execution");
 
     const type = `test.fail-${crypto.randomUUID()}`;
     const handlers = {
@@ -112,9 +108,8 @@ describe("job internals", () => {
   it("recovers abandoned running jobs", async () => {
     const { db } = await import("@/db/client");
     const { jobs } = await import("@/features/jobs/db");
-    const { recoverAbandonedJobs } = await import(
-      "@/features/jobs/_shared/db/queries"
-    );
+    const { recoverAbandonedJobs } =
+      await import("@/features/jobs/_shared/db/queries");
 
     const now = new Date(Date.now() + 3_600_000);
     const oldLock = new Date(now.getTime() - 600_000).toISOString();
@@ -178,12 +173,10 @@ describe("job internals", () => {
   });
 
   it("enqueues each due schedule window once", async () => {
-    const { upsertJobSchedule } = await import(
-      "@/features/jobs/_shared/db/queries"
-    );
-    const { enqueueDueJobSchedules, runNextDueJob } = await import(
-      "@/features/jobs/_shared/domain/execution"
-    );
+    const { upsertJobSchedule } =
+      await import("@/features/jobs/_shared/db/queries");
+    const { enqueueDueJobSchedules, runNextDueJob } =
+      await import("@/features/jobs/_shared/domain/execution");
 
     const type = `test.schedule-${crypto.randomUUID()}`;
     const now = new Date("2026-05-16T12:00:00.000Z");
@@ -220,9 +213,8 @@ describe("job internals", () => {
     const { jobs } = await import("@/features/jobs/db");
     const { enqueueKnownJob, roomReconcileJobType, runNextDueJob } =
       await import("@/features/jobs/_shared/domain/execution");
-    const { roomInstances, roomPrograms, roomProgramVersions } = await import(
-      "@/features/rooms/db"
-    );
+    const { roomInstances, roomPrograms, roomProgramVersions } =
+      await import("@/features/rooms/db");
 
     const [program] = await db
       .insert(roomPrograms)

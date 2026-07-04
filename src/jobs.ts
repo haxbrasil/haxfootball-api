@@ -1,6 +1,11 @@
 import { Command, InvalidArgumentError } from "commander";
 import type { JsonValue } from "@lib/json";
 import { parseJsonValue } from "@lib/json";
+import { enqueueJob } from "@/features/jobs/enqueue-job";
+import { listJobs } from "@/features/jobs/list-jobs";
+import { retryJob } from "@/features/jobs/retry-job";
+import { runJob } from "@/features/jobs/run-job";
+import { workJobs } from "@/features/jobs/work-jobs";
 import { HttpError } from "@/shared/http/errors";
 
 const program = new Command()
@@ -12,8 +17,6 @@ program
   .command("work")
   .description("Run the long-lived job runner")
   .action(async () => {
-    const { workJobs } = await import("@/features/jobs/work-jobs");
-
     await workJobs();
   });
 
@@ -23,8 +26,6 @@ program
   .argument("<job-type>", "registered job type")
   .argument("[payload-json]", "optional JSON payload", jsonArgument)
   .action(async (type: string, payload: JsonValue | undefined) => {
-    const { enqueueJob } = await import("@/features/jobs/enqueue-job");
-
     printJson(
       await enqueueJob({
         type,
@@ -39,8 +40,6 @@ program
   .argument("<job-type>", "registered job type")
   .argument("[payload-json]", "optional JSON payload", jsonArgument)
   .action(async (type: string, payload: JsonValue | undefined) => {
-    const { runJob } = await import("@/features/jobs/run-job");
-
     printJson(await runJob({ type, payload }));
   });
 
@@ -48,8 +47,6 @@ program
   .command("list")
   .description("List jobs")
   .action(async () => {
-    const { listJobs } = await import("@/features/jobs/list-jobs");
-
     printJson(await listJobs());
   });
 
@@ -58,8 +55,6 @@ program
   .description("Retry a failed job")
   .argument("<job-id>", "job UUID")
   .action(async (jobId: string) => {
-    const { retryJob } = await import("@/features/jobs/retry-job");
-
     printJson(await retryJob(jobId));
   });
 

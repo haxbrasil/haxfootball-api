@@ -11,6 +11,7 @@ import { liveStateGraphql } from "@/features/live-state/graphql";
 import { roomIdParamsSchema } from "@/features/rooms/_shared/http/inputs";
 
 type ControlSocket = {
+  id: string;
   data: {
     params: {
       id: string;
@@ -20,6 +21,7 @@ type ControlSocket = {
 };
 
 type ControlMessageContext = {
+  active: boolean;
   roomId: string | null;
   socket: ControlSocket;
 };
@@ -29,7 +31,8 @@ type ControlMessageHandler<TMessage extends RoomControlMessage> = (
   message: TMessage
 ) => Promise<void> | void;
 
-const socketRoomIds = new WeakMap<object, string>();
+const socketRoomIds = new Map<string, string>();
+const activeSocketIdsByRoom = new Map<string, string>();
 
 const controlMessageHandlers = {
   "room.ping": async (context, message) => {
@@ -42,7 +45,8 @@ const controlMessageHandlers = {
           send: (outgoing) => context.socket.send(outgoing)
         }
       });
-      socketRoomIds.set(context.socket, roomId);
+      socketRoomIds.set(context.socket.id, roomId);
+      activeSocketIdsByRoom.set(roomId, context.socket.id);
       context.socket.send(pong(true, true));
     } catch (error) {
       context.socket.send(
@@ -80,17 +84,20 @@ const controlMessageHandlers = {
     }
   },
   "room.command-result": async (context, message) => {
-    if (
-      !requireConnectedRoom(
-        context,
-        "Room ping is required before command results"
-      )
-    ) {
+    const roomId = requireConnectedRoom(
+      context,
+      "Room ping is required before command results"
+    );
+
+    if (!roomId) {
       return;
     }
 
     try {
-      await completeLiveRoomCommand(message);
+      await completeLiveRoomCommand({
+        ...message,
+        roomId
+      });
     } catch (error) {
       context.socket.send(
         pong(
@@ -123,12 +130,14 @@ export const liveStateRoutes = new Elysia()
       await dispatchControlMessage(ws, message);
     },
     close(ws) {
-      const roomId = socketRoomIds.get(ws);
+      const roomId = socketRoomIds.get(ws.id);
 
-      if (roomId) {
+      if (roomId && activeSocketIdsByRoom.get(roomId) === ws.id) {
         disconnectLiveRoom(roomId);
-        socketRoomIds.delete(ws);
+        activeSocketIdsByRoom.delete(roomId);
       }
+
+      socketRoomIds.delete(ws.id);
     }
   });
 
@@ -139,10 +148,13 @@ async function dispatchControlMessage(
   const handler = controlMessageHandlers[message.type] as ControlMessageHandler<
     typeof message
   >;
+  const roomId = socketRoomIds.get(socket.id) ?? null;
 
   await handler(
     {
-      roomId: socketRoomIds.get(socket) ?? null,
+      active:
+        roomId !== null && activeSocketIdsByRoom.get(roomId) === socket.id,
+      roomId: socketRoomIds.get(socket.id) ?? null,
       socket
     },
     message
@@ -154,6 +166,13 @@ function requireConnectedRoom(
   errorMessage: string
 ): string | null {
   if (context.roomId) {
+    if (!context.active) {
+      context.socket.send(
+        pong(false, false, "Room control connection is not active")
+      );
+      return null;
+    }
+
     return context.roomId;
   }
 

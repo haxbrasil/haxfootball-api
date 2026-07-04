@@ -1,0 +1,32 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "jsPlugins": [
+    "./lint/oxlint-plugin-dynamic-imports.cjs",
+    "./lint/oxlint-plugin-feature-boundaries.cjs"
+  ],
+  "plugins": ["typescript", "unicorn", "oxc"],
+  "categories": {
+    "correctness": "error"
+  },
+  "rules": {
+    "feature-boundaries/no-legacy-feature-suffix-imports": "error",
+    "unicorn/no-thenable": "off"
+  },
+  "overrides": [
+    {
+      "files": ["src/**/*.ts", "scripts/**/*.ts", "lib/**/*.ts"],
+      "rules": {
+        "dynamic-imports/no-dynamic-import": "error"
+      }
+    },
+    {
+      "files": ["test/**/*.ts"],
+      "rules": {
+        "feature-boundaries/no-legacy-feature-suffix-imports": "off"
+      }
+    }
+  ],
+  "env": {
+    "builtin": true
+  }
+}

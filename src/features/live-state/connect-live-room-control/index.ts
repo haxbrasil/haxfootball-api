@@ -2,6 +2,7 @@ import { deliverQueuedRoomCommands } from "@/features/live-state/_shared/db/comm
 import { connectLiveRoom } from "@/features/live-state/_shared/domain/registry";
 import { getRoomRow } from "@/features/rooms/_shared/db/queries";
 import { assertRoomCommunicationId } from "@/features/rooms/_shared/domain/room-communication";
+import { badRequest } from "@/shared/http/errors";
 
 type ConnectLiveRoomControlInput = {
   roomId: string;
@@ -15,6 +16,10 @@ export async function connectLiveRoomControl(
   input: ConnectLiveRoomControlInput
 ): Promise<void> {
   const { room, program } = await getRoomRow(input.roomId);
+
+  if (room.state !== "provisioning" && room.state !== "running") {
+    throw badRequest("Live room control is not available for terminal rooms");
+  }
 
   await assertRoomCommunicationId(room, input.commId);
   connectLiveRoom({

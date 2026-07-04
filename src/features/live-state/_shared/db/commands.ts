@@ -25,6 +25,7 @@ export type ListLiveRoomCommandsInput = {
 
 export type CompleteLiveRoomCommandInput = {
   commandId: string;
+  roomId?: string;
   ok: boolean;
   result?: JsonValue | null;
   error?: string | null;
@@ -55,6 +56,10 @@ export async function enqueueLiveRoomCommand(
 
   const { room } = await getRoomRow(input.roomId);
   const payload = input.payload ?? null;
+
+  if (room.state !== "provisioning" && room.state !== "running") {
+    throw badRequest("Live room commands are not available for terminal rooms");
+  }
 
   if (!isJsonValue(payload)) {
     throw badRequest("Live room command payload must be JSON");
@@ -101,6 +106,32 @@ export async function completeLiveRoomCommand(
     throw badRequest("Live room command result must be JSON");
   }
 
+  const [existingCommand] = await db
+    .select()
+    .from(roomCommands)
+    .where(eq(roomCommands.uuid, input.commandId));
+
+  if (!existingCommand) {
+    throw notFound("Live room command not found");
+  }
+
+  const [room] = await db
+    .select()
+    .from(roomInstances)
+    .where(eq(roomInstances.id, existingCommand.roomId));
+
+  if (!room) {
+    throw notFound("Room not found");
+  }
+
+  if (input.roomId && room.uuid !== input.roomId) {
+    throw badRequest("Live room command does not belong to this room");
+  }
+
+  if (existingCommand.status !== "sent") {
+    throw badRequest("Live room command is not awaiting completion");
+  }
+
   const now = new Date().toISOString();
   const [command] = await db
     .update(roomCommands)
@@ -111,21 +142,8 @@ export async function completeLiveRoomCommand(
       completedAt: now,
       updatedAt: now
     })
-    .where(eq(roomCommands.uuid, input.commandId))
+    .where(eq(roomCommands.id, existingCommand.id))
     .returning();
-
-  if (!command) {
-    throw notFound("Live room command not found");
-  }
-
-  const [room] = await db
-    .select()
-    .from(roomInstances)
-    .where(eq(roomInstances.id, command.roomId));
-
-  if (!room) {
-    throw notFound("Room not found");
-  }
 
   return toLiveRoomCommandResponse(command, room.uuid);
 }

@@ -93,15 +93,28 @@ export const resolvers = {
   ...typedResolvers
 };
 
-function toRoomCommandStatus(status: LiveRoomCommandStatus | null | undefined) {
+function toRoomCommandStatus(
+  status:
+    | LiveRoomCommandStatus
+    | "queued"
+    | "sent"
+    | "acknowledged"
+    | "failed"
+    | null
+    | undefined
+) {
   switch (status) {
     case LiveRoomCommandStatus.Queued:
+    case "queued":
       return "queued";
     case LiveRoomCommandStatus.Sent:
+    case "sent":
       return "sent";
     case LiveRoomCommandStatus.Acknowledged:
+    case "acknowledged":
       return "acknowledged";
     case LiveRoomCommandStatus.Failed:
+    case "failed":
       return "failed";
     default:
       return null;

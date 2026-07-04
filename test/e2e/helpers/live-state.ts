@@ -1,18 +1,32 @@
 import type { LiveRoomSnapshot } from "@/features/live-state/_shared/domain/protocol";
+import type {
+  RoomInstanceState,
+  RoomProgramLiveStateContract
+} from "@/features/rooms/db";
 import { setupTestDatabase } from "@/test/e2e/helpers/helpers";
 import type { JsonValue } from "@lib";
 
+export type {
+  LivePlayer,
+  LiveRoomSnapshot
+} from "@/features/live-state/_shared/domain/protocol";
+export type { RoomProgramLiveStateContract } from "@/features/rooms/db";
+
 export type LiveRoomFixture = {
+  commId: string;
   roomId: string;
 };
 
-export async function createLiveRoomFixture(): Promise<LiveRoomFixture> {
+export async function createLiveRoomFixture(input?: {
+  liveStateContract?: RoomProgramLiveStateContract | null;
+  state?: RoomInstanceState;
+}): Promise<LiveRoomFixture> {
   await setupTestDatabase();
 
+  const commId = crypto.randomUUID();
   const { db } = await import("@/db/client");
-  const { roomInstances, roomPrograms, roomProgramVersions } = await import(
-    "@/features/rooms/db"
-  );
+  const { roomInstances, roomPrograms, roomProgramVersions } =
+    await import("@/features/rooms/db");
   const [program] = await db
     .insert(roomPrograms)
     .values({
@@ -26,7 +40,7 @@ export async function createLiveRoomFixture(): Promise<LiveRoomFixture> {
         assetPattern: "room-{tag}.tgz"
       },
       launchConfigFields: [],
-      liveStateContract: null,
+      liveStateContract: input?.liveStateContract ?? null,
       integrationMode: "integrated",
       haxballTokenEnvVar: "ROOM_TOKEN"
     })
@@ -54,17 +68,18 @@ export async function createLiveRoomFixture(): Promise<LiveRoomFixture> {
       uuid: crypto.randomUUID(),
       programId: program.id,
       versionId: version.id,
-      state: "running",
+      state: input?.state ?? "running",
       roomLink: null,
       launchConfig: {},
       public: false,
-      commIdHash: "live-state-e2e",
+      commIdHash: await hashSecret(commId),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     })
     .returning();
 
   return {
+    commId,
     roomId: room.uuid
   };
 }
@@ -73,41 +88,62 @@ export async function connectLiveRoomFixture(input: {
   roomId: string;
   deliveredMessages?: unknown[];
 }): Promise<void> {
-  const { connectLiveRoom } = await import(
-    "@/features/live-state/_shared/domain/registry"
-  );
+  const { deliverQueuedRoomCommands } =
+    await import("@/features/live-state/_shared/db/commands");
+  const { getRoomRow } = await import("@/features/rooms/_shared/db/queries");
+  const { connectLiveRoom } =
+    await import("@/features/live-state/_shared/domain/registry");
+  const { program } = await getRoomRow(input.roomId);
 
   connectLiveRoom({
     roomId: input.roomId,
-    contract: null,
+    contract: program.liveStateContract,
     connection: {
       send: (message) => input.deliveredMessages?.push(message)
     }
   });
+  await deliverQueuedRoomCommands(input.roomId);
 }
 
 export async function publishLiveRoomSnapshot(
   roomId: string,
   snapshot: LiveRoomSnapshot
 ): Promise<void> {
-  const { replaceLiveRoomSnapshot } = await import(
-    "@/features/live-state/_shared/domain/registry"
-  );
+  const { replaceLiveRoomSnapshot } =
+    await import("@/features/live-state/_shared/domain/registry");
 
   replaceLiveRoomSnapshot(roomId, snapshot);
 }
 
 export async function acknowledgeLiveRoomCommand(input: {
   commandId: string;
+  ok?: boolean;
   result: JsonValue;
+  error?: string | null;
 }): Promise<void> {
-  const { completeLiveRoomCommand } = await import(
-    "@/features/live-state/complete-live-room-command"
-  );
+  const { completeLiveRoomCommand } =
+    await import("@/features/live-state/complete-live-room-command");
 
   await completeLiveRoomCommand({
     commandId: input.commandId,
-    ok: true,
-    result: input.result
+    ok: input.ok ?? true,
+    result: input.result,
+    error: input.error
   });
+}
+
+export async function disconnectLiveRoomFixture(roomId: string): Promise<void> {
+  const { disconnectLiveRoom } =
+    await import("@/features/live-state/_shared/domain/registry");
+
+  disconnectLiveRoom(roomId);
+}
+
+async function hashSecret(secret: string): Promise<string> {
+  const bytes = new TextEncoder().encode(secret);
+  const hash = await crypto.subtle.digest("SHA-256", bytes);
+
+  return Array.from(new Uint8Array(hash), (byte) =>
+    byte.toString(16).padStart(2, "0")
+  ).join("");
 }

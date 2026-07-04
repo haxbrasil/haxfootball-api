@@ -8,12 +8,10 @@ beforeAll(async () => {
 describe("recording internals", () => {
   it("extends the public ID when a hash prefix collides", async () => {
     const { db } = await import("@/db/client");
-    const { createUniquePublicId } = await import(
-      "@/features/recordings/create-recording"
-    );
-    const { recordings: recordingsTable } = await import(
-      "@/features/recordings/db"
-    );
+    const { createUniquePublicId } =
+      await import("@/features/recordings/create-recording");
+    const { recordings: recordingsTable } =
+      await import("@/features/recordings/db");
 
     await db.insert(recordingsTable).values({
       publicId: "abcdef0",
@@ -29,12 +27,10 @@ describe("recording internals", () => {
 
   it("lists recordings newest first", async () => {
     const { db } = await import("@/db/client");
-    const { listRecordings } = await import(
-      "@/features/recordings/list-recordings"
-    );
-    const { recordings: recordingsTable } = await import(
-      "@/features/recordings/db"
-    );
+    const { listRecordings } =
+      await import("@/features/recordings/list-recordings");
+    const { recordings: recordingsTable } =
+      await import("@/features/recordings/db");
 
     await db.insert(recordingsTable).values([
       {

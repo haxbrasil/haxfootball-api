@@ -7,9 +7,8 @@ export async function runRoomReconciliationJob(): Promise<void> {
 export async function runRoomReconciliationJobForTest(): Promise<string> {
   await setupTestDatabase();
 
-  const { enqueueKnownJob, roomReconcileJobType, runQueuedJob } = await import(
-    "@/features/jobs/_shared/domain/execution"
-  );
+  const { enqueueKnownJob, roomReconcileJobType, runQueuedJob } =
+    await import("@/features/jobs/_shared/domain/execution");
   const job = await enqueueKnownJob({ type: roomReconcileJobType });
   const completed = await runQueuedJob({
     uuid: job.uuid,
@@ -26,9 +25,8 @@ export async function runRoomReconciliationJobForTest(): Promise<string> {
 export async function enqueueRoomReconciliationJobForTest(): Promise<string> {
   await setupTestDatabase();
 
-  const { enqueueKnownJob, roomReconcileJobType } = await import(
-    "@/features/jobs/_shared/domain/execution"
-  );
+  const { enqueueKnownJob, roomReconcileJobType } =
+    await import("@/features/jobs/_shared/domain/execution");
   const job = await enqueueKnownJob({ type: roomReconcileJobType });
 
   return job.uuid;
@@ -37,12 +35,10 @@ export async function enqueueRoomReconciliationJobForTest(): Promise<string> {
 export async function ensureJobScheduleForTest(): Promise<string> {
   await setupTestDatabase();
 
-  const { ensureConfiguredJobSchedules, roomReconcileJobType } = await import(
-    "@/features/jobs/_shared/domain/execution"
-  );
-  const { getJobScheduleByUuid, listJobScheduleRows } = await import(
-    "@/features/jobs/_shared/db/queries"
-  );
+  const { ensureConfiguredJobSchedules, roomReconcileJobType } =
+    await import("@/features/jobs/_shared/domain/execution");
+  const { getJobScheduleByUuid, listJobScheduleRows } =
+    await import("@/features/jobs/_shared/db/queries");
 
   await ensureConfiguredJobSchedules();
 
