@@ -10,6 +10,7 @@ import {
 import { join } from "node:path";
 import { runRoomReconciliationJob } from "@/test/e2e/helpers/jobs";
 import {
+  paginatedBody,
   paginatedItems,
   rawRequest,
   request
@@ -326,7 +327,7 @@ describe("rooms", () => {
 
     const alpha: RoomProgramResponse = await alphaCreateResponse.json();
     const zeta: RoomProgramResponse = await zetaCreateResponse.json();
-    const listResponse = await request("/api/room-programs");
+    const programs = await listRoomProgramsUntil([alpha.id, zeta.id]);
     const getResponse = await request(`/api/room-programs/${zeta.id}`);
     const updateResponse = await request(`/api/room-programs/${alpha.id}`, {
       method: "PATCH",
@@ -380,15 +381,11 @@ describe("rooms", () => {
       }
     });
 
-    expect(listResponse.status).toBe(200);
     expect(getResponse.status).toBe(200);
     expect(updateResponse.status).toBe(200);
     expect(refetchResponse.status).toBe(200);
     expect(duplicateResponse.status).toBe(400);
 
-    const programs = await paginatedItems<
-      RoomProgramIdOnly & RoomProgramResponse
-    >(listResponse);
     const alphaIndex = programs.findIndex(
       (program: RoomProgramIdOnly) => program.id === alpha.id
     );
@@ -3358,4 +3355,34 @@ function fixtureEnvPath(): string {
 
 function uniqueName(prefix: string): string {
   return `${prefix}-${crypto.randomUUID().slice(0, 8)}`;
+}
+
+async function listRoomProgramsUntil(
+  ids: string[]
+): Promise<(RoomProgramIdOnly & RoomProgramResponse)[]> {
+  const programs: (RoomProgramIdOnly & RoomProgramResponse)[] = [];
+  let cursor: string | null = null;
+
+  do {
+    const searchParams = new URLSearchParams({ limit: "100" });
+    if (cursor) {
+      searchParams.set("cursor", cursor);
+    }
+
+    const response = await request(`/api/room-programs?${searchParams}`);
+    expect(response.status).toBe(200);
+
+    const body = await paginatedBody<RoomProgramIdOnly & RoomProgramResponse>(
+      response
+    );
+    programs.push(...body.items);
+
+    if (ids.every((id) => programs.some((program) => program.id === id))) {
+      return programs;
+    }
+
+    cursor = body.page.nextCursor;
+  } while (cursor);
+
+  return programs;
 }
