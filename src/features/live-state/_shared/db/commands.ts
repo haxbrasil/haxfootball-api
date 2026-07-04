@@ -173,6 +173,9 @@ export async function listLiveRoomCommands(input: ListLiveRoomCommandsInput) {
       cursor: encodeCursor(start + index),
       node: toLiveRoomCommandResponse(command, room.uuid)
     })),
+    nodes: items.map((command) =>
+      toLiveRoomCommandResponse(command, room.uuid)
+    ),
     pageInfo: {
       hasNextPage,
       endCursor: endIndex === null ? null : encodeCursor(endIndex)

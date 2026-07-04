@@ -27,6 +27,7 @@ export function connection<T extends object & Record<string, unknown>>(
   args: { first?: number | null; after?: string | null }
 ): {
   edges: Array<{ cursor: string; node: T }>;
+  nodes: T[];
   pageInfo: { hasNextPage: boolean; endCursor: string | null };
 } {
   const first = Math.min(Math.max(args.first ?? 50, 1), 100);
@@ -41,6 +42,7 @@ export function connection<T extends object & Record<string, unknown>>(
       cursor: encodeCursor(start + index),
       node
     })),
+    nodes: items,
     pageInfo: {
       hasNextPage,
       endCursor: endIndex === null ? null : encodeCursor(endIndex)

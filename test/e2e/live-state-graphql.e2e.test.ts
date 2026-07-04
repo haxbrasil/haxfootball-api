@@ -82,6 +82,70 @@ describe("live state GraphQL queries", () => {
     });
   });
 
+  it("returns live room and player connection nodes", async () => {
+    const fixture = await liveRoomWithSnapshot({
+      players: [
+        {
+          roomPlayerId: 7,
+          name: "Node Player",
+          team: "blue",
+          admin: true
+        }
+      ]
+    });
+
+    const response = await request("/api/graphql", {
+      method: "POST",
+      body: {
+        query: `
+          query Rooms($where: LiveRoomWhereInput!) {
+            liveRooms(where: $where) {
+              nodes {
+                id
+                players(where: { name: { equals: "Node Player" } }) {
+                  nodes {
+                    roomPlayerId
+                    name
+                    team
+                    admin
+                  }
+                }
+              }
+            }
+          }
+        `,
+        variables: {
+          where: {
+            id: { equals: fixture.roomId }
+          }
+        }
+      }
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      data: {
+        liveRooms: {
+          nodes: [
+            {
+              id: fixture.roomId,
+              players: {
+                nodes: [
+                  {
+                    roomPlayerId: 7,
+                    name: "Node Player",
+                    team: "BLUE",
+                    admin: true
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    });
+  });
+
   it("returns all native room enum values through GraphQL names", async () => {
     const stopped = await liveRoomWithSnapshot({
       room: { gameStatus: "stopped" },
@@ -1321,6 +1385,50 @@ describe("live state GraphQL commands", () => {
       payload: { nonce: "queued" },
       status: "QUEUED",
       sentAt: null
+    });
+  });
+
+  it("returns live room command connection nodes", async () => {
+    const fixture = await createLiveRoomFixture();
+    const command = await enqueueCommand(fixture.roomId, "ping", {
+      nonce: "nodes"
+    });
+
+    const response = await request("/api/graphql", {
+      method: "POST",
+      body: {
+        query: `
+          query Commands($roomId: ID!) {
+            liveRoomCommands(roomId: $roomId) {
+              nodes {
+                id
+                roomId
+                name
+                payload
+                status
+              }
+            }
+          }
+        `,
+        variables: { roomId: fixture.roomId }
+      }
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      data: {
+        liveRoomCommands: {
+          nodes: [
+            {
+              id: command.id,
+              roomId: fixture.roomId,
+              name: "ping",
+              payload: { nonce: "nodes" },
+              status: "QUEUED"
+            }
+          ]
+        }
+      }
     });
   });
 

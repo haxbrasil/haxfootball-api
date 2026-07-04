@@ -73,6 +73,7 @@ export type LivePlayer = {
 export type LivePlayerConnection = {
   __typename?: 'LivePlayerConnection';
   edges: Array<LivePlayerEdge>;
+  nodes: Array<LivePlayer>;
   pageInfo: PageInfo;
 };
 
@@ -155,6 +156,7 @@ export type LiveRoomCommand = {
 export type LiveRoomCommandConnection = {
   __typename?: 'LiveRoomCommandConnection';
   edges: Array<LiveRoomCommandEdge>;
+  nodes: Array<LiveRoomCommand>;
   pageInfo: PageInfo;
 };
 
@@ -174,6 +176,7 @@ export enum LiveRoomCommandStatus {
 export type LiveRoomConnection = {
   __typename?: 'LiveRoomConnection';
   edges: Array<LiveRoomEdge>;
+  nodes: Array<LiveRoom>;
   pageInfo: PageInfo;
 };
 
@@ -395,17 +398,17 @@ export type ResolversTypes = {
   LiveNativeRoom: ResolverTypeWrapper<LiveNativeRoomModel>;
   LiveNativeScore: ResolverTypeWrapper<LiveNativeScoreModel>;
   LivePlayer: ResolverTypeWrapper<LivePlayerModel>;
-  LivePlayerConnection: ResolverTypeWrapper<Partial<Omit<LivePlayerConnection, 'edges'> & { edges: Array<ResolversTypes['LivePlayerEdge']> }>>;
+  LivePlayerConnection: ResolverTypeWrapper<Partial<Omit<LivePlayerConnection, 'edges' | 'nodes'> & { edges: Array<ResolversTypes['LivePlayerEdge']>, nodes: Array<ResolversTypes['LivePlayer']> }>>;
   LivePlayerEdge: ResolverTypeWrapper<Partial<Omit<LivePlayerEdge, 'node'> & { node: ResolversTypes['LivePlayer'] }>>;
   LivePlayerListRelationFilter: ResolverTypeWrapper<Partial<LivePlayerListRelationFilter>>;
   LivePlayerSessionKind: ResolverTypeWrapper<Partial<LivePlayerSessionKind>>;
   LivePlayerWhereInput: ResolverTypeWrapper<Partial<LivePlayerWhereInput>>;
   LiveRoom: ResolverTypeWrapper<LiveRoomStateModel>;
   LiveRoomCommand: ResolverTypeWrapper<LiveRoomCommandResponseModel>;
-  LiveRoomCommandConnection: ResolverTypeWrapper<Partial<Omit<LiveRoomCommandConnection, 'edges'> & { edges: Array<ResolversTypes['LiveRoomCommandEdge']> }>>;
+  LiveRoomCommandConnection: ResolverTypeWrapper<Partial<Omit<LiveRoomCommandConnection, 'edges' | 'nodes'> & { edges: Array<ResolversTypes['LiveRoomCommandEdge']>, nodes: Array<ResolversTypes['LiveRoomCommand']> }>>;
   LiveRoomCommandEdge: ResolverTypeWrapper<Partial<Omit<LiveRoomCommandEdge, 'node'> & { node: ResolversTypes['LiveRoomCommand'] }>>;
   LiveRoomCommandStatus: ResolverTypeWrapper<Partial<LiveRoomCommandStatus>>;
-  LiveRoomConnection: ResolverTypeWrapper<Partial<Omit<LiveRoomConnection, 'edges'> & { edges: Array<ResolversTypes['LiveRoomEdge']> }>>;
+  LiveRoomConnection: ResolverTypeWrapper<Partial<Omit<LiveRoomConnection, 'edges' | 'nodes'> & { edges: Array<ResolversTypes['LiveRoomEdge']>, nodes: Array<ResolversTypes['LiveRoom']> }>>;
   LiveRoomEdge: ResolverTypeWrapper<Partial<Omit<LiveRoomEdge, 'node'> & { node: ResolversTypes['LiveRoom'] }>>;
   LiveRoomWhereInput: ResolverTypeWrapper<Partial<LiveRoomWhereInput>>;
   LiveStateDocument: ResolverTypeWrapper<LiveStateDocumentModel>;
@@ -438,15 +441,15 @@ export type ResolversParentTypes = {
   LiveNativeRoom: LiveNativeRoomModel;
   LiveNativeScore: LiveNativeScoreModel;
   LivePlayer: LivePlayerModel;
-  LivePlayerConnection: Partial<Omit<LivePlayerConnection, 'edges'> & { edges: Array<ResolversParentTypes['LivePlayerEdge']> }>;
+  LivePlayerConnection: Partial<Omit<LivePlayerConnection, 'edges' | 'nodes'> & { edges: Array<ResolversParentTypes['LivePlayerEdge']>, nodes: Array<ResolversParentTypes['LivePlayer']> }>;
   LivePlayerEdge: Partial<Omit<LivePlayerEdge, 'node'> & { node: ResolversParentTypes['LivePlayer'] }>;
   LivePlayerListRelationFilter: Partial<LivePlayerListRelationFilter>;
   LivePlayerWhereInput: Partial<LivePlayerWhereInput>;
   LiveRoom: LiveRoomStateModel;
   LiveRoomCommand: LiveRoomCommandResponseModel;
-  LiveRoomCommandConnection: Partial<Omit<LiveRoomCommandConnection, 'edges'> & { edges: Array<ResolversParentTypes['LiveRoomCommandEdge']> }>;
+  LiveRoomCommandConnection: Partial<Omit<LiveRoomCommandConnection, 'edges' | 'nodes'> & { edges: Array<ResolversParentTypes['LiveRoomCommandEdge']>, nodes: Array<ResolversParentTypes['LiveRoomCommand']> }>;
   LiveRoomCommandEdge: Partial<Omit<LiveRoomCommandEdge, 'node'> & { node: ResolversParentTypes['LiveRoomCommand'] }>;
-  LiveRoomConnection: Partial<Omit<LiveRoomConnection, 'edges'> & { edges: Array<ResolversParentTypes['LiveRoomEdge']> }>;
+  LiveRoomConnection: Partial<Omit<LiveRoomConnection, 'edges' | 'nodes'> & { edges: Array<ResolversParentTypes['LiveRoomEdge']>, nodes: Array<ResolversParentTypes['LiveRoom']> }>;
   LiveRoomEdge: Partial<Omit<LiveRoomEdge, 'node'> & { node: ResolversParentTypes['LiveRoom'] }>;
   LiveRoomWhereInput: Partial<LiveRoomWhereInput>;
   LiveStateDocument: LiveStateDocumentModel;
@@ -496,6 +499,7 @@ export type LivePlayerResolvers<ContextType = LiveStateGraphqlContext, ParentTyp
 
 export type LivePlayerConnectionResolvers<ContextType = LiveStateGraphqlContext, ParentType extends ResolversParentTypes['LivePlayerConnection'] = ResolversParentTypes['LivePlayerConnection']> = {
   edges?: Resolver<Array<ResolversTypes['LivePlayerEdge']>, ParentType, ContextType>;
+  nodes?: Resolver<Array<ResolversTypes['LivePlayer']>, ParentType, ContextType>;
   pageInfo?: Resolver<ResolversTypes['PageInfo'], ParentType, ContextType>;
 };
 
@@ -531,6 +535,7 @@ export type LiveRoomCommandResolvers<ContextType = LiveStateGraphqlContext, Pare
 
 export type LiveRoomCommandConnectionResolvers<ContextType = LiveStateGraphqlContext, ParentType extends ResolversParentTypes['LiveRoomCommandConnection'] = ResolversParentTypes['LiveRoomCommandConnection']> = {
   edges?: Resolver<Array<ResolversTypes['LiveRoomCommandEdge']>, ParentType, ContextType>;
+  nodes?: Resolver<Array<ResolversTypes['LiveRoomCommand']>, ParentType, ContextType>;
   pageInfo?: Resolver<ResolversTypes['PageInfo'], ParentType, ContextType>;
 };
 
@@ -541,6 +546,7 @@ export type LiveRoomCommandEdgeResolvers<ContextType = LiveStateGraphqlContext, 
 
 export type LiveRoomConnectionResolvers<ContextType = LiveStateGraphqlContext, ParentType extends ResolversParentTypes['LiveRoomConnection'] = ResolversParentTypes['LiveRoomConnection']> = {
   edges?: Resolver<Array<ResolversTypes['LiveRoomEdge']>, ParentType, ContextType>;
+  nodes?: Resolver<Array<ResolversTypes['LiveRoom']>, ParentType, ContextType>;
   pageInfo?: Resolver<ResolversTypes['PageInfo'], ParentType, ContextType>;
 };
 
