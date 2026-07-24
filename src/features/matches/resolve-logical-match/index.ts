@@ -17,12 +17,14 @@ export const matchRoundReferenceSchema = t.Union([
   t.Object({
     kind: t.Literal("sequential"),
     number: t.Integer({ minimum: 1 }),
-    matchId: matchPublicIdSchema
+    matchId: matchPublicIdSchema,
+    orientation: t.Union([t.Literal("aligned"), t.Literal("swapped")])
   }),
   t.Object({
     kind: t.Literal("extra-time"),
     number: t.Null(),
-    matchId: matchPublicIdSchema
+    matchId: matchPublicIdSchema,
+    orientation: t.Union([t.Literal("aligned"), t.Literal("swapped")])
   })
 ]);
 
@@ -40,6 +42,7 @@ export type ResolvedLogicalMatch =
           kind: "sequential";
           number: 1;
           matchId: string;
+          orientation: "aligned";
         };
         match: Match;
       }>;
@@ -123,7 +126,8 @@ export async function resolveLogicalMatch(
         reference: {
           kind: "sequential",
           number: 1,
-          matchId: match.publicId
+          matchId: match.publicId,
+          orientation: "aligned"
         },
         match
       }

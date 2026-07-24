@@ -12,7 +12,10 @@ import type {
   MatchPlayerStint,
   MatchTeamMetadata
 } from "@/features/matches/db";
-import { toMatchRoundReference } from "@/features/matches/_shared/domain/composition";
+import {
+  normalizeMatchScore,
+  toMatchRoundReference
+} from "@/features/matches/_shared/domain/composition";
 import { matchRoundReferenceSchema } from "@/features/matches/resolve-logical-match";
 import {
   composedMatchPublicIdSchema,
@@ -235,7 +238,9 @@ export function toComposedMatchResponse(
     status: last.status,
     initiatedAt: first.initiatedAt,
     endedAt: last.endedAt,
-    score: last.score,
+    score: last.score
+      ? normalizeMatchScore(last.score, lastRound.round.teamOrientation)
+      : null,
     gameMode: first.gameMode,
     eventSchema: first.eventSchema,
     rounds,

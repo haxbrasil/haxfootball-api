@@ -43,6 +43,7 @@ export async function updateMatchComposition(
         matchId: round.match.id,
         kind: round.input.kind,
         roundNumber: round.input.number,
+        teamOrientation: round.teamOrientation,
         position: index + 1
       }))
     );

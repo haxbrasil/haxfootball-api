@@ -47,8 +47,18 @@ type PhysicalMatchResponse = {
 };
 
 type RoundReference =
-  | { kind: "sequential"; number: number; matchId: string }
-  | { kind: "extra-time"; number: null; matchId: string };
+  | {
+      kind: "sequential";
+      number: number;
+      matchId: string;
+      orientation: "aligned" | "swapped";
+    }
+  | {
+      kind: "extra-time";
+      number: null;
+      matchId: string;
+      orientation: "aligned" | "swapped";
+    };
 
 type ComposedMatchResponse = {
   kind: "composed";
@@ -156,9 +166,24 @@ describe("match compositions", () => {
       method: "POST",
       body: {
         rounds: [
-          { kind: "sequential", number: 1, matchId: first.id },
-          { kind: "sequential", number: 2, matchId: second.id },
-          { kind: "extra-time", number: null, matchId: extraTime.id }
+          {
+            kind: "sequential",
+            number: 1,
+            matchId: first.id,
+            orientation: "aligned"
+          },
+          {
+            kind: "sequential",
+            number: 2,
+            matchId: second.id,
+            orientation: "aligned"
+          },
+          {
+            kind: "extra-time",
+            number: null,
+            matchId: extraTime.id,
+            orientation: "aligned"
+          }
         ]
       }
     });
@@ -183,18 +208,21 @@ describe("match compositions", () => {
           kind: "sequential",
           number: 1,
           matchId: first.id,
+          orientation: "aligned",
           match: { id: first.id, score: first.score, recording: null }
         },
         {
           kind: "sequential",
           number: 2,
           matchId: second.id,
+          orientation: "aligned",
           match: { id: second.id, score: second.score, recording: null }
         },
         {
           kind: "extra-time",
           number: null,
           matchId: extraTime.id,
+          orientation: "aligned",
           match: {
             id: extraTime.id,
             score: extraTime.score,
@@ -278,7 +306,12 @@ describe("match compositions", () => {
       body: {
         rounds: [
           { kind: "sequential", number: 1, matchId: first.id },
-          { kind: "sequential", number: 2, matchId: second.id }
+          {
+            kind: "sequential",
+            number: 2,
+            matchId: second.id,
+            orientation: "aligned"
+          }
         ]
       }
     });
@@ -406,6 +439,135 @@ describe("match compositions", () => {
     });
   });
 
+  it("detects switched sides and normalizes the composed score", async () => {
+    const firstResponse = await request("/api/matches", {
+      method: "POST",
+      body: {
+        status: "completed",
+        endedAt: "2026-07-12T11:10:00.000Z",
+        score: { red: 7, blue: 35 }
+      }
+    });
+    const secondResponse = await request("/api/matches", {
+      method: "POST",
+      body: {
+        status: "completed",
+        endedAt: "2026-07-12T11:20:00.000Z",
+        score: { red: 44, blue: 14 }
+      }
+    });
+
+    expect(firstResponse.status).toBe(201);
+    expect(secondResponse.status).toBe(201);
+
+    const first: PhysicalMatchResponse = await firstResponse.json();
+    const second: PhysicalMatchResponse = await secondResponse.json();
+    const response = await request("/api/matches/compositions", {
+      method: "POST",
+      body: {
+        rounds: [
+          { kind: "sequential", number: 1, matchId: first.id },
+          {
+            kind: "sequential",
+            number: 2,
+            matchId: second.id,
+            orientation: "auto"
+          }
+        ]
+      }
+    });
+
+    expect(response.status).toBe(201);
+
+    const composition: ComposedMatchResponse = await response.json();
+
+    expect(composition.score).toEqual({ red: 14, blue: 44 });
+    expect(composition.rounds).toMatchObject([
+      {
+        matchId: first.id,
+        orientation: "aligned",
+        match: { score: { red: 7, blue: 35 } }
+      },
+      {
+        matchId: second.id,
+        orientation: "swapped",
+        match: { score: { red: 44, blue: 14 } }
+      }
+    ]);
+  });
+
+  it("requires a manual choice when round orientation is ambiguous", async () => {
+    const firstResponse = await request("/api/matches", {
+      method: "POST",
+      body: {
+        status: "completed",
+        endedAt: "2026-07-12T12:10:00.000Z",
+        score: { red: 0, blue: 0 }
+      }
+    });
+    const secondResponse = await request("/api/matches", {
+      method: "POST",
+      body: {
+        status: "completed",
+        endedAt: "2026-07-12T12:20:00.000Z",
+        score: { red: 1, blue: 1 }
+      }
+    });
+
+    expect(firstResponse.status).toBe(201);
+    expect(secondResponse.status).toBe(201);
+
+    const first: PhysicalMatchResponse = await firstResponse.json();
+    const second: PhysicalMatchResponse = await secondResponse.json();
+    const response = await request("/api/matches/compositions", {
+      method: "POST",
+      body: {
+        rounds: [
+          { kind: "sequential", number: 1, matchId: first.id },
+          {
+            kind: "sequential",
+            number: 2,
+            matchId: second.id,
+            orientation: "auto"
+          }
+        ]
+      }
+    });
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({
+      error: {
+        code: "BAD_REQUEST",
+        message:
+          "Round team orientation is ambiguous; choose aligned or swapped"
+      }
+    });
+
+    const manualResponse = await request("/api/matches/compositions", {
+      method: "POST",
+      body: {
+        rounds: [
+          { kind: "sequential", number: 1, matchId: first.id },
+          {
+            kind: "sequential",
+            number: 2,
+            matchId: second.id,
+            orientation: "aligned"
+          }
+        ]
+      }
+    });
+
+    expect(manualResponse.status).toBe(201);
+
+    const composition: ComposedMatchResponse = await manualResponse.json();
+
+    expect(composition.rounds[1]).toMatchObject({
+      matchId: second.id,
+      orientation: "aligned"
+    });
+  });
+
   it("paginates round-aware events and returns overall and per-round metrics", async () => {
     const schemaResponse = await request("/api/event-schemas", {
       method: "POST",
@@ -502,7 +664,12 @@ describe("match compositions", () => {
       body: {
         rounds: [
           { kind: "sequential", number: 1, matchId: first.id },
-          { kind: "sequential", number: 2, matchId: second.id }
+          {
+            kind: "sequential",
+            number: 2,
+            matchId: second.id,
+            orientation: "aligned"
+          }
         ]
       }
     });
@@ -629,7 +796,12 @@ describe("match compositions", () => {
       body: {
         rounds: [
           { kind: "sequential", number: 1, matchId: first.id },
-          { kind: "sequential", number: 2, matchId: second.id }
+          {
+            kind: "sequential",
+            number: 2,
+            matchId: second.id,
+            orientation: "aligned"
+          }
         ]
       }
     });
@@ -646,11 +818,21 @@ describe("match compositions", () => {
       overall: [],
       rounds: [
         {
-          round: { kind: "sequential", number: 1, matchId: first.id },
+          round: {
+            kind: "sequential",
+            number: 1,
+            matchId: first.id,
+            orientation: "aligned"
+          },
           metrics: []
         },
         {
-          round: { kind: "sequential", number: 2, matchId: second.id },
+          round: {
+            kind: "sequential",
+            number: 2,
+            matchId: second.id,
+            orientation: "aligned"
+          },
           metrics: []
         }
       ]
@@ -768,7 +950,12 @@ describe("match compositions", () => {
       body: {
         rounds: [
           { kind: "sequential", number: 1, matchId: first.id },
-          { kind: "sequential", number: 2, matchId: second.id }
+          {
+            kind: "sequential",
+            number: 2,
+            matchId: second.id,
+            orientation: "aligned"
+          }
         ]
       }
     });
@@ -938,7 +1125,12 @@ describe("match compositions", () => {
       body: {
         rounds: [
           { kind: "sequential", number: 1, matchId: first.id },
-          { kind: "sequential", number: 2, matchId: second.id }
+          {
+            kind: "sequential",
+            number: 2,
+            matchId: second.id,
+            orientation: "aligned"
+          }
         ]
       }
     });
@@ -974,8 +1166,18 @@ describe("match compositions", () => {
         body: {
           rounds: [
             { kind: "sequential", number: 1, matchId: replacementFirst.id },
-            { kind: "sequential", number: 2, matchId: replacement.id },
-            { kind: "extra-time", number: null, matchId: extraTime.id }
+            {
+              kind: "sequential",
+              number: 2,
+              matchId: replacement.id,
+              orientation: "aligned"
+            },
+            {
+              kind: "extra-time",
+              number: null,
+              matchId: extraTime.id,
+              orientation: "aligned"
+            }
           ]
         }
       }
@@ -1721,7 +1923,12 @@ describe("match compositions", () => {
       body: {
         rounds: [
           { kind: "sequential", number: 1, matchId: first.id },
-          { kind: "sequential", number: 2, matchId: second.id }
+          {
+            kind: "sequential",
+            number: 2,
+            matchId: second.id,
+            orientation: "aligned"
+          }
         ]
       }
     });
