@@ -1,0 +1,1 @@
+ALTER TABLE `composed_match_rounds` ADD `team_orientation` text DEFAULT 'aligned' NOT NULL;

@@ -1,7 +1,7 @@
 import { and, inArray, ne } from "drizzle-orm";
 import { db } from "@/db/client";
 import {
-  validateCumulativeMatchScores,
+  resolveRoundTeamOrientations,
   validateMatchCompositionRounds
 } from "@/features/matches/_shared/domain/composition";
 import type { MatchRoundInput } from "@/features/matches/_shared/http/inputs";
@@ -9,6 +9,7 @@ import {
   composedMatchRounds,
   composedMatches,
   matches,
+  matchPlayerStints,
   matchTeamMetadata,
   type Match
 } from "@/features/matches/db";
@@ -18,6 +19,7 @@ export type ResolvedCompositionRound = {
   input: MatchRoundInput;
   match: Match;
   score: { red: number; blue: number };
+  teamOrientation: "aligned" | "swapped";
 };
 
 export async function resolveMatchCompositionRounds(
@@ -92,7 +94,35 @@ export async function resolveMatchCompositionRounds(
     metadataByMatchId.set(item.matchId, matchMetadata);
   }
 
-  const resolvedRounds = inputs.map((input) => {
+  const stints = await db
+    .select({
+      matchId: matchPlayerStints.matchId,
+      playerId: matchPlayerStints.playerId,
+      team: matchPlayerStints.team
+    })
+    .from(matchPlayerStints)
+    .where(
+      inArray(
+        matchPlayerStints.matchId,
+        physicalMatches.map((match) => match.id)
+      )
+    );
+  const playersByMatchId = new Map<
+    number,
+    { red: Set<number>; blue: Set<number> }
+  >();
+
+  for (const stint of stints) {
+    const players = playersByMatchId.get(stint.matchId) ?? {
+      red: new Set<number>(),
+      blue: new Set<number>()
+    };
+
+    players[stint.team].add(stint.playerId);
+    playersByMatchId.set(stint.matchId, players);
+  }
+
+  const unresolvedRounds = inputs.map((input) => {
     const match = matchByPublicId.get(input.matchId);
 
     if (!match) {
@@ -110,11 +140,35 @@ export async function resolveMatchCompositionRounds(
     return {
       input,
       match,
-      score: { red: red.score, blue: blue.score }
+      score: { red: red.score, blue: blue.score },
+      players: playersByMatchId.get(match.id) ?? {
+        red: new Set<number>(),
+        blue: new Set<number>()
+      }
     };
   });
 
-  validateCumulativeMatchScores(resolvedRounds.map((round) => round.score));
+  const orientations = resolveRoundTeamOrientations(
+    unresolvedRounds.map((round) => ({
+      requested: round.input.orientation ?? "auto",
+      score: round.score,
+      players: round.players
+    }))
+  );
+  const resolvedRounds = unresolvedRounds.map((round, index) => {
+    const teamOrientation = orientations[index];
+
+    if (!teamOrientation) {
+      throw new Error("Resolved composition round has no team orientation");
+    }
+
+    return {
+      input: round.input,
+      match: round.match,
+      score: round.score,
+      teamOrientation
+    };
+  });
 
   return resolvedRounds;
 }

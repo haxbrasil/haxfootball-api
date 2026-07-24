@@ -60,16 +60,24 @@ export const listMatchesQuerySchema = t.Object({
   gameMode: t.Optional(gameModeNameSchema)
 });
 
+export const matchRoundOrientationInputSchema = t.Union([
+  t.Literal("auto"),
+  t.Literal("aligned"),
+  t.Literal("swapped")
+]);
+
 export const sequentialMatchRoundInputSchema = t.Object({
   kind: t.Literal("sequential"),
   number: t.Integer({ minimum: 1 }),
-  matchId: logicalMatchPublicIdSchema
+  matchId: logicalMatchPublicIdSchema,
+  orientation: t.Optional(matchRoundOrientationInputSchema)
 });
 
 export const extraTimeMatchRoundInputSchema = t.Object({
   kind: t.Literal("extra-time"),
   number: t.Null(),
-  matchId: logicalMatchPublicIdSchema
+  matchId: logicalMatchPublicIdSchema,
+  orientation: t.Optional(matchRoundOrientationInputSchema)
 });
 
 export const matchRoundInputSchema = t.Union([

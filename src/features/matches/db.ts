@@ -122,6 +122,11 @@ export const composedMatchRounds = sqliteTable(
       .unique(),
     kind: text("kind", { enum: ["sequential", "extra-time"] }).notNull(),
     roundNumber: integer("round_number"),
+    teamOrientation: text("team_orientation", {
+      enum: ["aligned", "swapped"]
+    })
+      .notNull()
+      .default("aligned"),
     position: integer("position").notNull(),
     createdAt: text("created_at")
       .notNull()

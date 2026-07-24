@@ -416,10 +416,17 @@ components:
                           - minimum: 1
                             type: integer
                         minimum: 1
+                      orientation:
+                        anyOf:
+                          - const: aligned
+                            type: string
+                          - const: swapped
+                            type: string
                     required:
                       - kind
                       - number
                       - matchId
+                      - orientation
                     type: object
                   - properties:
                       kind:
@@ -432,10 +439,17 @@ components:
                         type: string
                       number:
                         type: "null"
+                      orientation:
+                        anyOf:
+                          - const: aligned
+                            type: string
+                          - const: swapped
+                            type: string
                     required:
                       - kind
                       - number
                       - matchId
+                      - orientation
                     type: object
               - properties:
                   match:
@@ -1409,10 +1423,17 @@ components:
                               - minimum: 1
                                 type: integer
                             minimum: 1
+                          orientation:
+                            anyOf:
+                              - const: aligned
+                                type: string
+                              - const: swapped
+                                type: string
                         required:
                           - kind
                           - number
                           - matchId
+                          - orientation
                         type: object
                       - properties:
                           kind:
@@ -1425,10 +1446,17 @@ components:
                             type: string
                           number:
                             type: "null"
+                          orientation:
+                            anyOf:
+                              - const: aligned
+                                type: string
+                              - const: swapped
+                                type: string
                         required:
                           - kind
                           - number
                           - matchId
+                          - orientation
                         type: object
                 required:
                   - round
@@ -1628,6 +1656,14 @@ components:
                       - minimum: 1
                         type: integer
                     minimum: 1
+                  orientation:
+                    anyOf:
+                      - const: auto
+                        type: string
+                      - const: aligned
+                        type: string
+                      - const: swapped
+                        type: string
                 required:
                   - kind
                   - number
@@ -1649,6 +1685,14 @@ components:
                         type: string
                   number:
                     type: "null"
+                  orientation:
+                    anyOf:
+                      - const: auto
+                        type: string
+                      - const: aligned
+                        type: string
+                      - const: swapped
+                        type: string
                 required:
                   - kind
                   - number
@@ -1903,10 +1947,17 @@ components:
                               - minimum: 1
                                 type: integer
                             minimum: 1
+                          orientation:
+                            anyOf:
+                              - const: aligned
+                                type: string
+                              - const: swapped
+                                type: string
                         required:
                           - kind
                           - number
                           - matchId
+                          - orientation
                         type: object
                       - properties:
                           kind:
@@ -1919,10 +1970,17 @@ components:
                             type: string
                           number:
                             type: "null"
+                          orientation:
+                            anyOf:
+                              - const: aligned
+                                type: string
+                              - const: swapped
+                                type: string
                         required:
                           - kind
                           - number
                           - matchId
+                          - orientation
                         type: object
                 required:
                   - round
@@ -1953,10 +2011,17 @@ components:
                     - minimum: 1
                       type: integer
                   minimum: 1
+                orientation:
+                  anyOf:
+                    - const: aligned
+                      type: string
+                    - const: swapped
+                      type: string
               required:
                 - kind
                 - number
                 - matchId
+                - orientation
               type: object
             - properties:
                 kind:
@@ -1969,10 +2034,17 @@ components:
                   type: string
                 number:
                   type: "null"
+                orientation:
+                  anyOf:
+                    - const: aligned
+                      type: string
+                    - const: swapped
+                      type: string
               required:
                 - kind
                 - number
                 - matchId
+                - orientation
               type: object
         - properties:
             match:
