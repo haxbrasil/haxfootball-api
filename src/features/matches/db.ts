@@ -1,4 +1,6 @@
+import { sql } from "drizzle-orm";
 import {
+  check,
   integer,
   real,
   sqliteTable,
@@ -83,6 +85,70 @@ export const matchPlayerStints = sqliteTable("match_player_stints", {
     .$defaultFn(() => new Date().toISOString())
 });
 
+export const composedMatches = sqliteTable(
+  "composed_matches",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    publicId: text("public_id").notNull().unique(),
+    firstMatchId: integer("first_match_id")
+      .notNull()
+      .references(() => matches.id)
+      .unique(),
+    createdAt: text("created_at")
+      .notNull()
+      .$defaultFn(() => new Date().toISOString()),
+    updatedAt: text("updated_at")
+      .notNull()
+      .$defaultFn(() => new Date().toISOString())
+  },
+  (table) => [
+    check(
+      "composed_matches_public_id_check",
+      sql`length(${table.publicId}) = 9 and ${table.publicId} glob 'c[a-z2-9][a-z2-9][a-z2-9][a-z2-9][a-z2-9][a-z2-9][a-z2-9][a-z2-9]'`
+    )
+  ]
+);
+
+export const composedMatchRounds = sqliteTable(
+  "composed_match_rounds",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    composedMatchId: integer("composed_match_id")
+      .notNull()
+      .references(() => composedMatches.id),
+    matchId: integer("match_id")
+      .notNull()
+      .references(() => matches.id)
+      .unique(),
+    kind: text("kind", { enum: ["sequential", "extra-time"] }).notNull(),
+    roundNumber: integer("round_number"),
+    position: integer("position").notNull(),
+    createdAt: text("created_at")
+      .notNull()
+      .$defaultFn(() => new Date().toISOString())
+  },
+  (table) => [
+    uniqueIndex("composed_match_rounds_composition_position_unique").on(
+      table.composedMatchId,
+      table.position
+    ),
+    uniqueIndex("composed_match_rounds_composition_number_unique").on(
+      table.composedMatchId,
+      table.roundNumber
+    ),
+    uniqueIndex("composed_match_rounds_extra_time_unique")
+      .on(table.composedMatchId)
+      .where(sql`${table.kind} = 'extra-time'`),
+    check(
+      "composed_match_rounds_kind_number_check",
+      sql`(${table.kind} = 'sequential' and ${table.roundNumber} is not null and ${table.roundNumber} >= 1) or (${table.kind} = 'extra-time' and ${table.roundNumber} is null)`
+    ),
+    check("composed_match_rounds_position_check", sql`${table.position} >= 1`)
+  ]
+);
+
 export type Match = typeof matches.$inferSelect;
 export type MatchTeamMetadata = typeof matchTeamMetadata.$inferSelect;
 export type MatchPlayerStint = typeof matchPlayerStints.$inferSelect;
+export type ComposedMatch = typeof composedMatches.$inferSelect;
+export type ComposedMatchRound = typeof composedMatchRounds.$inferSelect;

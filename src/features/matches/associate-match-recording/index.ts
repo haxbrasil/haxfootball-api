@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { type Static, t } from "elysia";
 import { db } from "@/db/client";
-import type { MatchResponse } from "@/features/matches/_shared/http/responses";
+import type { PhysicalMatchResponse } from "@/features/matches/_shared/http/responses";
 import { toMatchResponse } from "@/features/matches/_shared/http/responses";
 import { matches } from "@/features/matches/db";
 import {
@@ -22,7 +22,7 @@ export type AssociateMatchRecordingInput = Static<
 export async function associateMatchRecording(
   id: string,
   input: AssociateMatchRecordingInput
-): Promise<MatchResponse> {
+): Promise<PhysicalMatchResponse> {
   const current = await getMatchSummary(id);
 
   if (current.match.recordingId !== null) {

@@ -1,14 +1,23 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, lt, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import {
   type MatchSummaryRow,
   type MatchSummaryResponse,
   listMatchesResponseSchema,
+  toComposedMatchResponse,
   toMatchSummaryResponse
 } from "@/features/matches/_shared/http/responses";
 import { gameModes } from "@/features/game-modes/db";
-import { matchPlayerStints, matches } from "@/features/matches/db";
-import { listMatchMetadata } from "@/features/matches/_shared/db/queries";
+import {
+  composedMatchRounds,
+  composedMatches,
+  matchPlayerStints,
+  matches
+} from "@/features/matches/db";
+import {
+  getComposedMatchRows,
+  listMatchMetadata
+} from "@/features/matches/_shared/db/queries";
 import { players } from "@/features/players/db";
 import { recordings } from "@/features/recordings/db";
 import {
@@ -17,7 +26,7 @@ import {
 } from "@/features/event-schemas/db";
 import { notFound } from "@/shared/http/errors";
 import {
-  cursorAfter,
+  decodeCursor,
   pageItems,
   pageLimit,
   type PaginatedResponse,
@@ -39,16 +48,26 @@ export async function listPlayerMatches(
     throw notFound("Player not found");
   }
 
+  const logicalAnchorId = sql<number>`coalesce(${composedMatches.firstMatchId}, ${matches.id})`;
+  const cursor = decodeCursor<number>(query.cursor);
+
   const rows = await db
     .select({
       match: matches,
       recording: recordings,
       gameMode: gameModes,
       eventSchemaFamily: eventSchemaFamilies,
-      eventSchemaVersion: eventSchemaVersions
+      eventSchemaVersion: eventSchemaVersions,
+      composition: composedMatches,
+      logicalAnchorId
     })
     .from(matches)
     .innerJoin(matchPlayerStints, eq(matchPlayerStints.matchId, matches.id))
+    .leftJoin(composedMatchRounds, eq(matches.id, composedMatchRounds.matchId))
+    .leftJoin(
+      composedMatches,
+      eq(composedMatchRounds.composedMatchId, composedMatches.id)
+    )
     .leftJoin(recordings, eq(matches.recordingId, recordings.id))
     .leftJoin(gameModes, eq(matches.gameModeId, gameModes.id))
     .leftJoin(
@@ -62,23 +81,48 @@ export async function listPlayerMatches(
     .where(
       and(
         eq(matchPlayerStints.playerId, player.id),
-        cursorAfter(matches.id, query.cursor, "desc")
+        cursor === undefined ? undefined : lt(logicalAnchorId, cursor)
       )
     )
-    .groupBy(matches.id)
-    .orderBy(desc(matches.id))
+    .groupBy(logicalAnchorId)
+    .orderBy(desc(logicalAnchorId))
     .limit(pageLimit(query));
+  const composedRows = await getComposedMatchRows(
+    rows.flatMap((row) => (row.composition ? [row.composition] : []))
+  );
+  const composedRowById = new Map(
+    composedRows.map((row) => [row.composition.id, row])
+  );
 
-  const rowsWithMetadata: MatchSummaryRow[] = await Promise.all(
-    rows.map(async (row) => ({
-      ...row,
-      metadata: await listMatchMetadata(row.match.id)
+  const logicalRows = await Promise.all(
+    rows.map(async ({ composition, logicalAnchorId: cursorId, ...row }) => ({
+      cursorId,
+      value: composition
+        ? requireComposedRow(composedRowById, composition.id)
+        : ({
+            ...row,
+            metadata: await listMatchMetadata(row.match.id)
+          } satisfies MatchSummaryRow)
     }))
   );
-  const page = pageItems(rowsWithMetadata, query, (row) => row.match.id);
+  const page = pageItems(logicalRows, query, (row) => row.cursorId);
 
   return {
-    items: page.items.map(toMatchSummaryResponse),
+    items: page.items.map(({ value }) =>
+      "composition" in value
+        ? toComposedMatchResponse(value)
+        : toMatchSummaryResponse(value)
+    ),
     page: page.page
   };
+}
+
+function requireComposedRow<T>(rows: Map<number, T>, id: number): T {
+  const row = rows.get(id);
+
+  if (!row) {
+    throw new Error("Composed player match hydration is missing");
+  }
+
+  return row;
 }

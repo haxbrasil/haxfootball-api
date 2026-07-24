@@ -1,4 +1,14 @@
-import { and, asc, desc, eq, inArray, sql, type SQL } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  inArray,
+  isNull,
+  or,
+  sql,
+  type SQL
+} from "drizzle-orm";
 import { db, type DbTransaction } from "@/db/client";
 import { accounts } from "@/features/accounts/db";
 import { gameModes } from "@/features/game-modes/db";
@@ -9,12 +19,18 @@ import type {
   MatchEventInput,
   MatchScore
 } from "@/features/matches/_shared/http/inputs";
-import type { MatchDetailRow } from "@/features/matches/_shared/http/responses";
-import type { MatchSummaryRow } from "@/features/matches/_shared/http/responses";
+import type {
+  ComposedMatchRow,
+  MatchDetailRow,
+  MatchSummaryRow
+} from "@/features/matches/_shared/http/responses";
 import {
+  composedMatchRounds,
+  composedMatches,
   matchPlayerStints,
   matches,
-  matchTeamMetadata
+  matchTeamMetadata,
+  type MatchTeamMetadata
 } from "@/features/matches/db";
 import { validateMatchEvents } from "@/features/matches/_shared/domain/validation";
 import { players, type Player } from "@/features/players/db";
@@ -33,12 +49,122 @@ export type PersistedMatchEvent = MatchEventInput & {
   subjectPlayer: Player | null;
 };
 
-type MatchPersistenceDb = typeof db | DbTransaction;
+export async function getComposedMatchByPublicId(publicId: string) {
+  const [composition] = await db
+    .select()
+    .from(composedMatches)
+    .where(eq(composedMatches.publicId, publicId));
 
-export async function listMatchSummaries(
-  query: ListMatchesQuery = {}
-): Promise<MatchSummaryRow[]> {
-  const conditions: SQL[] = [];
+  if (!composition) {
+    throw notFound("Composed match not found");
+  }
+
+  return composition;
+}
+
+export async function getComposedMatchRow(
+  composition: typeof composedMatches.$inferSelect
+): Promise<ComposedMatchRow> {
+  const [row] = await getComposedMatchRows([composition]);
+
+  if (!row) {
+    throw notFound("Composed match not found");
+  }
+
+  return row;
+}
+
+export async function getComposedMatchRows(
+  compositions: Array<typeof composedMatches.$inferSelect>
+): Promise<ComposedMatchRow[]> {
+  if (compositions.length === 0) {
+    return [];
+  }
+
+  const rows = await db
+    .select({
+      compositionId: composedMatchRounds.composedMatchId,
+      round: composedMatchRounds,
+      match: matches,
+      recording: recordings,
+      gameMode: gameModes,
+      eventSchemaFamily: eventSchemaFamilies,
+      eventSchemaVersion: eventSchemaVersions
+    })
+    .from(composedMatchRounds)
+    .innerJoin(matches, eq(composedMatchRounds.matchId, matches.id))
+    .leftJoin(recordings, eq(matches.recordingId, recordings.id))
+    .leftJoin(gameModes, eq(matches.gameModeId, gameModes.id))
+    .leftJoin(
+      eventSchemaVersions,
+      eq(matches.eventSchemaVersionId, eventSchemaVersions.id)
+    )
+    .leftJoin(
+      eventSchemaFamilies,
+      eq(eventSchemaVersions.familyId, eventSchemaFamilies.id)
+    )
+    .where(
+      inArray(
+        composedMatchRounds.composedMatchId,
+        compositions.map((composition) => composition.id)
+      )
+    )
+    .orderBy(asc(composedMatchRounds.position));
+  const metadata = await db
+    .select()
+    .from(matchTeamMetadata)
+    .where(
+      inArray(
+        matchTeamMetadata.matchId,
+        rows.map((row) => row.match.id)
+      )
+    );
+  const metadataByMatchId = groupMatchMetadata(metadata);
+  const roundsByCompositionId = new Map<number, ComposedMatchRow["rounds"]>();
+
+  for (const row of rows) {
+    const rounds = roundsByCompositionId.get(row.compositionId) ?? [];
+
+    rounds.push({
+      round: row.round,
+      match: {
+        match: row.match,
+        recording: row.recording,
+        gameMode: row.gameMode,
+        eventSchemaFamily: row.eventSchemaFamily,
+        eventSchemaVersion: row.eventSchemaVersion,
+        metadata: metadataByMatchId.get(row.match.id) ?? []
+      }
+    });
+    roundsByCompositionId.set(row.compositionId, rounds);
+  }
+
+  return compositions.map((composition) => ({
+    composition,
+    rounds: roundsByCompositionId.get(composition.id) ?? []
+  }));
+}
+
+function groupMatchMetadata(metadata: MatchTeamMetadata[]) {
+  const metadataByMatchId = new Map<number, MatchTeamMetadata[]>();
+
+  for (const item of metadata) {
+    const matchMetadata = metadataByMatchId.get(item.matchId) ?? [];
+
+    matchMetadata.push(item);
+    metadataByMatchId.set(item.matchId, matchMetadata);
+  }
+
+  return metadataByMatchId;
+}
+
+export async function listMatchSummaries(query: ListMatchesQuery = {}) {
+  const conditions: SQL[] = [
+    or(
+      isNull(composedMatchRounds.id),
+      eq(matches.id, composedMatches.firstMatchId)
+    ) as SQL
+  ];
   const cursorCondition = cursorAfter(matches.id, query.cursor, "desc");
 
   if (cursorCondition) {
@@ -55,9 +181,15 @@ export async function listMatchSummaries(
       recording: recordings,
       gameMode: gameModes,
       eventSchemaFamily: eventSchemaFamilies,
-      eventSchemaVersion: eventSchemaVersions
+      eventSchemaVersion: eventSchemaVersions,
+      composition: composedMatches
     })
     .from(matches)
+    .leftJoin(composedMatchRounds, eq(matches.id, composedMatchRounds.matchId))
+    .leftJoin(
+      composedMatches,
+      eq(composedMatchRounds.composedMatchId, composedMatches.id)
+    )
     .leftJoin(recordings, eq(matches.recordingId, recordings.id))
     .leftJoin(gameModes, eq(matches.gameModeId, gameModes.id))
     .leftJoin(
@@ -68,17 +200,42 @@ export async function listMatchSummaries(
       eventSchemaFamilies,
       eq(eventSchemaVersions.familyId, eventSchemaFamilies.id)
     )
-    .where(conditions.length > 0 ? and(...conditions) : undefined)
+    .where(and(...conditions))
     .orderBy(cursorSort(matches.id, "desc"))
     .limit(pageLimit(query));
+  const compositionRows = await getComposedMatchRows(
+    rows.flatMap((row) => (row.composition ? [row.composition] : []))
+  );
+  const compositionRowById = new Map(
+    compositionRows.map((row) => [row.composition.id, row])
+  );
 
   return Promise.all(
-    rows.map(async (row) => ({
-      ...row,
-      metadata: await listMatchMetadata(row.match.id)
-    }))
+    rows.map(async ({ composition, ...row }) =>
+      composition
+        ? requireComposedMatchRow(compositionRowById, composition.id)
+        : {
+            ...row,
+            metadata: await listMatchMetadata(row.match.id)
+          }
+    )
   );
 }
+
+function requireComposedMatchRow(
+  rows: Map<number, ComposedMatchRow>,
+  compositionId: number
+): ComposedMatchRow {
+  const row = rows.get(compositionId);
+
+  if (!row) {
+    throw new Error("Composed match hydration is missing");
+  }
+
+  return row;
+}
+
+type MatchPersistenceDb = typeof db | DbTransaction;
 
 export async function getMatchSummary(
   publicId: string
