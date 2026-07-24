@@ -5107,7 +5107,7 @@ paths:
         - Game Modes
   /api/graphql:
     delete:
-      operationId: allApiGraphql
+      operationId: deleteApiGraphql
       responses:
         "400":
           content:
@@ -5128,7 +5128,7 @@ paths:
                 $ref: "#/components/schemas/InternalServerError"
           description: Response for status 500
     get:
-      operationId: allApiGraphql
+      operationId: getApiGraphql
       responses:
         "400":
           content:
@@ -5149,7 +5149,7 @@ paths:
                 $ref: "#/components/schemas/InternalServerError"
           description: Response for status 500
     head:
-      operationId: allApiGraphql
+      operationId: headApiGraphql
       responses:
         "400":
           content:
@@ -5170,7 +5170,7 @@ paths:
                 $ref: "#/components/schemas/InternalServerError"
           description: Response for status 500
     options:
-      operationId: allApiGraphql
+      operationId: optionsApiGraphql
       responses:
         "400":
           content:
@@ -5191,7 +5191,7 @@ paths:
                 $ref: "#/components/schemas/InternalServerError"
           description: Response for status 500
     patch:
-      operationId: allApiGraphql
+      operationId: patchApiGraphql
       responses:
         "400":
           content:
@@ -5212,7 +5212,7 @@ paths:
                 $ref: "#/components/schemas/InternalServerError"
           description: Response for status 500
     post:
-      operationId: allApiGraphql
+      operationId: postApiGraphql
       responses:
         "400":
           content:
@@ -5233,7 +5233,7 @@ paths:
                 $ref: "#/components/schemas/InternalServerError"
           description: Response for status 500
     put:
-      operationId: allApiGraphql
+      operationId: putApiGraphql
       responses:
         "400":
           content:
@@ -5254,7 +5254,7 @@ paths:
                 $ref: "#/components/schemas/InternalServerError"
           description: Response for status 500
     trace:
-      operationId: allApiGraphql
+      operationId: traceApiGraphql
       responses:
         "400":
           content:
