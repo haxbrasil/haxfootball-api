@@ -1,4 +1,4 @@
-import { and, eq, gte, inArray, isNull, lte, type SQL } from "drizzle-orm";
+import { and, eq, gte, inArray, isNull, lte, sql, type SQL } from "drizzle-orm";
 import { type Static, t } from "elysia";
 import { db } from "@/db/client";
 import { accounts } from "@/features/accounts/db";
@@ -10,7 +10,15 @@ import {
   applyEventAggregation,
   applyVirtualMetrics
 } from "@/features/match-events/_shared/domain/metrics";
-import { matches } from "@/features/matches/db";
+import {
+  composedMatchRounds,
+  composedMatches,
+  matches
+} from "@/features/matches/db";
+import {
+  logicalMatchPublicIdSchema,
+  resolveLogicalMatch
+} from "@/features/matches/resolve-logical-match";
 import { playerAccountResponseSchema } from "@/features/players/http";
 import { players } from "@/features/players/db";
 import { resolveLabels } from "@/features/localization/resolve-labels";
@@ -89,7 +97,7 @@ export const queryMatchMetricsBodySchema = t.Object({
         })
       ),
       matchIds: t.Optional(
-        t.Array(t.String({ minLength: 8, maxLength: 8 }), {
+        t.Array(logicalMatchPublicIdSchema, {
           minItems: 1,
           uniqueItems: true
         })
@@ -229,6 +237,7 @@ export const queryMatchMetricsResponseSchema = t.Object({
       metrics: t.Record(t.String(), t.Unknown()),
       contribution: t.Object({
         matchesCount: t.Integer({ minimum: 0 }),
+        roundsCount: t.Integer({ minimum: 0 }),
         eventsCount: t.Integer({ minimum: 0 }),
         playersCount: t.Integer({ minimum: 0 })
       })
@@ -253,6 +262,7 @@ export const queryMatchMetricsResponseSchema = t.Object({
     totals: t.Object({
       groupsCount: t.Integer({ minimum: 0 }),
       matchesCount: t.Integer({ minimum: 0 }),
+      roundsCount: t.Integer({ minimum: 0 }),
       eventsCount: t.Integer({ minimum: 0 })
     })
   })
@@ -273,6 +283,8 @@ type SortDescriptor = NonNullable<QueryMatchMetricsInput["sort"]>[number];
 
 type EventWithMatchRow = MatchEventRow & {
   match: typeof matches.$inferSelect;
+  logicalMatchId: number;
+  logicalPublicId: string;
 };
 
 type AggregateState = {
@@ -280,6 +292,7 @@ type AggregateState = {
   group: AggregateGroup;
   metrics: JsonObject;
   matchIds: Set<number>;
+  roundIds: Set<number>;
   playerIds: Set<number>;
   eventKeys: Set<string>;
 };
@@ -291,6 +304,7 @@ type AggregateRow = {
   metrics: JsonObject;
   contribution: {
     matchesCount: number;
+    roundsCount: number;
     eventsCount: number;
     playersCount: number;
   };
@@ -328,12 +342,16 @@ export async function queryMatchMetrics(
 
   const page = pageRows(rows, input.page ?? {});
   const allMatchIds = new Set<number>();
+  const allRoundIds = new Set<number>();
   let eventsCount = 0;
 
   for (const state of states) {
     eventsCount += state.eventKeys.size;
     for (const matchId of state.matchIds) {
       allMatchIds.add(matchId);
+    }
+    for (const roundId of state.roundIds) {
+      allRoundIds.add(roundId);
     }
   }
 
@@ -362,6 +380,7 @@ export async function queryMatchMetrics(
       totals: {
         groupsCount: rows.length,
         matchesCount: allMatchIds.size,
+        roundsCount: allRoundIds.size,
         eventsCount
       }
     }
@@ -389,11 +408,18 @@ async function listQueryEvents(
   const conditions: Array<SQL | undefined> = [
     eq(matchEvents.schemaVersionId, schemaVersionId),
     isNull(matchEvents.disabledAt),
-    inArray(matches.status, statuses)
+    inArray(logicalMatchStatus(), statuses)
   ];
 
   if (filters.matchIds) {
-    conditions.push(inArray(matches.publicId, filters.matchIds));
+    const logicalMatches = await Promise.all(
+      filters.matchIds.map(resolveLogicalMatch)
+    );
+    const expandedIds = logicalMatches.flatMap((logicalMatch) =>
+      logicalMatch.rounds.map((round) => round.match.publicId)
+    );
+
+    conditions.push(inArray(matches.publicId, expandedIds));
   }
 
   if (filters.gameModeNames) {
@@ -410,29 +436,47 @@ async function listQueryEvents(
 
   if (filters.period?.from) {
     conditions.push(
-      gte(periodColumn(filters.period.field), filters.period.from)
+      gte(logicalMatchPeriodColumn(filters.period.field), filters.period.from)
     );
   }
 
   if (filters.period?.to) {
-    conditions.push(lte(periodColumn(filters.period.field), filters.period.to));
+    conditions.push(
+      lte(logicalMatchPeriodColumn(filters.period.field), filters.period.to)
+    );
   }
 
   const rows = await db
     .select({
       event: matchEvents,
-      match: matches
+      match: matches,
+      composition: composedMatches
     })
     .from(matchEvents)
     .innerJoin(matches, eq(matchEvents.matchId, matches.id))
+    .leftJoin(composedMatchRounds, eq(matches.id, composedMatchRounds.matchId))
+    .leftJoin(
+      composedMatches,
+      eq(composedMatchRounds.composedMatchId, composedMatches.id)
+    )
     .leftJoin(gameModes, eq(matches.gameModeId, gameModes.id))
     .where(and(...conditions));
   const hydrated = await hydrateEvents(rows.map((row) => row.event));
   const eventById = new Map(hydrated.map((event) => [event.id, event]));
-  const withMatches = rows.map((row) => ({
-    ...(eventById.get(row.event.id) as MatchEventRow),
-    match: row.match
-  }));
+  const withMatches = rows.map((row) => {
+    const event = eventById.get(row.event.id);
+
+    if (!event) {
+      throw new Error("Match metrics event hydration is missing");
+    }
+
+    return {
+      ...event,
+      match: row.match,
+      logicalMatchId: row.composition?.firstMatchId ?? row.match.id,
+      logicalPublicId: row.composition?.publicId ?? row.match.publicId
+    };
+  });
 
   return withMatches.filter((event) => passesPlayerFilters(event, filters));
 }
@@ -473,16 +517,48 @@ function passesPlayerFilters(
   return true;
 }
 
-function periodColumn(field: "initiatedAt" | "endedAt" | "createdAt") {
+function logicalMatchStatus(): SQL {
+  return sql`coalesce(
+    (select logical_match.status
+      from composed_match_rounds logical_round
+      join matches logical_match on logical_match.id = logical_round.match_id
+      where logical_round.composed_match_id = ${composedMatches.id}
+      order by logical_round.position desc
+      limit 1),
+    ${matches.status}
+  )`;
+}
+
+function logicalMatchPeriodColumn(
+  field: "initiatedAt" | "endedAt" | "createdAt"
+): SQL {
   if (field === "initiatedAt") {
-    return matches.initiatedAt;
+    return sql`coalesce(
+      (select logical_match.initiated_at
+        from matches logical_match
+        where logical_match.id = ${composedMatches.firstMatchId}),
+      ${matches.initiatedAt}
+    )`;
   }
 
   if (field === "endedAt") {
-    return matches.endedAt;
+    return sql`coalesce(
+      (select logical_match.ended_at
+        from composed_match_rounds logical_round
+        join matches logical_match on logical_match.id = logical_round.match_id
+        where logical_round.composed_match_id = ${composedMatches.id}
+        order by logical_round.position desc
+        limit 1),
+      ${matches.endedAt}
+    )`;
   }
 
-  return matches.createdAt;
+  return sql`coalesce(
+    (select logical_match.created_at
+      from matches logical_match
+      where logical_match.id = ${composedMatches.firstMatchId}),
+    ${matches.createdAt}
+  )`;
 }
 
 function aggregateEvents(
@@ -515,7 +591,8 @@ function aggregateEvents(
 
       const state = getAggregateState(stateByGroup, group);
 
-      state.matchIds.add(event.matchId);
+      state.matchIds.add(event.logicalMatchId);
+      state.roundIds.add(event.matchId);
       state.eventKeys.add(`${event.matchId}:${event.sequence}`);
       addAggregationPlayerIds(state, event, aggregation);
       applyEventAggregation(state.metrics, event, aggregation);
@@ -555,9 +632,9 @@ function aggregateMatchMetrics(
       continue;
     }
 
-    const metrics = metricsByMatchId.get(event.matchId) ?? {};
+    const metrics = metricsByMatchId.get(event.logicalMatchId) ?? {};
 
-    metricsByMatchId.set(event.matchId, metrics);
+    metricsByMatchId.set(event.logicalMatchId, metrics);
 
     for (const aggregation of aggregations) {
       applyEventAggregation(metrics, event, aggregation);
@@ -587,8 +664,8 @@ function groupForEvent(
   if (target === "match") {
     return {
       type: "match",
-      id: event.match.publicId,
-      name: event.match.publicId
+      id: event.logicalPublicId,
+      name: event.logicalPublicId
     };
   }
 
@@ -671,6 +748,7 @@ function getAggregateState(
     group,
     metrics: {},
     matchIds: new Set<number>(),
+    roundIds: new Set<number>(),
     playerIds: new Set<number>(),
     eventKeys: new Set<string>()
   };
@@ -697,6 +775,7 @@ function toAggregateRow(
     metrics,
     contribution: {
       matchesCount: state.matchIds.size,
+      roundsCount: state.roundIds.size,
       eventsCount: state.eventKeys.size,
       playersCount: state.playerIds.size
     }

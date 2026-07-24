@@ -31,6 +31,7 @@ type MetricsQueryItem = {
   metrics: Record<string, unknown>;
   contribution: {
     matchesCount: number;
+    roundsCount: number;
     eventsCount: number;
     playersCount: number;
   };
@@ -60,6 +61,7 @@ type MetricsQueryResponse = {
     totals: {
       groupsCount: number;
       matchesCount: number;
+      roundsCount: number;
       eventsCount: number;
     };
   };
@@ -234,6 +236,7 @@ describe("match metrics query", () => {
         },
         contribution: {
           matchesCount: 1,
+          roundsCount: 1,
           eventsCount: 2,
           playersCount: 2
         }
@@ -262,6 +265,7 @@ describe("match metrics query", () => {
       },
       contribution: {
         matchesCount: 2,
+        roundsCount: 2,
         eventsCount: 3,
         playersCount: 2
       }

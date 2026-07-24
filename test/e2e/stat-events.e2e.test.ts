@@ -972,6 +972,7 @@ describe("match events", () => {
         },
         contribution: {
           matchesCount: 1,
+          roundsCount: 1,
           eventsCount: 3,
           playersCount: 2
         }

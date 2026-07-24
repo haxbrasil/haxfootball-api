@@ -201,6 +201,7 @@ describe("players", () => {
 
     expect(historyResponse.status).toBe(200);
     expect(await paginatedItems(historyResponse)).toContainEqual({
+      kind: "single",
       id: match.id,
       status: "completed",
       initiatedAt: "2026-05-10T12:00:00.000Z",

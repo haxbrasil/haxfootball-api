@@ -32,12 +32,25 @@ import {
   createMatch,
   createMatchBodySchema
 } from "@/features/matches/create-match";
+import {
+  createMatchComposition,
+  createMatchCompositionBodySchema
+} from "@/features/matches/create-match-composition";
+import { deleteMatchComposition } from "@/features/matches/delete-match-composition";
 import { getMatch } from "@/features/matches/get-match";
+import {
+  getExtraTimeMatchRound,
+  getSequentialMatchRound,
+  matchExtraTimeParamsSchema,
+  matchRoundParamsSchema
+} from "@/features/matches/get-match-round";
 import {
   listMatches,
   listMatchesResponseSchema
 } from "@/features/matches/list-matches";
 import {
+  composedMatchPublicIdParamsSchema,
+  logicalMatchPublicIdParamsSchema,
   matchPublicIdParamsSchema,
   listMatchesQuerySchema,
   matchEventInputSchema,
@@ -45,6 +58,9 @@ import {
 } from "@/features/matches/_shared/http/inputs";
 import {
   matchPlayerStintResponseSchema,
+  composedMatchResponseSchema,
+  matchRoundResponseSchema,
+  physicalMatchResponseSchema,
   matchResponseSchema,
   matchSummaryResponseSchema
 } from "@/features/matches/_shared/http/responses";
@@ -58,6 +74,7 @@ import {
   updateMatch,
   updateMatchBodySchema
 } from "@/features/matches/update-match";
+import { updateMatchComposition } from "@/features/matches/update-match-composition";
 import {
   badRequestErrorResponseSchema,
   notFoundErrorResponseSchema
@@ -80,6 +97,9 @@ export const matchRoutes = new Elysia({
     MatchEvent: matchEventResponseSchema,
     MatchStint: matchPlayerStintResponseSchema,
     MatchSummary: matchSummaryResponseSchema,
+    ComposedMatch: composedMatchResponseSchema,
+    MatchRound: matchRoundResponseSchema,
+    PhysicalMatch: physicalMatchResponseSchema,
     AddMatchEventBody: addMatchEventBodySchema,
     AssociateMatchRecordingBody: associateMatchRecordingBodySchema,
     CreateMatchBody: createMatchBodySchema,
@@ -90,7 +110,8 @@ export const matchRoutes = new Elysia({
     MatchMetrics: matchMetricsResponseSchema,
     QueryMatchMetricsBody: queryMatchMetricsBodySchema,
     QueryMatchMetrics: queryMatchMetricsResponseSchema,
-    UpdateMatchBody: updateMatchBodySchema
+    UpdateMatchBody: updateMatchBodySchema,
+    MatchCompositionBody: createMatchCompositionBodySchema
   })
   .get("", ({ query }) => listMatches(query), {
     query: listMatchesQuerySchema,
@@ -114,8 +135,91 @@ export const matchRoutes = new Elysia({
       summary: "Query match metrics"
     }
   })
+  .post(
+    "/compositions",
+    async ({ body, set }) => {
+      const match = await createMatchComposition(body);
+
+      set.status = 201;
+
+      return match;
+    },
+    {
+      body: t.Ref("MatchCompositionBody"),
+      response: {
+        201: t.Ref("ComposedMatch"),
+        400: t.Ref("BadRequestError"),
+        404: t.Ref("NotFoundError")
+      },
+      detail: {
+        tags: ["Matches"],
+        summary: "Compose matches into rounds"
+      }
+    }
+  )
+  .put(
+    "/:id/rounds",
+    ({ body, params }) => updateMatchComposition(params.id, body),
+    {
+      body: t.Ref("MatchCompositionBody"),
+      params: composedMatchPublicIdParamsSchema,
+      response: {
+        200: t.Ref("ComposedMatch"),
+        400: t.Ref("BadRequestError"),
+        404: t.Ref("NotFoundError")
+      },
+      detail: {
+        tags: ["Matches"],
+        summary: "Replace composed match rounds"
+      }
+    }
+  )
+  .delete(
+    "/:id/rounds",
+    async ({ params, set }) => {
+      await deleteMatchComposition(params.id);
+      set.status = 204;
+    },
+    {
+      params: composedMatchPublicIdParamsSchema,
+      response: {
+        204: t.Void(),
+        404: t.Ref("NotFoundError")
+      },
+      detail: {
+        tags: ["Matches"],
+        summary: "Unbind a composed match"
+      }
+    }
+  )
+  .get(
+    "/:id/rounds/:roundNumber",
+    ({ params }) => getSequentialMatchRound(params.id, params.roundNumber),
+    {
+      params: matchRoundParamsSchema,
+      response: {
+        200: t.Ref("MatchRound"),
+        404: t.Ref("NotFoundError")
+      },
+      detail: {
+        tags: ["Matches"],
+        summary: "Get a sequential match round"
+      }
+    }
+  )
+  .get("/:id/extra-time", ({ params }) => getExtraTimeMatchRound(params.id), {
+    params: matchExtraTimeParamsSchema,
+    response: {
+      200: t.Ref("MatchRound"),
+      404: t.Ref("NotFoundError")
+    },
+    detail: {
+      tags: ["Matches"],
+      summary: "Get match extra time"
+    }
+  })
   .get("/:id", ({ params }) => getMatch(params.id), {
-    params: matchPublicIdParamsSchema,
+    params: logicalMatchPublicIdParamsSchema,
     response: {
       200: t.Ref("Match"),
       404: t.Ref("NotFoundError")
@@ -137,7 +241,7 @@ export const matchRoutes = new Elysia({
     {
       body: t.Ref("CreateMatchBody"),
       response: {
-        201: t.Ref("Match"),
+        201: t.Ref("PhysicalMatch"),
         400: t.Ref("BadRequestError"),
         404: t.Ref("NotFoundError")
       },
@@ -151,7 +255,7 @@ export const matchRoutes = new Elysia({
     body: t.Ref("UpdateMatchBody"),
     params: matchPublicIdParamsSchema,
     response: {
-      200: t.Ref("Match"),
+      200: t.Ref("PhysicalMatch"),
       400: t.Ref("BadRequestError"),
       404: t.Ref("NotFoundError")
     },
@@ -164,7 +268,7 @@ export const matchRoutes = new Elysia({
     "/:id/events",
     ({ params, query }) => listMatchEvents(params.id, query),
     {
-      params: matchPublicIdParamsSchema,
+      params: logicalMatchPublicIdParamsSchema,
       query: paginationQuerySchema,
       response: {
         200: t.Ref("ListMatchEvents"),
@@ -218,7 +322,7 @@ export const matchRoutes = new Elysia({
     }
   )
   .get("/:id/metrics", ({ params }) => getMatchMetrics(params.id), {
-    params: matchPublicIdParamsSchema,
+    params: logicalMatchPublicIdParamsSchema,
     response: {
       200: t.Ref("MatchMetrics"),
       400: t.Ref("BadRequestError"),
@@ -236,7 +340,7 @@ export const matchRoutes = new Elysia({
       body: t.Ref("AssociateMatchRecordingBody"),
       params: matchPublicIdParamsSchema,
       response: {
-        200: t.Ref("Match"),
+        200: t.Ref("PhysicalMatch"),
         400: t.Ref("BadRequestError"),
         404: t.Ref("NotFoundError")
       },

@@ -6,11 +6,16 @@ import {
 } from "@/features/game-modes/http";
 import type { GameMode } from "@/features/game-modes/db";
 import type {
+  ComposedMatch,
+  ComposedMatchRound,
   Match,
   MatchPlayerStint,
   MatchTeamMetadata
 } from "@/features/matches/db";
+import { toMatchRoundReference } from "@/features/matches/_shared/domain/composition";
+import { matchRoundReferenceSchema } from "@/features/matches/resolve-logical-match";
 import {
+  composedMatchPublicIdSchema,
   matchFieldTeamSchema,
   matchPublicIdSchema,
   matchScoreSchema,
@@ -49,7 +54,8 @@ export const matchPlayerStintResponseSchema = t.Object({
   leftElapsedSeconds: t.Nullable(t.Number())
 });
 
-export const matchSummaryResponseSchema = t.Object({
+export const physicalMatchSummaryResponseSchema = t.Object({
+  kind: t.Literal("single"),
   id: matchPublicIdSchema,
   status: matchStatusSchema,
   initiatedAt: t.Nullable(t.String()),
@@ -62,18 +68,70 @@ export const matchSummaryResponseSchema = t.Object({
   updatedAt: t.String()
 });
 
-export const matchResponseSchema = t.Intersect([
-  matchSummaryResponseSchema,
+export const physicalMatchResponseSchema = t.Intersect([
+  physicalMatchSummaryResponseSchema,
   t.Object({
     events: t.Array(matchEventResponseSchema),
     participations: t.Array(matchPlayerStintResponseSchema)
   })
 ]);
 
+export const matchRoundReferenceResponseSchema = matchRoundReferenceSchema;
+
+export const matchRoundSummaryResponseSchema = t.Intersect([
+  matchRoundReferenceResponseSchema,
+  t.Object({
+    match: physicalMatchSummaryResponseSchema
+  })
+]);
+
+export const matchRoundResponseSchema = t.Intersect([
+  matchRoundReferenceResponseSchema,
+  t.Object({
+    match: physicalMatchResponseSchema
+  })
+]);
+
+export const composedMatchResponseSchema = t.Object({
+  kind: t.Literal("composed"),
+  id: composedMatchPublicIdSchema,
+  status: matchStatusSchema,
+  initiatedAt: t.Nullable(t.String()),
+  endedAt: t.Nullable(t.String()),
+  score: t.Nullable(matchScoreSchema),
+  gameMode: t.Nullable(gameModeResponseSchema),
+  eventSchema: t.Nullable(eventSchemaReferenceSchema),
+  rounds: t.Array(matchRoundSummaryResponseSchema, { minItems: 2 }),
+  createdAt: t.String(),
+  updatedAt: t.String()
+});
+
+export const matchSummaryResponseSchema = t.Union([
+  physicalMatchSummaryResponseSchema,
+  composedMatchResponseSchema
+]);
+
+export const matchResponseSchema = t.Union([
+  physicalMatchResponseSchema,
+  composedMatchResponseSchema
+]);
+
 export const listMatchesResponseSchema = paginatedResponseSchema(
   matchSummaryResponseSchema
 );
 
+export type PhysicalMatchSummaryResponse = Static<
+  typeof physicalMatchSummaryResponseSchema
+>;
+export type PhysicalMatchResponse = Static<typeof physicalMatchResponseSchema>;
+export type MatchRoundReferenceResponse = Static<
+  typeof matchRoundReferenceResponseSchema
+>;
+export type MatchRoundSummaryResponse = Static<
+  typeof matchRoundSummaryResponseSchema
+>;
+export type MatchRoundResponse = Static<typeof matchRoundResponseSchema>;
+export type ComposedMatchResponse = Static<typeof composedMatchResponseSchema>;
 export type MatchSummaryResponse = Static<typeof matchSummaryResponseSchema>;
 export type MatchResponse = Static<typeof matchResponseSchema>;
 
@@ -96,6 +154,14 @@ export type MatchDetailRow = MatchSummaryRow & {
   stints: Array<MatchPlayerStint & PlayerRow>;
 };
 
+export type ComposedMatchRow = {
+  composition: ComposedMatch;
+  rounds: Array<{
+    round: ComposedMatchRound;
+    match: MatchSummaryRow;
+  }>;
+};
+
 export function toMatchSummaryResponse({
   match,
   recording,
@@ -103,8 +169,9 @@ export function toMatchSummaryResponse({
   eventSchemaFamily,
   eventSchemaVersion,
   metadata
-}: MatchSummaryRow): MatchSummaryResponse {
+}: MatchSummaryRow): PhysicalMatchSummaryResponse {
   return {
+    kind: "single",
     id: match.publicId,
     status: match.status,
     initiatedAt: match.initiatedAt,
@@ -121,7 +188,7 @@ export function toMatchSummaryResponse({
   };
 }
 
-export function toMatchResponse(row: MatchDetailRow): MatchResponse {
+export function toMatchResponse(row: MatchDetailRow): PhysicalMatchResponse {
   return {
     ...toMatchSummaryResponse(row),
     events: row.events.map(toMatchEventResponse),
@@ -137,6 +204,43 @@ export function toMatchResponse(row: MatchDetailRow): MatchResponse {
       joinedElapsedSeconds: stint.joinedElapsedSeconds,
       leftElapsedSeconds: stint.leftElapsedSeconds
     }))
+  };
+}
+
+export function toComposedMatchResponse(
+  row: ComposedMatchRow
+): ComposedMatchResponse {
+  const firstRound = row.rounds[0];
+  const lastRound = row.rounds.at(-1);
+
+  if (!firstRound || !lastRound) {
+    throw new Error("Composed matches require at least two rounds");
+  }
+
+  const first = toMatchSummaryResponse(firstRound.match);
+  const last = toMatchSummaryResponse(lastRound.match);
+  const updatedAt = row.rounds.reduce(
+    (latest, { match }) =>
+      match.match.updatedAt > latest ? match.match.updatedAt : latest,
+    row.composition.updatedAt
+  );
+  const rounds = row.rounds.map(({ round, match }) => ({
+    ...toMatchRoundReference(round, match.match.publicId),
+    match: toMatchSummaryResponse(match)
+  }));
+
+  return {
+    kind: "composed",
+    id: row.composition.publicId,
+    status: last.status,
+    initiatedAt: first.initiatedAt,
+    endedAt: last.endedAt,
+    score: last.score,
+    gameMode: first.gameMode,
+    eventSchema: first.eventSchema,
+    rounds,
+    createdAt: first.createdAt,
+    updatedAt
   };
 }
 

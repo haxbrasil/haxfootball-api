@@ -41,12 +41,14 @@ type MetricsQueryResponse = {
     metrics: Record<string, unknown>;
     contribution: {
       matchesCount: number;
+      roundsCount: number;
       eventsCount: number;
     };
   }>;
   meta: {
     totals: {
       matchesCount: number;
+      roundsCount: number;
       eventsCount: number;
     };
   };

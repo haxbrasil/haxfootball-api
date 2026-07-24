@@ -1,5 +1,6 @@
 const matchPublicIdAlphabet = "abcdefghjkmnpqrstvwxyz23456789";
 const matchPublicIdLength = 8;
+const composedMatchPublicIdPrefix = "c";
 const defaultMaxPublicIdAttempts = 16;
 
 export async function createUniqueMatchPublicId(
@@ -28,6 +29,19 @@ export async function createUniqueMatchPublicId(
   );
 
   return uniqueCandidate?.candidatePublicId ?? null;
+}
+
+export async function createUniqueComposedMatchPublicId(
+  publicIdExists: (publicId: string) => Promise<boolean>,
+  maxAttempts = defaultMaxPublicIdAttempts
+): Promise<string | null> {
+  const candidate = await createUniqueMatchPublicId(
+    async (candidate) =>
+      publicIdExists(`${composedMatchPublicIdPrefix}${candidate}`),
+    maxAttempts
+  );
+
+  return candidate ? `${composedMatchPublicIdPrefix}${candidate}` : null;
 }
 
 function randomMatchPublicId(): string {

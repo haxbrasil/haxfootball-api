@@ -12,6 +12,18 @@ if (!response.ok) {
 }
 
 const openApiDocument = await response.json();
+const graphqlPath = openApiDocument.paths?.["/api/graphql"];
+
+if (graphqlPath) {
+  for (const [method, operation] of Object.entries(graphqlPath)) {
+    if (operation && typeof operation === "object") {
+      const openApiOperation = operation as { operationId?: string };
+
+      openApiOperation.operationId = `${method}ApiGraphql`;
+    }
+  }
+}
+
 const output = stringify(openApiDocument, {
   lineWidth: 0,
   sortMapEntries: true

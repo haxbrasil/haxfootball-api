@@ -6,9 +6,9 @@ import {
   matchScoreSchema,
   matchStatusSchema
 } from "@/features/matches/_shared/http/inputs";
-import type { MatchResponse } from "@/features/matches/_shared/http/responses";
+import type { PhysicalMatchResponse } from "@/features/matches/_shared/http/responses";
 import {
-  matchResponseSchema,
+  physicalMatchResponseSchema,
   toMatchResponse
 } from "@/features/matches/_shared/http/responses";
 import { matches } from "@/features/matches/db";
@@ -39,13 +39,13 @@ export const createMatchBodySchema = t.Object({
   events: t.Optional(t.Array(matchEventInputSchema))
 });
 
-export { matchResponseSchema as createMatchResponseSchema };
+export { physicalMatchResponseSchema as createMatchResponseSchema };
 
 export type CreateMatchInput = Static<typeof createMatchBodySchema>;
 
 export async function createMatch(
   input: CreateMatchInput
-): Promise<MatchResponse> {
+): Promise<PhysicalMatchResponse> {
   assertCompletedMatchFields(input);
 
   const publicId = await createRequiredMatchPublicId();

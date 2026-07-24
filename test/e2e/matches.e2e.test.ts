@@ -9,6 +9,7 @@ type MatchEventResponse = {
 };
 
 type MatchResponse = {
+  kind: "single";
   id: string;
   status: string;
   initiatedAt: string | null;
@@ -54,6 +55,7 @@ describe("matches", () => {
     const match: MatchResponse = await response.json();
 
     expect(match).toMatchObject({
+      kind: "single",
       id: expect.stringMatching(/^[a-z2-9]{8}$/),
       status: "ongoing",
       initiatedAt: "2026-05-10T12:00:00.000Z",

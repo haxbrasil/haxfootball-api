@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, or } from "drizzle-orm";
 import { db } from "@/db/client";
 import { accounts } from "@/features/accounts/db";
 import { validateNativeRoomEvent } from "@/features/match-events/_shared/domain/native-room-events";
@@ -10,7 +10,7 @@ import {
   persistMatchEvents,
   recomputeMatchStints
 } from "@/features/matches/_shared/db/queries";
-import { matches } from "@/features/matches/db";
+import { composedMatchRounds, matches } from "@/features/matches/db";
 import { players } from "@/features/players/db";
 import type { EventSchemaVersion } from "@/features/event-schemas/db";
 import { eventSchemaVersions } from "@/features/event-schemas/db";
@@ -140,6 +140,68 @@ export async function listMatchEventsByMatchId(
   return hydrateMatchEvents(rows);
 }
 
+export async function listMatchEventsByMatchIds(
+  matchIds: number[]
+): Promise<MatchEventRow[]> {
+  if (matchIds.length === 0) {
+    return [];
+  }
+
+  const rows = await db
+    .select()
+    .from(matchEvents)
+    .where(inArray(matchEvents.matchId, matchIds))
+    .orderBy(asc(matchEvents.matchId), asc(matchEvents.sequence));
+
+  return hydrateMatchEvents(rows);
+}
+
+export async function listComposedMatchEventRows(
+  compositionId: number,
+  cursor: { position: number; sequence: number } | undefined,
+  limit: number
+) {
+  const cursorCondition = cursor
+    ? or(
+        gt(composedMatchRounds.position, cursor.position),
+        and(
+          eq(composedMatchRounds.position, cursor.position),
+          gt(matchEvents.sequence, cursor.sequence)
+        )
+      )
+    : undefined;
+  const rows = await db
+    .select({
+      position: composedMatchRounds.position,
+      event: matchEvents
+    })
+    .from(composedMatchRounds)
+    .innerJoin(
+      matchEvents,
+      eq(composedMatchRounds.matchId, matchEvents.matchId)
+    )
+    .where(
+      and(
+        eq(composedMatchRounds.composedMatchId, compositionId),
+        cursorCondition
+      )
+    )
+    .orderBy(asc(composedMatchRounds.position), asc(matchEvents.sequence))
+    .limit(limit);
+  const hydratedEvents = await hydrateMatchEvents(rows.map((row) => row.event));
+  const eventById = new Map(hydratedEvents.map((event) => [event.id, event]));
+
+  return rows.map((row) => {
+    const event = eventById.get(row.event.id);
+
+    if (!event) {
+      throw new Error("Composed match event hydration is missing");
+    }
+
+    return { position: row.position, event };
+  });
+}
+
 export async function disableMatchEvent(
   publicId: string,
   eventId: string
@@ -205,10 +267,16 @@ function validateInputShape(input: MatchEventInput): void {
 }
 
 async function hydrateMatchEvent(event: MatchEvent): Promise<MatchEventRow> {
-  return (await hydrateMatchEvents([event]))[0] as MatchEventRow;
+  const [hydrated] = await hydrateMatchEvents([event]);
+
+  if (!hydrated) {
+    throw new Error("Match event hydration is missing");
+  }
+
+  return hydrated;
 }
 
-async function hydrateMatchEvents(
+export async function hydrateMatchEvents(
   events: MatchEvent[]
 ): Promise<MatchEventRow[]> {
   const playerIds = Array.from(

@@ -7,7 +7,7 @@ import {
   matchScoreSchema,
   matchStatusSchema
 } from "@/features/matches/_shared/http/inputs";
-import type { MatchResponse } from "@/features/matches/_shared/http/responses";
+import type { PhysicalMatchResponse } from "@/features/matches/_shared/http/responses";
 import { toMatchResponse } from "@/features/matches/_shared/http/responses";
 import { matches } from "@/features/matches/db";
 import {
@@ -45,7 +45,7 @@ export type UpdateMatchInput = Static<typeof updateMatchBodySchema>;
 export async function updateMatch(
   id: string,
   input: UpdateMatchInput
-): Promise<MatchResponse> {
+): Promise<PhysicalMatchResponse> {
   const current = await getMatchSummary(id);
 
   assertMatchIsEditable(current.match);
