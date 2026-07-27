@@ -1,4 +1,3 @@
-import { validateAsync } from "@hax-brasil/replay-decoder";
 import { eq } from "drizzle-orm";
 import { type Static, t } from "elysia";
 import { env } from "@/config/env";
@@ -27,10 +26,6 @@ export async function createRecording(
   input: CreateRecordingInput
 ): Promise<CreateRecordingResult> {
   const bytes = new Uint8Array(await input.file.arrayBuffer());
-
-  if (!(await isValidRecording(bytes))) {
-    throw badRequest("Invalid recording file");
-  }
 
   const sha256 = await sha256Hex(bytes);
   const [existingRecording] = await db
@@ -68,12 +63,6 @@ export async function createRecording(
     recording: toRecordingResponse(recording),
     created: true
   };
-}
-
-async function isValidRecording(bytes: Uint8Array): Promise<boolean> {
-  const report = await validateAsync(bytes, "strict");
-
-  return !report.issues.some((issue) => issue.severity === "error");
 }
 
 export async function createUniquePublicId(sha256: string): Promise<string> {

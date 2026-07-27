@@ -161,25 +161,28 @@ describe("recordings", () => {
     expect(recording.publicId).toBeUndefined();
   });
 
-  it("rejects invalid recordings", async () => {
+  it("stores arbitrary recording bytes without inspecting their contents", async () => {
+    const bytes = new TextEncoder().encode("invalid-rec");
     const formData = new FormData();
-    formData.set("file", new File(["invalid-rec"], "invalid.hbr2"));
+    formData.set("file", new File([bytes], "invalid.hbr2"));
 
     const response = await request("/api/recs", {
       method: "POST",
       body: formData
     });
 
-    expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({
-      error: {
-        code: "BAD_REQUEST",
-        message: "Invalid recording file"
-      }
+    expect([200, 201]).toContain(response.status);
+
+    const recording: RecordingResponse = await response.json();
+
+    expect(recording).toMatchObject({
+      sizeBytes: bytes.byteLength,
+      createdAt: expect.any(String)
     });
+    expect(await recordingObjectExists(`${recording.id}.hbr2`)).toBe(true);
   });
 
-  it("rejects an HBRX recording with a corrupted extension", async () => {
+  it("stores a corrupted HBRX recording as opaque bytes", async () => {
     const corruptedBytes = Uint8Array.from(extendedRecordingBytes());
     corruptedBytes[corruptedBytes.length - 1] ^= 0xff;
     const corruptedBuffer = new ArrayBuffer(corruptedBytes.byteLength);
@@ -192,13 +195,15 @@ describe("recordings", () => {
       body: formData
     });
 
-    expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({
-      error: {
-        code: "BAD_REQUEST",
-        message: "Invalid recording file"
-      }
+    expect([200, 201]).toContain(response.status);
+
+    const recording: RecordingResponse = await response.json();
+
+    expect(recording).toMatchObject({
+      sizeBytes: corruptedBytes.byteLength,
+      createdAt: expect.any(String)
     });
+    expect(await recordingObjectExists(`${recording.id}.hbr2`)).toBe(true);
   });
 
   it("rejects missing recording files", async () => {
