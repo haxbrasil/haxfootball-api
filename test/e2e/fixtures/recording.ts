@@ -8,12 +8,20 @@ export function headlessAvatarEmojiRecordingFile(): File {
   return new File([headlessAvatarEmojiRecordingBuffer()], "emoji-avatar.hbr2");
 }
 
+export function extendedRecordingFile(): File {
+  return new File([extendedRecordingBuffer()], "match.hbrx");
+}
+
 export function recordingBytes(): Uint8Array {
   return readFileSync("test/e2e/fixtures/assets/recording.hbr2");
 }
 
 export function headlessAvatarEmojiRecordingBytes(): Uint8Array {
   return readFileSync("test/e2e/fixtures/assets/headless-avatar-emoji.hbr2");
+}
+
+export function extendedRecordingBytes(): Uint8Array {
+  return readFileSync("test/e2e/fixtures/assets/recording.hbrx");
 }
 
 function recordingBuffer(): ArrayBuffer {
@@ -28,6 +36,16 @@ function recordingBuffer(): ArrayBuffer {
 
 function headlessAvatarEmojiRecordingBuffer(): ArrayBuffer {
   const bytes = headlessAvatarEmojiRecordingBytes();
+  const buffer = new ArrayBuffer(bytes.byteLength);
+  const view = new Uint8Array(buffer);
+
+  view.set(bytes);
+
+  return buffer;
+}
+
+function extendedRecordingBuffer(): ArrayBuffer {
+  const bytes = extendedRecordingBytes();
   const buffer = new ArrayBuffer(bytes.byteLength);
   const view = new Uint8Array(buffer);
 

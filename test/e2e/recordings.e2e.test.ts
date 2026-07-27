@@ -1,5 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import {
+  extendedRecordingBytes,
+  extendedRecordingFile,
   headlessAvatarEmojiRecordingBytes,
   headlessAvatarEmojiRecordingFile,
   recordingBytes,
@@ -55,6 +57,26 @@ describe("recordings", () => {
 
     expect(recording).toMatchObject({
       sizeBytes: headlessAvatarEmojiRecordingBytes().byteLength,
+      createdAt: expect.any(String)
+    });
+    expect(await recordingObjectExists(`${recording.id}.hbr2`)).toBe(true);
+  });
+
+  it("saves an HBRX-extended recording without discarding its extension", async () => {
+    const formData = new FormData();
+    formData.set("file", extendedRecordingFile());
+
+    const response = await request("/api/recs", {
+      method: "POST",
+      body: formData
+    });
+
+    expect([200, 201]).toContain(response.status);
+
+    const recording: RecordingResponse = await response.json();
+
+    expect(recording).toMatchObject({
+      sizeBytes: extendedRecordingBytes().byteLength,
       createdAt: expect.any(String)
     });
     expect(await recordingObjectExists(`${recording.id}.hbr2`)).toBe(true);
@@ -142,6 +164,28 @@ describe("recordings", () => {
   it("rejects invalid recordings", async () => {
     const formData = new FormData();
     formData.set("file", new File(["invalid-rec"], "invalid.hbr2"));
+
+    const response = await request("/api/recs", {
+      method: "POST",
+      body: formData
+    });
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({
+      error: {
+        code: "BAD_REQUEST",
+        message: "Invalid recording file"
+      }
+    });
+  });
+
+  it("rejects an HBRX recording with a corrupted extension", async () => {
+    const corruptedBytes = Uint8Array.from(extendedRecordingBytes());
+    corruptedBytes[corruptedBytes.length - 1] ^= 0xff;
+    const corruptedBuffer = new ArrayBuffer(corruptedBytes.byteLength);
+    new Uint8Array(corruptedBuffer).set(corruptedBytes);
+    const formData = new FormData();
+    formData.set("file", new File([corruptedBuffer], "corrupted.hbrx"));
 
     const response = await request("/api/recs", {
       method: "POST",
