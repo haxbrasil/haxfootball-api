@@ -39,6 +39,9 @@ components:
         elapsedSeconds:
           minimum: 0
           type: number
+        id:
+          format: uuid
+          type: string
         occurredAt:
           minLength: 1
           type: string
@@ -46,6 +49,14 @@ components:
           maxLength: 128
           minLength: 1
           type: string
+        producerSequence:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - minimum: 1
+              type: integer
+          minimum: 1
         roomPlayerId:
           anyOf:
             - default: 0
@@ -292,6 +303,105 @@ components:
       required:
         - values
       type: object
+    CheckpointMatchBody:
+      properties:
+        completionReason:
+          enum:
+            - normal
+            - room-process-exit
+            - room-closed
+          type: string
+        elapsedSeconds:
+          minimum: 0
+          type: number
+        events:
+          items:
+            $ref: "#/components/schemas/MatchEventInput"
+          type: array
+        observedAt:
+          minLength: 1
+          type: string
+        revision:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - minimum: 1
+              type: integer
+          minimum: 1
+        score:
+          $ref: "#/components/schemas/MatchScore"
+        status:
+          enum:
+            - pending
+            - ongoing
+            - completed
+            - discarded
+          type: string
+      required:
+        - revision
+        - observedAt
+        - elapsedSeconds
+        - score
+        - events
+      type: object
+    CheckpointMatchRecordingBody:
+      properties:
+        file:
+          default: File
+          format: binary
+          maxSize: 26214400
+          type: string
+        revision:
+          anyOf:
+            - default: 0
+              format: numeric
+              type: string
+            - minimum: 1
+              type: number
+          minimum: 1
+      required:
+        - revision
+        - file
+      type: object
+    CheckpointMatchRecordingResponse:
+      properties:
+        revision:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - minimum: 0
+              type: integer
+          minimum: 0
+        sizeBytes:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - minimum: 0
+              type: integer
+          minimum: 0
+      required:
+        - revision
+        - sizeBytes
+      type: object
+    CheckpointMatchResponse:
+      properties:
+        acknowledgedProducerSequence:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - minimum: 0
+              type: integer
+          minimum: 0
+        match:
+          $ref: "#/components/schemas/PhysicalMatch"
+      required:
+        - acknowledgedProducerSequence
+        - match
+      type: object
     CloseRoomResponse:
       properties:
         closedAt:
@@ -454,6 +564,14 @@ components:
               - properties:
                   match:
                     properties:
+                      completionReason:
+                        anyOf:
+                          - const: normal
+                            type: string
+                          - const: room-process-exit
+                            type: string
+                          - const: room-closed
+                            type: string
                       createdAt:
                         type: string
                       endedAt:
@@ -496,9 +614,13 @@ components:
                         nullable: true
                       status:
                         anyOf:
+                          - const: pending
+                            type: string
                           - const: ongoing
                             type: string
                           - const: completed
+                            type: string
+                          - const: discarded
                             type: string
                       updatedAt:
                         type: string
@@ -527,8 +649,10 @@ components:
           nullable: true
         status:
           enum:
+            - pending
             - ongoing
             - completed
+            - discarded
           type: string
         updatedAt:
           type: string
@@ -710,6 +834,9 @@ components:
         recordingId:
           minLength: 1
           type: string
+        roomId:
+          format: uuid
+          type: string
         score:
           properties:
             blue:
@@ -732,10 +859,15 @@ components:
             - red
             - blue
           type: object
+        sessionId:
+          format: uuid
+          type: string
         status:
           enum:
+            - pending
             - ongoing
             - completed
+            - discarded
           type: string
       required:
         - status
@@ -1744,6 +1876,17 @@ components:
             - type: string
             - type: "null"
           nullable: true
+        producerSequence:
+          anyOf:
+            - anyOf:
+                - default: 0
+                  format: integer
+                  type: string
+                - minimum: 1
+                  type: integer
+              minimum: 1
+            - type: "null"
+          nullable: true
         roomPlayerId:
           anyOf:
             - type: number
@@ -1797,6 +1940,7 @@ components:
       required:
         - id
         - sequence
+        - producerSequence
         - domain
         - type
         - scope
@@ -1831,6 +1975,9 @@ components:
         elapsedSeconds:
           minimum: 0
           type: number
+        id:
+          format: uuid
+          type: string
         occurredAt:
           minLength: 1
           type: string
@@ -1838,6 +1985,14 @@ components:
           maxLength: 128
           minLength: 1
           type: string
+        producerSequence:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - minimum: 1
+              type: integer
+          minimum: 1
         roomPlayerId:
           anyOf:
             - default: 0
@@ -2120,6 +2275,14 @@ components:
     MatchSummary:
       anyOf:
         - properties:
+            completionReason:
+              anyOf:
+                - const: normal
+                  type: string
+                - const: room-process-exit
+                  type: string
+                - const: room-closed
+                  type: string
             createdAt:
               type: string
             endedAt:
@@ -2162,9 +2325,13 @@ components:
               nullable: true
             status:
               anyOf:
+                - const: pending
+                  type: string
                 - const: ongoing
                   type: string
                 - const: completed
+                  type: string
+                - const: discarded
                   type: string
             updatedAt:
               type: string
@@ -2244,6 +2411,14 @@ components:
     PhysicalMatch:
       allOf:
         - properties:
+            completionReason:
+              anyOf:
+                - const: normal
+                  type: string
+                - const: room-process-exit
+                  type: string
+                - const: room-closed
+                  type: string
             createdAt:
               type: string
             endedAt:
@@ -2286,9 +2461,13 @@ components:
               nullable: true
             status:
               anyOf:
+                - const: pending
+                  type: string
                 - const: ongoing
                   type: string
                 - const: completed
+                  type: string
+                - const: discarded
                   type: string
             updatedAt:
               type: string
@@ -3924,8 +4103,10 @@ components:
           type: object
         status:
           enum:
+            - pending
             - ongoing
             - completed
+            - discarded
           type: string
       type: object
     UpdatePermissionBody:
@@ -5876,6 +6057,58 @@ paths:
       summary: Update a match
       tags:
         - Matches
+  /api/matches/{id}/checkpoints:
+    post:
+      operationId: postApiMatchesByIdCheckpoints
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            maxLength: 8
+            minLength: 8
+            pattern: ^[a-z2-9]{8}$
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CheckpointMatchBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckpointMatchResponse"
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Checkpoint an active match
+      tags:
+        - Matches
   /api/matches/{id}/events:
     get:
       operationId: getApiMatchesByIdEvents
@@ -6202,6 +6435,58 @@ paths:
                 $ref: "#/components/schemas/InternalServerError"
           description: Response for status 500
       summary: Associate a match recording
+      tags:
+        - Matches
+  /api/matches/{id}/recording-checkpoint:
+    post:
+      operationId: postApiMatchesByIdRecording-checkpoint
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            maxLength: 8
+            minLength: 8
+            pattern: ^[a-z2-9]{8}$
+            type: string
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/CheckpointMatchRecordingBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckpointMatchRecordingResponse"
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Checkpoint an active match recording
       tags:
         - Matches
   /api/matches/{id}/rounds:

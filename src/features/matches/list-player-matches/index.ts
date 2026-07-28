@@ -1,4 +1,4 @@
-import { and, desc, eq, lt, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, lt, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import {
   type MatchSummaryRow,
@@ -81,6 +81,7 @@ export async function listPlayerMatches(
     .where(
       and(
         eq(matchPlayerStints.playerId, player.id),
+        inArray(matches.status, ["ongoing", "completed"]),
         cursor === undefined ? undefined : lt(logicalAnchorId, cursor)
       )
     )

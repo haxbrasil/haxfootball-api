@@ -6,6 +6,7 @@ import {
   closeRoomProcess,
   inspectRoomProcess
 } from "@/features/rooms/_shared/adapters/room-process";
+import { finalizeInactiveRoomMatches } from "@/features/matches/finalize-inactive-room-matches";
 
 export type ReconcileOpenRoomsResult = {
   inspected: number;
@@ -13,6 +14,7 @@ export type ReconcileOpenRoomsResult = {
   failed: number;
   externalMarkedRunning: number;
   staleClosed: number;
+  matchesFinalized: number;
 };
 
 export async function reconcileOpenRooms(): Promise<ReconcileOpenRoomsResult> {
@@ -32,7 +34,8 @@ export async function reconcileOpenRooms(): Promise<ReconcileOpenRoomsResult> {
     closed: 0,
     failed: 0,
     externalMarkedRunning: 0,
-    staleClosed
+    staleClosed,
+    matchesFinalized: 0
   };
 
   for (const { room, program } of rooms) {
@@ -81,7 +84,9 @@ export async function reconcileOpenRooms(): Promise<ReconcileOpenRoomsResult> {
         closedAt: state === "closed" ? now : null,
         failedAt: state === "failed" ? now : null,
         failureReason:
-          state === "failed" ? "Room process exited before readiness" : null,
+          state === "failed"
+            ? "Room process exited before readiness"
+            : "Room process exited",
         updatedAt: now
       })
       .where(eq(roomInstances.id, room.id));
@@ -92,6 +97,8 @@ export async function reconcileOpenRooms(): Promise<ReconcileOpenRoomsResult> {
       result.failed += 1;
     }
   }
+
+  result.matchesFinalized = await finalizeInactiveRoomMatches();
 
   return result;
 }

@@ -27,9 +27,12 @@ import { resolveGameModeId } from "@/features/game-modes/read-game-mode";
 import { assertCompletedMatchFields } from "@/features/matches/_shared/domain/validation";
 import { eventSchemaReferenceSchema } from "@/features/event-schemas/http";
 import { badRequest } from "@/shared/http/errors";
+import { roomInstances } from "@/features/rooms/db";
 
 export const createMatchBodySchema = t.Object({
   status: matchStatusSchema,
+  sessionId: t.Optional(t.String({ format: "uuid" })),
+  roomId: t.Optional(t.String({ format: "uuid" })),
   initiatedAt: t.Optional(t.String({ minLength: 1 })),
   endedAt: t.Optional(t.String({ minLength: 1 })),
   score: t.Optional(matchScoreSchema),
@@ -48,6 +51,20 @@ export async function createMatch(
 ): Promise<PhysicalMatchResponse> {
   assertCompletedMatchFields(input);
 
+  if (input.sessionId) {
+    const [existing] = await db
+      .select({ publicId: matches.publicId })
+      .from(matches)
+      .where(eq(matches.sessionId, input.sessionId));
+
+    if (existing) {
+      return toMatchResponse(await getMatchDetail(existing.publicId));
+    }
+  }
+
+  const roomInstanceId = input.roomId
+    ? await resolveRoomInstanceId(input.roomId)
+    : null;
   const publicId = await createRequiredMatchPublicId();
   const recording = input.recordingId
     ? await getRecordingForAssociation(input.recordingId)
@@ -62,6 +79,8 @@ export async function createMatch(
   const matchValues = {
     publicId,
     status: input.status,
+    sessionId: input.sessionId,
+    roomInstanceId,
     recordingId,
     gameModeId,
     eventSchemaVersionId,
@@ -82,6 +101,19 @@ export async function createMatch(
   const matchDetail = await getMatchDetail(createdMatch.publicId);
 
   return toMatchResponse(matchDetail);
+}
+
+async function resolveRoomInstanceId(roomId: string): Promise<number> {
+  const [room] = await db
+    .select({ id: roomInstances.id })
+    .from(roomInstances)
+    .where(eq(roomInstances.uuid, roomId));
+
+  if (!room) {
+    throw badRequest("Room instance not found");
+  }
+
+  return room.id;
 }
 
 async function createRequiredMatchPublicId(): Promise<string> {

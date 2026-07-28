@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   check,
+  index,
   integer,
   real,
   sqliteTable,
@@ -17,7 +18,28 @@ export const matches = sqliteTable(
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
     publicId: text("public_id").notNull().unique(),
-    status: text("status", { enum: ["ongoing", "completed"] }).notNull(),
+    status: text("status", {
+      enum: ["pending", "ongoing", "completed", "discarded"]
+    }).notNull(),
+    completionReason: text("completion_reason", {
+      enum: ["normal", "room-process-exit", "room-closed"]
+    }),
+    sessionId: text("session_id").unique(),
+    roomInstanceId: integer("room_instance_id"),
+    lastCheckpointAt: text("last_checkpoint_at"),
+    lastCheckpointRevision: integer("last_checkpoint_revision")
+      .notNull()
+      .default(0),
+    elapsedSeconds: real("elapsed_seconds"),
+    lastProducerSequence: integer("last_producer_sequence")
+      .notNull()
+      .default(0),
+    recordingCheckpointRevision: integer("recording_checkpoint_revision")
+      .notNull()
+      .default(0),
+    recordingCheckpointObjectKey: text("recording_checkpoint_object_key"),
+    recordingCheckpointSha256: text("recording_checkpoint_sha256"),
+    recordingCheckpointSizeBytes: integer("recording_checkpoint_size_bytes"),
     recordingId: integer("recording_id")
       .references(() => recordings.id)
       .unique(),
@@ -35,6 +57,10 @@ export const matches = sqliteTable(
       .$defaultFn(() => new Date().toISOString())
   },
   (table) => [
+    index("matches_room_instance_status_idx").on(
+      table.roomInstanceId,
+      table.status
+    ),
     uniqueIndex("matches_id_event_schema_version_id_unique").on(
       table.id,
       table.eventSchemaVersionId

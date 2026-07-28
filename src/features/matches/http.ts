@@ -33,6 +33,16 @@ import {
   createMatchBodySchema
 } from "@/features/matches/create-match";
 import {
+  checkpointMatch,
+  checkpointMatchBodySchema,
+  checkpointMatchResponseSchema
+} from "@/features/matches/checkpoint-match";
+import {
+  checkpointMatchRecording,
+  checkpointMatchRecordingBodySchema,
+  checkpointMatchRecordingResponseSchema
+} from "@/features/matches/checkpoint-match-recording";
+import {
   createMatchComposition,
   createMatchCompositionBodySchema
 } from "@/features/matches/create-match-composition";
@@ -103,6 +113,10 @@ export const matchRoutes = new Elysia({
     AddMatchEventBody: addMatchEventBodySchema,
     AssociateMatchRecordingBody: associateMatchRecordingBodySchema,
     CreateMatchBody: createMatchBodySchema,
+    CheckpointMatchBody: checkpointMatchBodySchema,
+    CheckpointMatchResponse: checkpointMatchResponseSchema,
+    CheckpointMatchRecordingBody: checkpointMatchRecordingBodySchema,
+    CheckpointMatchRecordingResponse: checkpointMatchRecordingResponseSchema,
     DisableMatchEventBody: disableMatchEventBodySchema,
     ListMatches: listMatchesResponseSchema,
     ListMatchEvents: listMatchEventsResponseSchema,
@@ -264,6 +278,40 @@ export const matchRoutes = new Elysia({
       summary: "Update a match"
     }
   })
+  .post(
+    "/:id/checkpoints",
+    ({ body, params }) => checkpointMatch(params.id, body),
+    {
+      body: t.Ref("CheckpointMatchBody"),
+      params: matchPublicIdParamsSchema,
+      response: {
+        200: t.Ref("CheckpointMatchResponse"),
+        400: t.Ref("BadRequestError"),
+        404: t.Ref("NotFoundError")
+      },
+      detail: {
+        tags: ["Matches"],
+        summary: "Checkpoint an active match"
+      }
+    }
+  )
+  .post(
+    "/:id/recording-checkpoint",
+    ({ body, params }) => checkpointMatchRecording(params.id, body),
+    {
+      body: t.Ref("CheckpointMatchRecordingBody"),
+      params: matchPublicIdParamsSchema,
+      response: {
+        200: t.Ref("CheckpointMatchRecordingResponse"),
+        400: t.Ref("BadRequestError"),
+        404: t.Ref("NotFoundError")
+      },
+      detail: {
+        tags: ["Matches"],
+        summary: "Checkpoint an active match recording"
+      }
+    }
+  )
   .get(
     "/:id/events",
     ({ params, query }) => listMatchEvents(params.id, query),

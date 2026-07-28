@@ -5,8 +5,16 @@ import type { EventSchemaReference } from "@/features/event-schemas/http";
 import { matchEventInputSchema } from "@/features/match-events/http";
 
 export const matchStatusSchema = t.Union([
+  t.Literal("pending"),
   t.Literal("ongoing"),
-  t.Literal("completed")
+  t.Literal("completed"),
+  t.Literal("discarded")
+]);
+
+export const matchCompletionReasonSchema = t.Union([
+  t.Literal("normal"),
+  t.Literal("room-process-exit"),
+  t.Literal("room-closed")
 ]);
 
 export const matchPublicIdSchema = t.String({

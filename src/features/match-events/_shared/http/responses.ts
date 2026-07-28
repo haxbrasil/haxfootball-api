@@ -17,6 +17,7 @@ import { paginatedResponseSchema } from "@lib";
 export const matchEventResponseSchema = t.Object({
   id: matchEventIdSchema,
   sequence: t.Integer({ minimum: 1 }),
+  producerSequence: t.Nullable(t.Integer({ minimum: 1 })),
   domain: matchEventDomainSchema,
   type: t.String(),
   scope: matchEventScopeSchema,
@@ -61,6 +62,7 @@ export function toMatchEventResponse(row: MatchEventRow): MatchEventResponse {
   return {
     id: row.uuid,
     sequence: row.sequence,
+    producerSequence: row.producerSequence,
     domain: row.domain,
     type: row.type,
     scope: row.scope,

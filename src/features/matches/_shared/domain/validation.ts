@@ -11,6 +11,10 @@ export function assertMatchIsEditable(match: Match): void {
   if (match.status === "completed") {
     throw badRequest("Completed matches cannot be edited");
   }
+
+  if (match.status === "discarded") {
+    throw badRequest("Discarded matches cannot be edited");
+  }
 }
 
 export function assertCompletedMatchFields(input: {

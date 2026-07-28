@@ -23,6 +23,7 @@ export const matchEvents = sqliteTable(
       () => eventSchemaVersions.id
     ),
     sequence: integer("sequence").notNull(),
+    producerSequence: integer("producer_sequence"),
     domain: text("domain", {
       enum: ["room", "game", "agent", "system"]
     }).notNull(),
@@ -52,6 +53,10 @@ export const matchEvents = sqliteTable(
     uniqueIndex("match_events_match_id_sequence_unique").on(
       table.matchId,
       table.sequence
+    ),
+    uniqueIndex("match_events_match_id_producer_sequence_unique").on(
+      table.matchId,
+      table.producerSequence
     ),
     foreignKey({
       name: "match_events_match_schema_version_fk",

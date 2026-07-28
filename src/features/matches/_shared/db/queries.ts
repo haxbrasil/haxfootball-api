@@ -160,6 +160,7 @@ function groupMatchMetadata(metadata: MatchTeamMetadata[]) {
 
 export async function listMatchSummaries(query: ListMatchesQuery = {}) {
   const conditions: SQL[] = [
+    inArray(matches.status, ["ongoing", "completed"]),
     or(
       isNull(composedMatchRounds.id),
       eq(matches.id, composedMatches.firstMatchId)
@@ -400,13 +401,14 @@ export async function persistResolvedMatchEvents(
 
   await database.insert(matchEvents).values(
     persistedEvents.map((event) => ({
-      uuid: crypto.randomUUID(),
+      uuid: event.id ?? crypto.randomUUID(),
       matchId,
       schemaVersionId:
         event.domain === "game"
           ? sql`(select event_schema_version_id from matches where id = ${matchId})`
           : null,
       sequence: event.sequence,
+      producerSequence: event.producerSequence ?? null,
       domain: event.domain,
       type: event.type,
       scope: event.scope,

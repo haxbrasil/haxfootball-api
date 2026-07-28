@@ -22,6 +22,8 @@ export const matchEventTeamSchema = t.Union([
 ]);
 
 export const matchEventInputSchema = t.Object({
+  id: t.Optional(matchEventIdSchema),
+  producerSequence: t.Optional(t.Integer({ minimum: 1 })),
   domain: matchEventDomainSchema,
   type: t.String({
     minLength: 1,

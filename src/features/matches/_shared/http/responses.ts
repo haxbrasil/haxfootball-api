@@ -20,6 +20,7 @@ import { matchRoundReferenceSchema } from "@/features/matches/resolve-logical-ma
 import {
   composedMatchPublicIdSchema,
   matchFieldTeamSchema,
+  matchCompletionReasonSchema,
   matchPublicIdSchema,
   matchScoreSchema,
   matchStatusSchema,
@@ -61,6 +62,7 @@ export const physicalMatchSummaryResponseSchema = t.Object({
   kind: t.Literal("single"),
   id: matchPublicIdSchema,
   status: matchStatusSchema,
+  completionReason: t.Optional(matchCompletionReasonSchema),
   initiatedAt: t.Nullable(t.String()),
   endedAt: t.Nullable(t.String()),
   score: t.Nullable(matchScoreSchema),
@@ -177,6 +179,9 @@ export function toMatchSummaryResponse({
     kind: "single",
     id: match.publicId,
     status: match.status,
+    ...(match.completionReason
+      ? { completionReason: match.completionReason }
+      : {}),
     initiatedAt: match.initiatedAt,
     endedAt: match.endedAt,
     score: toMatchScore(metadata),

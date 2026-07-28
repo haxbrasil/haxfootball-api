@@ -82,6 +82,9 @@ export async function updateMatch(
     .update(matches)
     .set({
       ...(input.status ? { status: input.status } : {}),
+      ...(input.status === "completed"
+        ? { completionReason: "normal" as const }
+        : {}),
       ...(input.initiatedAt !== undefined
         ? { initiatedAt: input.initiatedAt }
         : {}),
