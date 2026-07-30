@@ -22,6 +22,7 @@ import type {
 import type {
   ComposedMatchRow,
   MatchDetailRow,
+  MatchSummaryPlayerRow,
   MatchSummaryRow
 } from "@/features/matches/_shared/http/responses";
 import {
@@ -120,6 +121,9 @@ export async function getComposedMatchRows(
       )
     );
   const metadataByMatchId = groupMatchMetadata(metadata);
+  const playersByMatchId = await listMatchSummaryPlayers(
+    rows.map((row) => row.match.id)
+  );
   const roundsByCompositionId = new Map<number, ComposedMatchRow["rounds"]>();
 
   for (const row of rows) {
@@ -133,7 +137,8 @@ export async function getComposedMatchRows(
         gameMode: row.gameMode,
         eventSchemaFamily: row.eventSchemaFamily,
         eventSchemaVersion: row.eventSchemaVersion,
-        metadata: metadataByMatchId.get(row.match.id) ?? []
+        metadata: metadataByMatchId.get(row.match.id) ?? [],
+        players: playersByMatchId.get(row.match.id) ?? []
       }
     });
     roundsByCompositionId.set(row.compositionId, rounds);
@@ -210,16 +215,20 @@ export async function listMatchSummaries(query: ListMatchesQuery = {}) {
   const compositionRowById = new Map(
     compositionRows.map((row) => [row.composition.id, row])
   );
+  const standaloneRows = rows.filter((row) => !row.composition);
+  const standaloneMatchIds = standaloneRows.map((row) => row.match.id);
+  const standaloneMetadata =
+    await listMatchMetadataForMatches(standaloneMatchIds);
+  const standalonePlayers = await listMatchSummaryPlayers(standaloneMatchIds);
 
-  return Promise.all(
-    rows.map(async ({ composition, ...row }) =>
-      composition
-        ? requireComposedMatchRow(compositionRowById, composition.id)
-        : {
-            ...row,
-            metadata: await listMatchMetadata(row.match.id)
-          }
-    )
+  return rows.map(({ composition, ...row }) =>
+    composition
+      ? requireComposedMatchRow(compositionRowById, composition.id)
+      : {
+          ...row,
+          metadata: standaloneMetadata.get(row.match.id) ?? [],
+          players: standalonePlayers.get(row.match.id) ?? []
+        }
   );
 }
 
@@ -268,7 +277,9 @@ export async function getMatchSummary(
 
   return {
     ...row,
-    metadata: await listMatchMetadata(row.match.id)
+    metadata: await listMatchMetadata(row.match.id),
+    players:
+      (await listMatchSummaryPlayers([row.match.id])).get(row.match.id) ?? []
   };
 }
 
@@ -527,6 +538,49 @@ export async function listMatchMetadata(matchId: number) {
     .select()
     .from(matchTeamMetadata)
     .where(eq(matchTeamMetadata.matchId, matchId));
+}
+
+async function listMatchMetadataForMatches(matchIds: number[]) {
+  if (matchIds.length === 0) {
+    return new Map<number, MatchTeamMetadata[]>();
+  }
+
+  const metadata = await db
+    .select()
+    .from(matchTeamMetadata)
+    .where(inArray(matchTeamMetadata.matchId, matchIds));
+
+  return groupMatchMetadata(metadata);
+}
+
+export async function listMatchSummaryPlayers(matchIds: number[]) {
+  if (matchIds.length === 0) {
+    return new Map<number, MatchSummaryPlayerRow[]>();
+  }
+
+  const rows = await db
+    .select({
+      matchId: matchPlayerStints.matchId,
+      team: matchPlayerStints.team,
+      player: players
+    })
+    .from(matchPlayerStints)
+    .innerJoin(players, eq(matchPlayerStints.playerId, players.id))
+    .where(inArray(matchPlayerStints.matchId, matchIds))
+    .orderBy(asc(matchPlayerStints.id));
+  const playersByMatchId = new Map<number, MatchSummaryPlayerRow[]>();
+
+  for (const row of rows) {
+    const matchPlayers = playersByMatchId.get(row.matchId) ?? [];
+
+    matchPlayers.push({
+      player: row.player,
+      team: row.team
+    });
+    playersByMatchId.set(row.matchId, matchPlayers);
+  }
+
+  return playersByMatchId;
 }
 
 async function listMatchEvents(

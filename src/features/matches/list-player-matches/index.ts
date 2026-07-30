@@ -16,7 +16,8 @@ import {
 } from "@/features/matches/db";
 import {
   getComposedMatchRows,
-  listMatchMetadata
+  listMatchMetadata,
+  listMatchSummaryPlayers
 } from "@/features/matches/_shared/db/queries";
 import { players } from "@/features/players/db";
 import { recordings } from "@/features/recordings/db";
@@ -94,6 +95,9 @@ export async function listPlayerMatches(
   const composedRowById = new Map(
     composedRows.map((row) => [row.composition.id, row])
   );
+  const playersByMatchId = await listMatchSummaryPlayers(
+    rows.map((row) => row.match.id)
+  );
 
   const logicalRows = await Promise.all(
     rows.map(async ({ composition, logicalAnchorId: cursorId, ...row }) => ({
@@ -102,7 +106,8 @@ export async function listPlayerMatches(
         ? requireComposedRow(composedRowById, composition.id)
         : ({
             ...row,
-            metadata: await listMatchMetadata(row.match.id)
+            metadata: await listMatchMetadata(row.match.id),
+            players: playersByMatchId.get(row.match.id) ?? []
           } satisfies MatchSummaryRow)
     }))
   );

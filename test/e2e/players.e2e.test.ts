@@ -213,6 +213,13 @@ describe("players", () => {
       recording: null,
       gameMode: null,
       eventSchema: null,
+      players: [
+        {
+          id: player.id,
+          name: player.name,
+          team: "red"
+        }
+      ],
       createdAt: match.createdAt,
       updatedAt: match.updatedAt
     });

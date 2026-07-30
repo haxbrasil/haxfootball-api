@@ -58,6 +58,12 @@ export const matchPlayerStintResponseSchema = t.Object({
   leftElapsedSeconds: t.Nullable(t.Number())
 });
 
+export const matchSummaryPlayerResponseSchema = t.Object({
+  id: t.String(),
+  name: t.String(),
+  team: matchFieldTeamSchema
+});
+
 export const physicalMatchSummaryResponseSchema = t.Object({
   kind: t.Literal("single"),
   id: matchPublicIdSchema,
@@ -69,6 +75,7 @@ export const physicalMatchSummaryResponseSchema = t.Object({
   recording: t.Nullable(recordingResponseSchema),
   gameMode: t.Nullable(gameModeResponseSchema),
   eventSchema: t.Nullable(eventSchemaReferenceSchema),
+  players: t.Array(matchSummaryPlayerResponseSchema),
   createdAt: t.String(),
   updatedAt: t.String()
 });
@@ -145,6 +152,11 @@ type PlayerRow = {
   account: Account | null;
 };
 
+export type MatchSummaryPlayerRow = {
+  player: Player;
+  team: MatchPlayerStint["team"];
+};
+
 export type MatchSummaryRow = {
   match: Match;
   recording: Recording | null;
@@ -152,6 +164,7 @@ export type MatchSummaryRow = {
   eventSchemaFamily: EventSchemaFamily | null;
   eventSchemaVersion: EventSchemaVersion | null;
   metadata: MatchTeamMetadata[];
+  players: MatchSummaryPlayerRow[];
 };
 
 export type MatchDetailRow = MatchSummaryRow & {
@@ -173,7 +186,8 @@ export function toMatchSummaryResponse({
   gameMode,
   eventSchemaFamily,
   eventSchemaVersion,
-  metadata
+  metadata,
+  players
 }: MatchSummaryRow): PhysicalMatchSummaryResponse {
   return {
     kind: "single",
@@ -191,6 +205,7 @@ export function toMatchSummaryResponse({
       family: eventSchemaFamily,
       version: eventSchemaVersion
     }),
+    players: toMatchSummaryPlayers(players),
     createdAt: match.createdAt,
     updatedAt: match.updatedAt
   };
@@ -266,6 +281,25 @@ function toMatchScore(metadata: MatchTeamMetadata[]): MatchScore | null {
     red: red.score,
     blue: blue.score
   };
+}
+
+function toMatchSummaryPlayers(
+  rows: MatchSummaryPlayerRow[]
+): PhysicalMatchSummaryResponse["players"] {
+  const playersById = new Map<
+    string,
+    PhysicalMatchSummaryResponse["players"][number]
+  >();
+
+  for (const row of rows) {
+    playersById.set(row.player.externalId, {
+      id: row.player.externalId,
+      name: row.player.name,
+      team: row.team
+    });
+  }
+
+  return [...playersById.values()];
 }
 
 function toMatchEventSchemaReference(input: {

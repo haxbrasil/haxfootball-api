@@ -16,6 +16,7 @@ type MatchResponse = {
   endedAt: string | null;
   score: MatchScoreResponse | null;
   recording: RecordingResponse | null;
+  players: MatchSummaryPlayerResponse[];
   events: MatchEventResponse[];
   participations: unknown[];
   createdAt: string;
@@ -31,6 +32,12 @@ type MatchScoreResponse = {
 
 type PlayerResponse = {
   id: string;
+};
+
+type MatchSummaryPlayerResponse = {
+  id: string;
+  name: string;
+  team: "red" | "blue";
 };
 
 type RecordingResponse = {
@@ -1224,6 +1231,51 @@ describe("matches", () => {
 
     expect(getResponse.status).toBe(200);
     expect(await getResponse.json()).toEqual(match);
+  });
+
+  it("includes the player roster in match summaries", async () => {
+    const playerResponse = await request("/api/players", {
+      method: "POST",
+      body: {
+        externalId: `summary-player-${crypto.randomUUID()}`,
+        name: "Jogador do resumo"
+      }
+    });
+
+    expect(playerResponse.status).toBe(201);
+
+    const player: PlayerResponse = await playerResponse.json();
+    const createResponse = await request("/api/matches", {
+      method: "POST",
+      body: {
+        status: "ongoing",
+        events: [
+          {
+            type: MATCH_ROOM_EVENT.PlayerTeamChange,
+            domain: "room",
+            scope: "player",
+            actorPlayerId: player.id,
+            team: "red",
+            value: {}
+          }
+        ]
+      }
+    });
+
+    expect(createResponse.status).toBe(201);
+
+    const match: MatchResponse = await createResponse.json();
+    const listResponse = await request("/api/matches?limit=100");
+    const matches = await paginatedItems<MatchSummaryResponse>(listResponse);
+    const listedMatch = matches.find((item) => item.id === match.id);
+
+    expect(listedMatch?.players).toEqual([
+      {
+        id: player.id,
+        name: "Jogador do resumo",
+        team: "red"
+      }
+    ]);
   });
 
   it("returns 404 for missing matches", async () => {
