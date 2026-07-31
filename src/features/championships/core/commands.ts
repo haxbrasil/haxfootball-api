@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { type DbTransaction, withDatabaseTransaction } from "@/db/client";
 import {
   championshipAuditEvents,
@@ -54,7 +54,12 @@ export async function executeChampionshipCommand<T>(
     const [championship] = await tx
       .select()
       .from(championships)
-      .where(eq(championships.uuid, input.championshipUuid));
+      .where(
+        and(
+          eq(championships.uuid, input.championshipUuid),
+          isNull(championships.deletedAt)
+        )
+      );
 
     if (!championship) {
       throw notFound("Championship not found");

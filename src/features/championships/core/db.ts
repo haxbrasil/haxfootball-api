@@ -130,6 +130,7 @@ export const championships = sqliteTable(
     completedAt: text("completed_at"),
     archivedAt: text("archived_at"),
     canceledAt: text("canceled_at"),
+    deletedAt: text("deleted_at"),
     createdAt: text("created_at")
       .notNull()
       .$defaultFn(() => new Date().toISOString()),

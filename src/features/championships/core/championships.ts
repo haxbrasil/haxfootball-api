@@ -323,7 +323,11 @@ export async function updateChampionship(
         });
       }
 
-      const detail = await getChampionshipDetailFrom(tx, championship.uuid);
+      const detail = await getChampionshipDetailFrom(
+        tx,
+        championship.uuid,
+        true
+      );
 
       return {
         response: () => detail,
@@ -370,7 +374,11 @@ export async function transitionChampionship(
         .set(next)
         .where(eq(championships.id, championship.id))
         .returning();
-      const detail = await getChampionshipDetailFrom(tx, championship.uuid);
+      const detail = await getChampionshipDetailFrom(
+        tx,
+        championship.uuid,
+        true
+      );
 
       return {
         response: () => detail,
@@ -389,6 +397,7 @@ export async function listChampionships(
 ): Promise<PaginatedResponse<ChampionshipSummaryResponse>> {
   const cursor = decodeCursor<number>(query.cursor);
   const conditions = [
+    isNull(championships.deletedAt),
     cursor === undefined ? undefined : gt(championships.id, cursor),
     query.slug ? eq(championships.slug, query.slug) : undefined,
     !query.visibility || query.visibility === "public"
@@ -477,6 +486,12 @@ function resolveTransition(
       }
 
       return { lifecycle: "canceled", canceledAt: now };
+    case "delete":
+      return {
+        visibility: "private",
+        registrationState: "closed",
+        deletedAt: now
+      };
   }
 }
 

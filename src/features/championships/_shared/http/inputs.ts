@@ -886,7 +886,8 @@ export const transitionChampionshipBodySchema = t.Composite([
       t.Literal("activate"),
       t.Literal("complete"),
       t.Literal("archive"),
-      t.Literal("cancel")
+      t.Literal("cancel"),
+      t.Literal("delete")
     ]),
     reason: t.Optional(t.String({ minLength: 1, maxLength: 1_000 }))
   })

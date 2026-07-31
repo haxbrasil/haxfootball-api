@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, type SQL } from "drizzle-orm";
+import { and, asc, eq, gt, isNull, type SQL } from "drizzle-orm";
 import { db, type DbTransaction } from "@/db/client";
 import { accounts } from "@/features/accounts/db";
 import {
@@ -117,7 +117,8 @@ export function toChampionshipSummaryResponse(
 
 export async function getChampionshipWithType(
   database: Database,
-  uuid: string
+  uuid: string,
+  includeDeleted = false
 ): Promise<ChampionshipWithType> {
   const [row] = await database
     .select({
@@ -129,7 +130,11 @@ export async function getChampionshipWithType(
       championshipCompetitionTypes,
       eq(championships.competitionTypeId, championshipCompetitionTypes.id)
     )
-    .where(eq(championships.uuid, uuid));
+    .where(
+      includeDeleted
+        ? eq(championships.uuid, uuid)
+        : and(eq(championships.uuid, uuid), isNull(championships.deletedAt))
+    );
 
   if (!row) {
     throw notFound("Championship not found");
@@ -146,9 +151,10 @@ export async function getChampionshipDetail(
 
 export async function getChampionshipDetailFrom(
   database: Database,
-  uuid: string
+  uuid: string,
+  includeDeleted = false
 ): Promise<ChampionshipDetailResponse> {
-  const row = await getChampionshipWithType(database, uuid);
+  const row = await getChampionshipWithType(database, uuid, includeDeleted);
   const teamRows = await database
     .select({
       team: championshipTeams,

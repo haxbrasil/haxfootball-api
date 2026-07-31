@@ -1,0 +1,1 @@
+ALTER TABLE `championships` ADD `deleted_at` text;

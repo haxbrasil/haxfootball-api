@@ -378,6 +378,49 @@ describe("championship core", () => {
     expect(historical.visibility).toBe("private");
   });
 
+  it("soft-deletes championships only for championship administrators", async () => {
+    const operator = await createAccountWithPermissions([
+      "championship:operate"
+    ]);
+    const championship = await createChampionship(admin, competitionType, {
+      name: "Disposable Cup"
+    });
+    const forbiddenDelete = await request(
+      `/api/championships/${championship.uuid}/transitions`,
+      {
+        method: "POST",
+        body: command(operator, championship.revision, {
+          transition: "delete",
+          reason: "Operator should not be allowed"
+        })
+      }
+    );
+
+    expect(forbiddenDelete.status).toBe(403);
+
+    const deleted = await request(
+      `/api/championships/${championship.uuid}/transitions`,
+      {
+        method: "POST",
+        body: command(admin, championship.revision, {
+          transition: "delete",
+          reason: "Created by mistake"
+        })
+      }
+    );
+
+    expect(deleted.status).toBe(200);
+    expect((await deleted.json()).visibility).toBe("private");
+
+    const detail = await request(`/api/championships/${championship.uuid}`);
+    expect(detail.status).toBe(404);
+
+    const listed = await paginatedItems<Championship>(
+      await request("/api/championships?visibility=all&limit=100")
+    );
+    expect(listed.some(({ uuid }) => uuid === championship.uuid)).toBe(false);
+  });
+
   it("grants championship-scoped authority and records ordered audit events", async () => {
     let championship = await createChampionship(admin, competitionType, {
       name: "Delegated Cup"

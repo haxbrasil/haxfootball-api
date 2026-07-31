@@ -14630,6 +14630,7 @@ components:
             - complete
             - archive
             - cancel
+            - delete
           type: string
       required:
         - actorAccountUuid
