@@ -207,12 +207,6 @@ export async function createChampionshipParticipant(
         throw notFound("Participant account not found");
       }
 
-      if (championship.registrationState !== "open" && !input.reason?.trim()) {
-        throw badRequest(
-          "A reason is required when staff register outside the registration window"
-        );
-      }
-
       assertLateParticipantPrice(championship, input.priceUnits);
       await assertAccountNotRegistered(tx, championship.id, account.id);
       const now = new Date().toISOString();

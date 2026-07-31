@@ -929,7 +929,7 @@ describe("championship registration, rosters, and salary", () => {
     });
   });
 
-  it("requires an open window for self-registration and a reason for staff overrides", async () => {
+  it("requires an open window for self-registration but lets staff register without a reason", async () => {
     const participantAccount = await createAccountWithPermissions([]);
     const type = await createCompetitionType(admin, {
       name: "Controlled Registration",
@@ -948,25 +948,12 @@ describe("championship registration, rosters, and salary", () => {
 
     expect(closedSelfResponse.status).toBe(409);
 
-    const unreasonedStaffResponse = await request(
-      `/api/championships/${championship.uuid}/participants`,
-      {
-        method: "POST",
-        body: command(admin, championship.revision, {
-          accountUuid: participantAccount.uuid
-        })
-      }
-    );
-
-    expect(unreasonedStaffResponse.status).toBe(400);
-
     const staffResponse = await request(
       `/api/championships/${championship.uuid}/participants`,
       {
         method: "POST",
         body: command(admin, championship.revision, {
-          accountUuid: participantAccount.uuid,
-          reason: "Inscrição confirmada manualmente pela organização"
+          accountUuid: participantAccount.uuid
         })
       }
     );
