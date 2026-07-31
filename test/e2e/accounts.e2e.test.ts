@@ -50,7 +50,9 @@ describe("accounts", () => {
     expect(createResponse.status).toBe(201);
 
     const account = await createResponse.json();
-    const listResponse = await request("/api/accounts");
+    const listResponse = await request(
+      `/api/accounts?name=${encodeURIComponent(account.name)}`
+    );
 
     expect(listResponse.status).toBe(200);
     expect(await paginatedItems(listResponse)).toContainEqual(account);
