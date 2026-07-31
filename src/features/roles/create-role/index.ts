@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { type Static, t } from "elysia";
-import { db } from "@/db/client";
+import { db, withDatabaseTransaction } from "@/db/client";
 import { resolveLabels } from "@/features/localization/resolve-labels";
 import { badRequest } from "@/shared/http/errors";
 import {
@@ -38,7 +38,7 @@ export async function createRole(
 
   const permissionKeys = input.permissions ?? [];
 
-  const role = await db.transaction(async (tx) => {
+  const role = await withDatabaseTransaction(async (tx) => {
     const resolvedPermissions = await resolveRolePermissionInput(
       tx,
       permissionKeys

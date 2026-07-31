@@ -107,6 +107,7 @@ export const matchRoundResponseSchema = t.Intersect([
 export const composedMatchResponseSchema = t.Object({
   kind: t.Literal("composed"),
   id: composedMatchPublicIdSchema,
+  scoreMode: t.Union([t.Literal("cumulative"), t.Literal("per-game")]),
   status: matchStatusSchema,
   initiatedAt: t.Nullable(t.String()),
   endedAt: t.Nullable(t.String()),
@@ -255,18 +256,41 @@ export function toComposedMatchResponse(
   return {
     kind: "composed",
     id: row.composition.publicId,
+    scoreMode: row.composition.scoreMode,
     status: last.status,
     initiatedAt: first.initiatedAt,
     endedAt: last.endedAt,
-    score: last.score
-      ? normalizeMatchScore(last.score, lastRound.round.teamOrientation)
-      : null,
+    score: composedMatchScore(row),
     gameMode: first.gameMode,
     eventSchema: first.eventSchema,
     rounds,
     createdAt: first.createdAt,
     updatedAt
   };
+}
+
+function composedMatchScore(row: ComposedMatchRow): MatchScore | null {
+  const normalizedScores = row.rounds.map(({ round, match }) => {
+    const score = toMatchSummaryResponse(match).score;
+
+    return score ? normalizeMatchScore(score, round.teamOrientation) : null;
+  });
+
+  if (normalizedScores.some((score) => score === null)) {
+    return null;
+  }
+
+  if (row.composition.scoreMode === "cumulative") {
+    return normalizedScores.at(-1) ?? null;
+  }
+
+  return normalizedScores.reduce<MatchScore>(
+    (total, score) => ({
+      red: total.red + (score?.red ?? 0),
+      blue: total.blue + (score?.blue ?? 0)
+    }),
+    { red: 0, blue: 0 }
+  );
 }
 
 function toMatchScore(metadata: MatchTeamMetadata[]): MatchScore | null {

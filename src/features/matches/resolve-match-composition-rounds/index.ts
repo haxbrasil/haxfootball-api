@@ -1,10 +1,11 @@
 import { and, inArray, ne } from "drizzle-orm";
-import { db } from "@/db/client";
+import { db, type DatabaseExecutor } from "@/db/client";
 import {
   resolveRoundTeamOrientations,
   validateMatchCompositionRounds
 } from "@/features/matches/_shared/domain/composition";
 import type { MatchRoundInput } from "@/features/matches/_shared/http/inputs";
+import type { MatchCompositionScoreMode } from "@/features/matches/_shared/http/inputs";
 import {
   composedMatchRounds,
   composedMatches,
@@ -24,10 +25,12 @@ export type ResolvedCompositionRound = {
 
 export async function resolveMatchCompositionRounds(
   inputs: MatchRoundInput[],
-  currentCompositionId?: number
+  scoreMode: MatchCompositionScoreMode,
+  currentCompositionId?: number,
+  database: DatabaseExecutor = db
 ): Promise<ResolvedCompositionRound[]> {
   const publicIds = inputs.map((round) => round.matchId);
-  const physicalMatches = await db
+  const physicalMatches = await database
     .select()
     .from(matches)
     .where(inArray(matches.publicId, publicIds));
@@ -39,7 +42,7 @@ export async function resolveMatchCompositionRounds(
   );
 
   if (missingPublicIds.length > 0) {
-    const [nestedComposition] = await db
+    const [nestedComposition] = await database
       .select({ id: composedMatches.id })
       .from(composedMatches)
       .where(inArray(composedMatches.publicId, missingPublicIds));
@@ -66,7 +69,7 @@ export async function resolveMatchCompositionRounds(
     );
   }
 
-  const [existingMembership] = await db
+  const [existingMembership] = await database
     .select({ matchId: composedMatchRounds.matchId })
     .from(composedMatchRounds)
     .where(and(...membershipConditions))
@@ -76,7 +79,7 @@ export async function resolveMatchCompositionRounds(
     throw badRequest("Match is already bound to a composed match");
   }
 
-  const metadata = await db
+  const metadata = await database
     .select()
     .from(matchTeamMetadata)
     .where(
@@ -94,7 +97,7 @@ export async function resolveMatchCompositionRounds(
     metadataByMatchId.set(item.matchId, matchMetadata);
   }
 
-  const stints = await db
+  const stints = await database
     .select({
       matchId: matchPlayerStints.matchId,
       playerId: matchPlayerStints.playerId,
@@ -153,7 +156,8 @@ export async function resolveMatchCompositionRounds(
       requested: round.input.orientation ?? "auto",
       score: round.score,
       players: round.players
-    }))
+    })),
+    scoreMode
   );
   const resolvedRounds = unresolvedRounds.map((round, index) => {
     const teamOrientation = orientations[index];

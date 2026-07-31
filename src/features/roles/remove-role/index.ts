@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { type Static, t } from "elysia";
-import { db } from "@/db/client";
+import { db, withDatabaseTransaction } from "@/db/client";
 import { accounts } from "@/features/accounts/db";
 import { badRequest, notFound } from "@/shared/http/errors";
 import { getDefaultRole } from "@/features/roles/get-default-role";
@@ -25,7 +25,7 @@ export async function removeRole(uuid: string): Promise<RemoveRoleResult> {
 
   const defaultRole = await getDefaultRole();
 
-  await db.transaction(async (tx) => {
+  await withDatabaseTransaction(async (tx) => {
     await tx
       .update(accounts)
       .set({

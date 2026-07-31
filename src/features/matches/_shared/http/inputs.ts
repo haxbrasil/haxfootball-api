@@ -93,7 +93,13 @@ export const matchRoundInputSchema = t.Union([
   extraTimeMatchRoundInputSchema
 ]);
 
+export const matchCompositionScoreModeSchema = t.Union([
+  t.Literal("cumulative"),
+  t.Literal("per-game")
+]);
+
 export const matchCompositionRoundsBodySchema = t.Object({
+  scoreMode: t.Optional(matchCompositionScoreModeSchema),
   rounds: t.Array(matchRoundInputSchema, { minItems: 2 })
 });
 
@@ -104,6 +110,9 @@ export type MatchScore = Static<typeof matchScoreSchema>;
 export type MatchEventInput = Static<typeof matchEventInputSchema>;
 export type ListMatchesQuery = Static<typeof listMatchesQuerySchema>;
 export type MatchRoundInput = Static<typeof matchRoundInputSchema>;
+export type MatchCompositionScoreMode = Static<
+  typeof matchCompositionScoreModeSchema
+>;
 export type MatchCompositionRoundsInput = Static<
   typeof matchCompositionRoundsBodySchema
 >;

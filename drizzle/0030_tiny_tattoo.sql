@@ -1,0 +1,2 @@
+ALTER TABLE `championship_teams` ADD `roster_revision` integer DEFAULT 0 NOT NULL;--> statement-breakpoint
+CREATE UNIQUE INDEX `championship_memberships_participant_active_unique` ON `championship_team_memberships` (`championship_id`,`participant_id`) WHERE "championship_team_memberships"."ended_at" is null;

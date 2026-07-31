@@ -1,5 +1,9 @@
 import { and, asc, desc, eq, gt, inArray, or } from "drizzle-orm";
-import { db } from "@/db/client";
+import {
+  db,
+  type DatabaseExecutor,
+  withDatabaseTransaction
+} from "@/db/client";
 import { accounts } from "@/features/accounts/db";
 import { validateNativeRoomEvent } from "@/features/match-events/_shared/domain/native-room-events";
 import type { MatchEventInput } from "@/features/match-events/_shared/http/inputs";
@@ -11,6 +15,7 @@ import {
   recomputeMatchStints
 } from "@/features/matches/_shared/db/queries";
 import { composedMatchRounds, matches } from "@/features/matches/db";
+import { assertPhysicalMatchesUnclaimed } from "@/features/matches/evidence-claims";
 import { players } from "@/features/players/db";
 import type { EventSchemaVersion } from "@/features/event-schemas/db";
 import { eventSchemaVersions } from "@/features/event-schemas/db";
@@ -123,9 +128,10 @@ export async function listMatchEventRows(
 
 export async function listMatchEventsByMatchId(
   matchId: number,
-  query?: PaginationQuery
+  query?: PaginationQuery,
+  database: DatabaseExecutor = db
 ): Promise<MatchEventRow[]> {
-  const rows = await db
+  const rows = await database
     .select()
     .from(matchEvents)
     .where(
@@ -137,23 +143,24 @@ export async function listMatchEventsByMatchId(
     .orderBy(cursorSort(matchEvents.sequence, "asc"))
     .limit(query ? pageLimit(query) : -1);
 
-  return hydrateMatchEvents(rows);
+  return hydrateMatchEvents(rows, database);
 }
 
 export async function listMatchEventsByMatchIds(
-  matchIds: number[]
+  matchIds: number[],
+  database: DatabaseExecutor = db
 ): Promise<MatchEventRow[]> {
   if (matchIds.length === 0) {
     return [];
   }
 
-  const rows = await db
+  const rows = await database
     .select()
     .from(matchEvents)
     .where(inArray(matchEvents.matchId, matchIds))
     .orderBy(asc(matchEvents.matchId), asc(matchEvents.sequence));
 
-  return hydrateMatchEvents(rows);
+  return hydrateMatchEvents(rows, database);
 }
 
 export async function listComposedMatchEventRows(
@@ -213,27 +220,34 @@ export async function disableMatchEvent(
   }
 
   const now = new Date().toISOString();
-  const [existingEvent] = await db
-    .select()
-    .from(matchEvents)
-    .where(
-      and(eq(matchEvents.matchId, match.id), eq(matchEvents.uuid, eventId))
-    );
+  const event = await withDatabaseTransaction(async (tx) => {
+    await assertPhysicalMatchesUnclaimed(tx, [match.id]);
+    const [existingEvent] = await tx
+      .select()
+      .from(matchEvents)
+      .where(
+        and(eq(matchEvents.matchId, match.id), eq(matchEvents.uuid, eventId))
+      );
 
-  if (!existingEvent) {
-    throw notFound("Event not found");
-  }
+    if (!existingEvent) {
+      throw notFound("Event not found");
+    }
 
-  const [event] = existingEvent.disabledAt
-    ? [existingEvent]
-    : await db
-        .update(matchEvents)
-        .set({
-          disabledAt: now,
-          updatedAt: now
-        })
-        .where(eq(matchEvents.id, existingEvent.id))
-        .returning();
+    if (existingEvent.disabledAt) {
+      return existingEvent;
+    }
+
+    const [disabledEvent] = await tx
+      .update(matchEvents)
+      .set({
+        disabledAt: now,
+        updatedAt: now
+      })
+      .where(eq(matchEvents.id, existingEvent.id))
+      .returning();
+
+    return disabledEvent;
+  });
 
   return hydrateMatchEvent(event);
 }
@@ -277,7 +291,8 @@ async function hydrateMatchEvent(event: MatchEvent): Promise<MatchEventRow> {
 }
 
 export async function hydrateMatchEvents(
-  events: MatchEvent[]
+  events: MatchEvent[],
+  database: DatabaseExecutor = db
 ): Promise<MatchEventRow[]> {
   const playerIds = Array.from(
     new Set(
@@ -289,7 +304,7 @@ export async function hydrateMatchEvents(
 
   const rows =
     playerIds.length > 0
-      ? await db
+      ? await database
           .select({
             player: players,
             account: accounts

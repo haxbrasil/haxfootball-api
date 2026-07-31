@@ -1,0 +1,1 @@
+ALTER TABLE `composed_matches` ADD `score_mode` text DEFAULT 'cumulative' NOT NULL;

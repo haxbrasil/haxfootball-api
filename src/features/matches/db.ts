@@ -12,6 +12,7 @@ import { gameModes } from "@/features/game-modes/db";
 import { players } from "@/features/players/db";
 import { recordings } from "@/features/recordings/db";
 import { eventSchemaVersions } from "@/features/event-schemas/db";
+import { roomInstances } from "@/features/rooms/core-db";
 
 export const matches = sqliteTable(
   "matches",
@@ -25,7 +26,9 @@ export const matches = sqliteTable(
       enum: ["normal", "room-process-exit", "room-closed"]
     }),
     sessionId: text("session_id").unique(),
-    roomInstanceId: integer("room_instance_id"),
+    roomInstanceId: integer("room_instance_id").references(
+      () => roomInstances.id
+    ),
     lastCheckpointAt: text("last_checkpoint_at"),
     lastCheckpointRevision: integer("last_checkpoint_revision")
       .notNull()
@@ -116,6 +119,11 @@ export const composedMatches = sqliteTable(
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
     publicId: text("public_id").notNull().unique(),
+    scoreMode: text("score_mode", {
+      enum: ["cumulative", "per-game"]
+    })
+      .notNull()
+      .default("cumulative"),
     firstMatchId: integer("first_match_id")
       .notNull()
       .references(() => matches.id)

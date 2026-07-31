@@ -11,6 +11,11 @@ import {
 import { recordingPublicIdParamsSchema } from "@/features/recordings/_shared/http/inputs";
 import { recordingResponseSchema } from "@/features/recordings/_shared/http/responses";
 import {
+  getRecordingInspection,
+  inspectRecording,
+  recordingInspectionResponseSchema
+} from "@/features/recordings/inspect-recording";
+import {
   badRequestErrorResponseSchema,
   notFoundErrorResponseSchema
 } from "@/shared/http/errors";
@@ -35,7 +40,8 @@ export const recordingRoutes = new Elysia({
     CreateRecordingBody: createRecordingBodySchema,
     ListRecordings: listRecordingsResponseSchema,
     NotFoundError: notFoundErrorResponseSchema,
-    Recording: recordingResponseSchema
+    Recording: recordingResponseSchema,
+    RecordingInspection: recordingInspectionResponseSchema
   })
   .get("", ({ query }) => listRecordings(query), {
     query: paginationQuerySchema,
@@ -56,6 +62,28 @@ export const recordingRoutes = new Elysia({
     detail: {
       tags: ["Recordings"],
       summary: "Get a recording"
+    }
+  })
+  .get("/:id/inspection", ({ params }) => getRecordingInspection(params.id), {
+    params: recordingPublicIdParamsSchema,
+    response: {
+      200: t.Ref("RecordingInspection"),
+      404: t.Ref("NotFoundError")
+    },
+    detail: {
+      tags: ["Recordings"],
+      summary: "Get replay validation state"
+    }
+  })
+  .post("/:id/inspection", ({ params }) => inspectRecording(params.id), {
+    params: recordingPublicIdParamsSchema,
+    response: {
+      200: t.Ref("RecordingInspection"),
+      404: t.Ref("NotFoundError")
+    },
+    detail: {
+      tags: ["Recordings"],
+      summary: "Validate replay bytes without changing the source object"
     }
   })
   .post(

@@ -12,6 +12,10 @@ import {
   upsertJobSchedule
 } from "@/features/jobs/_shared/db/queries";
 import { reconcileOpenRooms } from "@/features/rooms/reconcile-rooms";
+import {
+  advanceChampionshipDraftJob,
+  draftAdvanceJobType
+} from "@/features/championships/draft-trades/draft";
 import { badRequest } from "@/shared/http/errors";
 import type { JsonValue } from "@lib/json";
 
@@ -25,7 +29,8 @@ export type JobHandler = (
 export type JobHandlerRegistry = Readonly<Record<string, JobHandler>>;
 
 export const defaultJobHandlers = {
-  [roomReconcileJobType]: async () => reconcileOpenRooms()
+  [roomReconcileJobType]: async () => reconcileOpenRooms(),
+  [draftAdvanceJobType]: advanceChampionshipDraftJob
 } satisfies JobHandlerRegistry;
 
 export function assertKnownJobType(

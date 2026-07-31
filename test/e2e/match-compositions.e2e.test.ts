@@ -63,6 +63,7 @@ type RoundReference =
 type ComposedMatchResponse = {
   kind: "composed";
   id: string;
+  scoreMode: "cumulative" | "per-game";
   status: "ongoing" | "completed";
   initiatedAt: string | null;
   endedAt: string | null;
@@ -195,6 +196,7 @@ describe("match compositions", () => {
     expect(composition).toMatchObject({
       kind: "composed",
       id: expect.stringMatching(/^c[a-z2-9]{8}$/),
+      scoreMode: "cumulative",
       status: "completed",
       initiatedAt: first.initiatedAt,
       endedAt: extraTime.endedAt,
@@ -237,6 +239,86 @@ describe("match compositions", () => {
     expect(composition).not.toHaveProperty("recording");
     expect(composition).not.toHaveProperty("events");
     expect(composition).not.toHaveProperty("participations");
+  });
+
+  it("sums independent side-switched games without room score carry-over", async () => {
+    const firstResponse = await request("/api/matches", {
+      method: "POST",
+      body: {
+        status: "completed",
+        initiatedAt: "2026-07-01T19:00:00.000Z",
+        endedAt: "2026-07-01T19:10:00.000Z",
+        score: { red: 3, blue: 1 }
+      }
+    });
+    const secondResponse = await request("/api/matches", {
+      method: "POST",
+      body: {
+        status: "completed",
+        initiatedAt: "2026-07-01T19:12:00.000Z",
+        endedAt: "2026-07-01T19:22:00.000Z",
+        score: { red: 2, blue: 4 }
+      }
+    });
+    const extraTimeResponse = await request("/api/matches", {
+      method: "POST",
+      body: {
+        status: "completed",
+        initiatedAt: "2026-07-01T19:24:00.000Z",
+        endedAt: "2026-07-01T19:25:00.000Z",
+        score: { red: 1, blue: 0 }
+      }
+    });
+    const first: PhysicalMatchResponse = await firstResponse.json();
+    const second: PhysicalMatchResponse = await secondResponse.json();
+    const extraTime: PhysicalMatchResponse = await extraTimeResponse.json();
+    const compositionResponse = await request("/api/matches/compositions", {
+      method: "POST",
+      body: {
+        scoreMode: "per-game",
+        rounds: [
+          {
+            kind: "sequential",
+            number: 1,
+            matchId: first.id,
+            orientation: "aligned"
+          },
+          {
+            kind: "sequential",
+            number: 2,
+            matchId: second.id,
+            orientation: "swapped"
+          },
+          {
+            kind: "extra-time",
+            number: null,
+            matchId: extraTime.id,
+            orientation: "aligned"
+          }
+        ]
+      }
+    });
+
+    expect(compositionResponse.status).toBe(201);
+    const composition: ComposedMatchResponse = await compositionResponse.json();
+
+    expect(composition.scoreMode).toBe("per-game");
+    expect(composition.score).toEqual({ red: 8, blue: 3 });
+
+    const evidenceResponse = await request(
+      `/api/matches/${composition.id}/evidence`
+    );
+
+    expect(evidenceResponse.status).toBe(200);
+    expect(await evidenceResponse.json()).toMatchObject({
+      scoreMode: "per-game",
+      score: { red: 8, blue: 3 },
+      rounds: [
+        { normalizedScore: { red: 3, blue: 1 } },
+        { normalizedScore: { red: 4, blue: 2 } },
+        { normalizedScore: { red: 1, blue: 0 } }
+      ]
+    });
   });
 
   it("lists and filters one logical match at the first round cursor position", async () => {

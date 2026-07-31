@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { type Static, t } from "elysia";
-import { db } from "@/db/client";
+import { withDatabaseTransaction } from "@/db/client";
 import {
   matchCompletionReasonSchema,
   matchEventInputSchema,
@@ -110,7 +110,7 @@ export async function checkpointMatch(id: string, input: CheckpointMatchInput) {
   const startSequence = await nextMatchEventSequence(current.match.id);
   const now = new Date().toISOString();
 
-  await db.transaction(async (tx) => {
+  await withDatabaseTransaction(async (tx) => {
     await persistMatchEvents(current.match.id, newEvents, startSequence, tx);
     await persistMatchScore(current.match.id, input.score, tx);
     await recomputeMatchStints(current.match.id, tx);

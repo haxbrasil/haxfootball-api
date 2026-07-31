@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { type Static, t } from "elysia";
-import { db } from "@/db/client";
+import { db, withDatabaseTransaction } from "@/db/client";
 import { rolePermissions } from "@/features/roles/db";
 import { permissions } from "@/features/permissions/db";
 import { notFound } from "@/shared/http/errors";
@@ -25,7 +25,7 @@ export async function removePermission(
     throw notFound("Permission not found");
   }
 
-  await db.transaction(async (tx) => {
+  await withDatabaseTransaction(async (tx) => {
     await tx
       .delete(rolePermissions)
       .where(eq(rolePermissions.permissionId, permission.id));

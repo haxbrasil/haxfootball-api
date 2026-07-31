@@ -1,0 +1,1 @@
+ALTER TABLE `championship_progression_routes` ADD `condition` text DEFAULT 'always' NOT NULL;

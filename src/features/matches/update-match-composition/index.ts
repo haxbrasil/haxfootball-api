@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { db } from "@/db/client";
+import { withDatabaseTransaction } from "@/db/client";
 import {
   getComposedMatchByPublicId,
   getComposedMatchRow
@@ -10,6 +10,7 @@ import {
   type ComposedMatchResponse
 } from "@/features/matches/_shared/http/responses";
 import { composedMatchRounds, composedMatches } from "@/features/matches/db";
+import { assertCompositionUnclaimed } from "@/features/matches/evidence-claims";
 import { resolveMatchCompositionRounds } from "@/features/matches/resolve-match-composition-rounds";
 
 export async function updateMatchComposition(
@@ -17,8 +18,10 @@ export async function updateMatchComposition(
   input: MatchCompositionRoundsInput
 ): Promise<ComposedMatchResponse> {
   const composition = await getComposedMatchByPublicId(publicId);
+  const scoreMode = input.scoreMode ?? composition.scoreMode;
   const rounds = await resolveMatchCompositionRounds(
     input.rounds,
+    scoreMode,
     composition.id
   );
   const firstMatch = rounds[0]?.match;
@@ -29,13 +32,14 @@ export async function updateMatchComposition(
 
   const updatedAt = new Date().toISOString();
 
-  await db.transaction(async (tx) => {
+  await withDatabaseTransaction(async (tx) => {
+    await assertCompositionUnclaimed(tx, composition.id);
     await tx
       .delete(composedMatchRounds)
       .where(eq(composedMatchRounds.composedMatchId, composition.id));
     await tx
       .update(composedMatches)
-      .set({ firstMatchId: firstMatch.id, updatedAt })
+      .set({ firstMatchId: firstMatch.id, scoreMode, updatedAt })
       .where(eq(composedMatches.id, composition.id));
     await tx.insert(composedMatchRounds).values(
       rounds.map((round, index) => ({
@@ -53,6 +57,7 @@ export async function updateMatchComposition(
     await getComposedMatchRow({
       ...composition,
       firstMatchId: firstMatch.id,
+      scoreMode,
       updatedAt
     })
   );

@@ -190,6 +190,76 @@
       "when": 1785245840492,
       "tag": "0026_late_spiral",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "6",
+      "when": 1785442395976,
+      "tag": "0027_bent_the_captain",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "6",
+      "when": 1785443884130,
+      "tag": "0028_zippy_zaladane",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "6",
+      "when": 1785444541466,
+      "tag": "0029_fearless_zarda",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "6",
+      "when": 1785449321898,
+      "tag": "0030_tiny_tattoo",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "6",
+      "when": 1785457229315,
+      "tag": "0031_crazy_slipstream",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "6",
+      "when": 1785457324284,
+      "tag": "0032_military_big_bertha",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "6",
+      "when": 1785463134019,
+      "tag": "0033_nappy_sage",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "6",
+      "when": 1785464590211,
+      "tag": "0034_pretty_red_shift",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "6",
+      "when": 1785465532600,
+      "tag": "0035_free_lady_deathstrike",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "6",
+      "when": 1785467364340,
+      "tag": "0036_workable_fallen_one",
+      "breakpoints": true
     }
   ]
 }

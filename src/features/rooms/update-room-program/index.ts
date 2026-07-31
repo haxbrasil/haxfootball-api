@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { db } from "@/db/client";
+import { withDatabaseTransaction } from "@/db/client";
 import {
   toRoomProgramResponse,
   type RoomProgramResponse,
@@ -31,7 +31,7 @@ export async function updateRoomProgram(
       ? program.liveStateContract
       : normalizeLiveStateContract(input.liveStateContract);
 
-  const updatedProgram = await db.transaction(async (tx) => {
+  const updatedProgram = await withDatabaseTransaction(async (tx) => {
     await ensurePermissionsByKeys(
       tx,
       launchConfigRequiredPermissions(launchConfigFields)

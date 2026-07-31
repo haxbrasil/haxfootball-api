@@ -300,9 +300,10 @@ export async function resolveMatchEventSchemaVersionId(
 }
 
 export async function assertMatchEventSchemaCanChange(
-  matchId: number
+  matchId: number,
+  database: MatchPersistenceDb = db
 ): Promise<void> {
-  const [{ count }] = await db
+  const [{ count }] = await database
     .select({ count: sql<number>`count(*)` })
     .from(matchEvents)
     .where(eq(matchEvents.matchId, matchId));
@@ -313,9 +314,10 @@ export async function assertMatchEventSchemaCanChange(
 }
 
 export async function assertMatchGameModeCanChange(
-  matchId: number
+  matchId: number,
+  database: MatchPersistenceDb = db
 ): Promise<void> {
-  const [{ count }] = await db
+  const [{ count }] = await database
     .select({ count: sql<number>`count(*)` })
     .from(matchEvents)
     .where(eq(matchEvents.matchId, matchId));
@@ -439,10 +441,11 @@ export async function persistResolvedMatchEvents(
 
 export async function replaceMatchEvents(
   matchId: number,
-  events: MatchEventInput[]
+  events: MatchEventInput[],
+  database: MatchPersistenceDb = db
 ): Promise<void> {
-  await db.delete(matchEvents).where(eq(matchEvents.matchId, matchId));
-  await persistMatchEvents(matchId, events);
+  await database.delete(matchEvents).where(eq(matchEvents.matchId, matchId));
+  await persistMatchEvents(matchId, events, 1, database);
 }
 
 export async function nextMatchEventSequence(matchId: number): Promise<number> {

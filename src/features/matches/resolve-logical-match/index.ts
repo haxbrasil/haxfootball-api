@@ -1,6 +1,6 @@
 import { asc, eq, or } from "drizzle-orm";
 import { type Static, t } from "elysia";
-import { db } from "@/db/client";
+import { db, type DatabaseExecutor } from "@/db/client";
 import { toMatchRoundReference } from "@/features/matches/_shared/domain/composition";
 import {
   composedMatchRounds,
@@ -61,9 +61,10 @@ export type ResolvedLogicalMatch =
     };
 
 export async function resolveLogicalMatch(
-  publicId: string
+  publicId: string,
+  database: DatabaseExecutor = db
 ): Promise<ResolvedLogicalMatch> {
-  const [compositionRow] = await db
+  const [compositionRow] = await database
     .select({ composition: composedMatches })
     .from(composedMatches)
     .leftJoin(
@@ -76,7 +77,7 @@ export async function resolveLogicalMatch(
     );
 
   if (compositionRow) {
-    const rows = await db
+    const rows = await database
       .select({ round: composedMatchRounds, match: matches })
       .from(composedMatchRounds)
       .innerJoin(matches, eq(composedMatchRounds.matchId, matches.id))
@@ -106,7 +107,7 @@ export async function resolveLogicalMatch(
     };
   }
 
-  const [match] = await db
+  const [match] = await database
     .select()
     .from(matches)
     .where(eq(matches.publicId, publicId));

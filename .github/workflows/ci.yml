@@ -79,14 +79,59 @@ jobs:
           export PATH=/home/ubuntu/.nvm/versions/node/v22.20.0/bin:/home/ubuntu/.bun/bin:$PATH
 
           cd /home/ubuntu/haxfootball-api
+          previous_sha="$(git rev-parse HEAD)"
+          database_file="/home/ubuntu/haxfootball-api/data/app.sqlite"
+          backup_directory="/home/ubuntu/haxfootball-api/data/backups"
+          backup_file=""
+          services_stopped="false"
+
+          rollback_deploy() {
+            exit_code="$?"
+            trap - ERR
+            echo "Deployment failed; restoring the previous database and source revision" >&2
+
+            if [[ "$services_stopped" == "true" ]]; then
+              sudo systemctl stop haxfootball-api-jobs || true
+              sudo systemctl stop haxfootball-api || true
+            fi
+
+            if [[ -n "$backup_file" ]]; then
+              DATABASE_FILE="$database_file" bun scripts/sqlite-maintenance.ts restore "$backup_file"
+            fi
+
+            git reset --hard "$previous_sha"
+            bun install --frozen-lockfile
+            sudo systemctl start haxfootball-api
+            sudo systemctl start haxfootball-api-jobs
+            exit "$exit_code"
+          }
+
+          trap rollback_deploy ERR
           git fetch origin main
           git reset --hard "$DEPLOY_SHA"
           bun install --frozen-lockfile
+
+          sudo systemctl stop haxfootball-api-jobs
+          sudo systemctl stop haxfootball-api
+          services_stopped="true"
+
+          backup_file="$(
+            DATABASE_FILE="$database_file" \
+            DATABASE_BACKUP_DIRECTORY="$backup_directory" \
+            DEPLOY_SOURCE_SHA="$previous_sha" \
+            bun scripts/sqlite-maintenance.ts backup
+          )"
+
           DATABASE_FILE=/home/ubuntu/haxfootball-api/data/app.sqlite bun run db:migrate
-          sudo systemctl restart haxfootball-api
-          sudo systemctl restart haxfootball-api-jobs
+          DATABASE_FILE="$database_file" bun scripts/sqlite-maintenance.ts verify
+
+          sudo systemctl start haxfootball-api
+          sudo systemctl start haxfootball-api-jobs
           systemctl is-active --quiet haxfootball-api
           systemctl is-active --quiet haxfootball-api-jobs
+          curl --retry 10 --retry-delay 3 --retry-all-errors -fsS https://api.bfl.haxbrasil.com/health
+          services_stopped="false"
+          trap - ERR
           REMOTE
 
       - name: Verify production health

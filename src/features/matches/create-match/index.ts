@@ -1,6 +1,6 @@
 import { type Static, t } from "elysia";
 import { eq } from "drizzle-orm";
-import { db } from "@/db/client";
+import { db, withDatabaseTransaction } from "@/db/client";
 import {
   matchEventInputSchema,
   matchScoreSchema,
@@ -88,7 +88,7 @@ export async function createMatch(
     endedAt: input.endedAt
   };
 
-  const createdMatch = await db.transaction(async (tx) => {
+  const createdMatch = await withDatabaseTransaction(async (tx) => {
     const [match] = await tx.insert(matches).values(matchValues).returning();
 
     await persistMatchScore(match.id, input.score, tx);

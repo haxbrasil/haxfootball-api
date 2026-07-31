@@ -59,6 +59,11 @@ import {
   listMatchesResponseSchema
 } from "@/features/matches/list-matches";
 import {
+  logicalMatchEvidenceQuerySchema,
+  logicalMatchEvidenceResponseSchema,
+  readLogicalMatchEvidence
+} from "@/features/matches/read-logical-match-evidence";
+import {
   composedMatchPublicIdParamsSchema,
   logicalMatchPublicIdParamsSchema,
   matchPublicIdParamsSchema,
@@ -87,6 +92,7 @@ import {
 import { updateMatchComposition } from "@/features/matches/update-match-composition";
 import {
   badRequestErrorResponseSchema,
+  conflictErrorResponseSchema,
   notFoundErrorResponseSchema
 } from "@/shared/http/errors";
 import { paginationQuerySchema } from "@lib";
@@ -97,6 +103,7 @@ export const matchRoutes = new Elysia({
 })
   .model({
     BadRequestError: badRequestErrorResponseSchema,
+    ConflictError: conflictErrorResponseSchema,
     NotFoundError: notFoundErrorResponseSchema,
     PlayerAccount: playerAccountResponseSchema,
     Player: playerResponseSchema,
@@ -122,6 +129,7 @@ export const matchRoutes = new Elysia({
     ListMatchEvents: listMatchEventsResponseSchema,
     Match: matchResponseSchema,
     MatchMetrics: matchMetricsResponseSchema,
+    LogicalMatchEvidence: logicalMatchEvidenceResponseSchema,
     QueryMatchMetricsBody: queryMatchMetricsBodySchema,
     QueryMatchMetrics: queryMatchMetricsResponseSchema,
     UpdateMatchBody: updateMatchBodySchema,
@@ -180,6 +188,7 @@ export const matchRoutes = new Elysia({
       response: {
         200: t.Ref("ComposedMatch"),
         400: t.Ref("BadRequestError"),
+        409: t.Ref("ConflictError"),
         404: t.Ref("NotFoundError")
       },
       detail: {
@@ -198,6 +207,7 @@ export const matchRoutes = new Elysia({
       params: composedMatchPublicIdParamsSchema,
       response: {
         204: t.Void(),
+        409: t.Ref("ConflictError"),
         404: t.Ref("NotFoundError")
       },
       detail: {
@@ -232,6 +242,22 @@ export const matchRoutes = new Elysia({
       summary: "Get match extra time"
     }
   })
+  .get(
+    "/:id/evidence",
+    ({ params, query }) => readLogicalMatchEvidence(params.id, query),
+    {
+      params: logicalMatchPublicIdParamsSchema,
+      query: logicalMatchEvidenceQuerySchema,
+      response: {
+        200: t.Ref("LogicalMatchEvidence"),
+        404: t.Ref("NotFoundError")
+      },
+      detail: {
+        tags: ["Matches"],
+        summary: "Read normalized logical match evidence"
+      }
+    }
+  )
   .get("/:id", ({ params }) => getMatch(params.id), {
     params: logicalMatchPublicIdParamsSchema,
     response: {
@@ -271,6 +297,7 @@ export const matchRoutes = new Elysia({
     response: {
       200: t.Ref("PhysicalMatch"),
       400: t.Ref("BadRequestError"),
+      409: t.Ref("ConflictError"),
       404: t.Ref("NotFoundError")
     },
     detail: {
@@ -361,6 +388,7 @@ export const matchRoutes = new Elysia({
       response: {
         200: t.Ref("MatchEvent"),
         400: t.Ref("BadRequestError"),
+        409: t.Ref("ConflictError"),
         404: t.Ref("NotFoundError")
       },
       detail: {

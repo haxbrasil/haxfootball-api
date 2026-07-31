@@ -1,19 +1,67 @@
-import { describe, expect, it } from "bun:test";
+import { beforeAll, describe, expect, it } from "bun:test";
 import { eq } from "drizzle-orm";
+import { setupInternalTestDatabase } from "./helpers/database";
 import { db } from "@/db/client";
 import { matches } from "@/features/matches/db";
 import { finalizeInactiveRoomMatches } from "@/features/matches/finalize-inactive-room-matches";
-import { roomInstances } from "@/features/rooms/db";
+import {
+  roomInstances,
+  roomPrograms,
+  roomProgramVersions
+} from "@/features/rooms/db";
+
+beforeAll(async () => {
+  await setupInternalTestDatabase();
+});
 
 describe("inactive room match reconciliation", () => {
   it("discards pending matches and completes eligible matches at their last checkpoint", async () => {
     const now = "2026-07-28T12:00:30.000Z";
+    const [program] = await db
+      .insert(roomPrograms)
+      .values({
+        uuid: crypto.randomUUID(),
+        name: `reconciliation-${crypto.randomUUID()}`,
+        releaseSource: {
+          owner: "haxbrasil",
+          repo: "test-room",
+          assetPattern: "room-{tag}.tgz"
+        },
+        launchConfigFields: []
+      })
+      .returning();
+
+    if (!program) {
+      throw new Error("Room program fixture was not created");
+    }
+
+    const [version] = await db
+      .insert(roomProgramVersions)
+      .values({
+        uuid: crypto.randomUUID(),
+        programId: program.id,
+        version: "v1.0.0",
+        artifact: {
+          releaseId: crypto.randomUUID(),
+          tagName: "v1.0.0",
+          assetName: "room-v1.0.0.tgz",
+          assetUrl: "https://example.com/room-v1.0.0.tgz",
+          publishedAt: now
+        },
+        entrypoint: "dist/server.js"
+      })
+      .returning();
+
+    if (!version) {
+      throw new Error("Room program version fixture was not created");
+    }
+
     const [room] = await db
       .insert(roomInstances)
       .values({
         uuid: crypto.randomUUID(),
-        programId: 999_001,
-        versionId: 999_001,
+        programId: program.id,
+        versionId: version.id,
         state: "closed",
         launchConfig: {},
         public: false,

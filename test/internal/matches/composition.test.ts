@@ -99,4 +99,50 @@ describe("match composition team orientation", () => {
       ])
     ).toThrow("Round scores must be cumulative");
   });
+
+  it("accepts independent per-game scores and uses players for orientation", () => {
+    const orientations = resolveRoundTeamOrientations(
+      [
+        {
+          requested: "auto",
+          score: { red: 4, blue: 2 },
+          players: {
+            red: new Set([1, 2, 3]),
+            blue: new Set([4, 5, 6])
+          }
+        },
+        {
+          requested: "auto",
+          score: { red: 3, blue: 1 },
+          players: {
+            red: new Set([4, 5, 7]),
+            blue: new Set([1, 2, 8])
+          }
+        }
+      ],
+      "per-game"
+    );
+
+    expect(orientations).toEqual(["aligned", "swapped"]);
+  });
+
+  it("allows explicit per-game orientation without cumulative scores", () => {
+    expect(
+      resolveRoundTeamOrientations(
+        [
+          {
+            requested: "auto",
+            score: { red: 6, blue: 1 },
+            players: noPlayers
+          },
+          {
+            requested: "swapped",
+            score: { red: 2, blue: 0 },
+            players: noPlayers
+          }
+        ],
+        "per-game"
+      )
+    ).toEqual(["aligned", "swapped"]);
+  });
 });

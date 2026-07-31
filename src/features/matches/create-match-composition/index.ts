@@ -1,5 +1,10 @@
 import { eq } from "drizzle-orm";
-import { db } from "@/db/client";
+import {
+  db,
+  type DatabaseExecutor,
+  type DbTransaction,
+  withDatabaseTransaction
+} from "@/db/client";
 import { createUniqueComposedMatchPublicId } from "@/features/matches/_shared/domain/public-id";
 import { getComposedMatchRow } from "@/features/matches/_shared/db/queries";
 import {
@@ -19,8 +24,27 @@ export { matchCompositionRoundsBodySchema as createMatchCompositionBodySchema };
 export async function createMatchComposition(
   input: MatchCompositionRoundsInput
 ): Promise<ComposedMatchResponse> {
-  const rounds = await resolveMatchCompositionRounds(input.rounds);
-  const publicId = await createUniqueComposedMatchPublicId(publicIdExists);
+  const composition = await withDatabaseTransaction((tx) =>
+    createMatchCompositionInTransaction(input, tx)
+  );
+
+  return toComposedMatchResponse(await getComposedMatchRow(composition));
+}
+
+export async function createMatchCompositionInTransaction(
+  input: MatchCompositionRoundsInput,
+  tx: DbTransaction
+) {
+  const scoreMode = input.scoreMode ?? "cumulative";
+  const rounds = await resolveMatchCompositionRounds(
+    input.rounds,
+    scoreMode,
+    undefined,
+    tx
+  );
+  const publicId = await createUniqueComposedMatchPublicId((candidate) =>
+    publicIdExists(candidate, tx)
+  );
 
   if (!publicId) {
     throw badRequest("Match public ID collision");
@@ -32,34 +56,34 @@ export async function createMatchComposition(
     throw new Error("Validated composition has no first match");
   }
 
-  const composition = await db.transaction(async (tx) => {
-    const [created] = await tx
-      .insert(composedMatches)
-      .values({
-        publicId,
-        firstMatchId: firstMatch.id
-      })
-      .returning();
+  const [created] = await tx
+    .insert(composedMatches)
+    .values({
+      publicId,
+      scoreMode,
+      firstMatchId: firstMatch.id
+    })
+    .returning();
 
-    await tx.insert(composedMatchRounds).values(
-      rounds.map((round, index) => ({
-        composedMatchId: created.id,
-        matchId: round.match.id,
-        kind: round.input.kind,
-        roundNumber: round.input.number,
-        teamOrientation: round.teamOrientation,
-        position: index + 1
-      }))
-    );
+  await tx.insert(composedMatchRounds).values(
+    rounds.map((round, index) => ({
+      composedMatchId: created.id,
+      matchId: round.match.id,
+      kind: round.input.kind,
+      roundNumber: round.input.number,
+      teamOrientation: round.teamOrientation,
+      position: index + 1
+    }))
+  );
 
-    return created;
-  });
-
-  return toComposedMatchResponse(await getComposedMatchRow(composition));
+  return created;
 }
 
-async function publicIdExists(publicId: string): Promise<boolean> {
-  const [composition] = await db
+async function publicIdExists(
+  publicId: string,
+  database: DatabaseExecutor = db
+): Promise<boolean> {
+  const [composition] = await database
     .select({ id: composedMatches.id })
     .from(composedMatches)
     .where(eq(composedMatches.publicId, publicId));

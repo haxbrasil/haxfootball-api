@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { type Static, t } from "elysia";
-import { db } from "@/db/client";
+import { withDatabaseTransaction } from "@/db/client";
 import {
   type MatchScore,
   matchEventInputSchema,
@@ -27,6 +27,7 @@ import {
   assertCompletedMatchFields,
   assertMatchIsEditable
 } from "@/features/matches/_shared/domain/validation";
+import { assertPhysicalMatchesUnclaimed } from "@/features/matches/evidence-claims";
 
 export const updateMatchBodySchema = t.Partial(
   t.Object({
@@ -49,7 +50,6 @@ export async function updateMatch(
   const current = await getMatchSummary(id);
 
   assertMatchIsEditable(current.match);
-
   const nextStatus = input.status ?? current.match.status;
   const nextEndedAt = input.endedAt ?? current.match.endedAt;
   const nextScore = input.score ?? scoreFromMetadata(current.metadata);
@@ -78,33 +78,51 @@ export async function updateMatch(
     await assertMatchGameModeCanChange(current.match.id);
   }
 
-  await db
-    .update(matches)
-    .set({
-      ...(input.status ? { status: input.status } : {}),
-      ...(input.status === "completed"
-        ? { completionReason: "normal" as const }
-        : {}),
-      ...(input.initiatedAt !== undefined
-        ? { initiatedAt: input.initiatedAt }
-        : {}),
-      ...(input.endedAt !== undefined ? { endedAt: input.endedAt } : {}),
-      ...(nextGameModeId !== undefined ? { gameModeId: nextGameModeId } : {}),
-      ...(nextEventSchemaVersionId !== undefined
-        ? { eventSchemaVersionId: nextEventSchemaVersionId }
-        : {}),
-      updatedAt: new Date().toISOString()
-    })
-    .where(eq(matches.id, current.match.id));
+  await withDatabaseTransaction(async (tx) => {
+    await assertPhysicalMatchesUnclaimed(tx, [current.match.id]);
 
-  if (input.score !== undefined) {
-    await persistMatchScore(current.match.id, input.score);
-  }
+    if (
+      nextEventSchemaVersionId !== undefined &&
+      nextEventSchemaVersionId !== current.match.eventSchemaVersionId
+    ) {
+      await assertMatchEventSchemaCanChange(current.match.id, tx);
+    }
 
-  if (input.events !== undefined) {
-    await replaceMatchEvents(current.match.id, input.events);
-    await recomputeMatchStints(current.match.id);
-  }
+    if (
+      nextGameModeId !== undefined &&
+      nextGameModeId !== current.match.gameModeId
+    ) {
+      await assertMatchGameModeCanChange(current.match.id, tx);
+    }
+
+    await tx
+      .update(matches)
+      .set({
+        ...(input.status ? { status: input.status } : {}),
+        ...(input.status === "completed"
+          ? { completionReason: "normal" as const }
+          : {}),
+        ...(input.initiatedAt !== undefined
+          ? { initiatedAt: input.initiatedAt }
+          : {}),
+        ...(input.endedAt !== undefined ? { endedAt: input.endedAt } : {}),
+        ...(nextGameModeId !== undefined ? { gameModeId: nextGameModeId } : {}),
+        ...(nextEventSchemaVersionId !== undefined
+          ? { eventSchemaVersionId: nextEventSchemaVersionId }
+          : {}),
+        updatedAt: new Date().toISOString()
+      })
+      .where(eq(matches.id, current.match.id));
+
+    if (input.score !== undefined) {
+      await persistMatchScore(current.match.id, input.score, tx);
+    }
+
+    if (input.events !== undefined) {
+      await replaceMatchEvents(current.match.id, input.events, tx);
+      await recomputeMatchStints(current.match.id, tx);
+    }
+  });
 
   return toMatchResponse(await getMatchDetail(id));
 }

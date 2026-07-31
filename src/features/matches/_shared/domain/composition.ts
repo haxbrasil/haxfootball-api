@@ -1,4 +1,5 @@
 import type { MatchRoundInput } from "@/features/matches/_shared/http/inputs";
+import type { MatchCompositionScoreMode } from "@/features/matches/_shared/http/inputs";
 import type { Match } from "@/features/matches/db";
 import { badRequest } from "@/shared/http/errors";
 
@@ -138,7 +139,8 @@ export function resolveRoundTeamOrientations(
     requested: "auto" | TeamOrientation;
     score: MatchScore;
     players: TeamPlayers;
-  }>
+  }>,
+  scoreMode: MatchCompositionScoreMode = "cumulative"
 ): TeamOrientation[] {
   const first = rounds[0];
 
@@ -155,15 +157,16 @@ export function resolveRoundTeamOrientations(
   let previousScore = first.score;
 
   for (const round of rounds.slice(1)) {
-    const candidates = (["aligned", "swapped"] as const).filter(
-      (orientation) => {
-        const score = normalizeMatchScore(round.score, orientation);
+    const candidates: TeamOrientation[] =
+      scoreMode === "per-game"
+        ? ["aligned", "swapped"]
+        : (["aligned", "swapped"] as const).filter((orientation) => {
+            const score = normalizeMatchScore(round.score, orientation);
 
-        return (
-          score.red >= previousScore.red && score.blue >= previousScore.blue
-        );
-      }
-    );
+            return (
+              score.red >= previousScore.red && score.blue >= previousScore.blue
+            );
+          });
     const requested = round.requested === "auto" ? null : round.requested;
     const orientation = requested
       ? resolveRequestedOrientation(candidates, requested)
@@ -180,7 +183,9 @@ export function resolveRoundTeamOrientations(
     }
 
     orientations.push(orientation);
-    previousScore = normalizeMatchScore(round.score, orientation);
+    if (scoreMode === "cumulative") {
+      previousScore = normalizeMatchScore(round.score, orientation);
+    }
   }
 
   return orientations;

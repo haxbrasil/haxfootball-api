@@ -413,7 +413,7 @@ async function listQueryEvents(
 
   if (filters.matchIds) {
     const logicalMatches = await Promise.all(
-      filters.matchIds.map(resolveLogicalMatch)
+      filters.matchIds.map((matchId) => resolveLogicalMatch(matchId))
     );
     const expandedIds = logicalMatches.flatMap((logicalMatch) =>
       logicalMatch.rounds.map((round) => round.match.publicId)
