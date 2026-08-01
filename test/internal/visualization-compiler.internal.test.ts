@@ -59,6 +59,34 @@ function compile(
 }
 
 describe("visualization compiler", () => {
+  it("keeps every category label visible on dense vertical charts", () => {
+    const option = compileVisualization(
+      {
+        datasets: [{ id: "principal", source: "players" }],
+        option: {},
+        chart: {
+          type: "bar",
+          datasetId: "principal",
+          fields: { category: "player", metrics: ["value"] }
+        }
+      },
+      [
+        {
+          id: "principal",
+          rows: Array.from({ length: 10 }, (_, index) => ({
+            player: `Jogador ${index + 1}`,
+            value: index
+          }))
+        }
+      ]
+    );
+
+    expect(option.xAxis).toMatchObject({
+      type: "category",
+      axisLabel: { interval: 0, hideOverlap: false, rotate: 28 }
+    });
+  });
+
   it.each([
     ["bar", { category: "player", metrics: ["value", "assists"] }],
     ["line", { category: "player", metrics: ["value"] }],

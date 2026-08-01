@@ -137,9 +137,23 @@ function cartesian(chart: VisualizationChart, rows: DataRow[]): EChartsOption {
     grid: defaultGrid(),
     tooltip: { trigger: "axis" },
     legend: metrics.length > 1 ? {} : undefined,
-    xAxis: { type: horizontal ? "value" : "category" },
-    yAxis: { type: horizontal ? "category" : "value" },
+    xAxis: horizontal
+      ? { type: "value" }
+      : {
+          type: "category",
+          axisLabel: categoryAxisLabel(rows.length)
+        },
+    yAxis: horizontal ? { type: "category" } : { type: "value" },
     series
+  };
+}
+
+function categoryAxisLabel(rowCount: number) {
+  return {
+    interval: 0,
+    hideOverlap: false,
+    rotate: rowCount > 6 ? 28 : 0,
+    ...(rowCount > 12 ? { width: 84, overflow: "truncate" } : {})
   };
 }
 
