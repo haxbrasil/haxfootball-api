@@ -378,8 +378,35 @@ export async function generateSingleElimination(
     input,
     "format.single-elimination.generated",
     async (tx, championship) => {
-      const teams = await resolveTeams(tx, championship.id, input.teamIds);
-      const plan = generateSingleEliminationPlan(teams.length);
+      const teamIds = input.teamIds ?? [];
+      const qualificationSources = input.qualificationSources ?? [];
+      const entryCount = teamIds.length + qualificationSources.length;
+      if (entryCount < 2 || entryCount > 64) {
+        throw badRequest(
+          "Single elimination requires between 2 and 64 entries"
+        );
+      }
+      if (
+        qualificationSources.length > 0 &&
+        (entryCount & (entryCount - 1)) !== 0
+      ) {
+        throw badRequest(
+          "Qualification-fed brackets currently require 2, 4, 8, 16, 32, or 64 entries"
+        );
+      }
+      const sourceKeys = qualificationSources.map(
+        (source) => `${source.groupId}:${source.rank}`
+      );
+      if (new Set(sourceKeys).size !== sourceKeys.length) {
+        throw badRequest("Each group rank can feed the bracket only once");
+      }
+      const teams = await resolveTeams(tx, championship.id, teamIds);
+      const sourceGroups = await Promise.all(
+        qualificationSources.map((source) =>
+          requireChampionshipGroup(tx, championship.id, source.groupId)
+        )
+      );
+      const plan = generateSingleEliminationPlan(entryCount);
       const program = await resolveChampionshipProgram(
         tx,
         championship.id,
@@ -399,6 +426,7 @@ export async function generateSingleElimination(
           config: {
             bracketSize: plan.bracketSize,
             teamCount: teams.length,
+            qualificationSourceCount: qualificationSources.length,
             seeding: "standard",
             competitionRoundMode:
               input.competitionRoundMode ?? "per-bracket-round"
@@ -460,14 +488,20 @@ export async function generateSingleElimination(
 
       for (const spotPlan of plan.spots) {
         const team =
-          spotPlan.teamIndex === null ? null : teams[spotPlan.teamIndex]!;
+          spotPlan.teamIndex === null || spotPlan.teamIndex >= teams.length
+            ? null
+            : teams[spotPlan.teamIndex]!;
+        const qualificationSource =
+          spotPlan.teamIndex === null || spotPlan.teamIndex < teams.length
+            ? null
+            : qualificationSources[spotPlan.teamIndex - teams.length]!;
         const [spot] = await tx
           .insert(championshipSpots)
           .values({
             championshipId: championship.id,
             stageId: stage.id,
             key: spotPlan.key,
-            label: spotPlan.label,
+            label: qualificationSource?.label ?? spotPlan.label,
             kind: spotPlan.kind,
             displayOrder: spotPlan.displayOrder,
             placementRank: spotPlan.placementRank ?? null,
@@ -481,6 +515,22 @@ export async function generateSingleElimination(
           id: spot.id,
           uuid: spot.uuid,
           teamId: team?.id ?? null
+        });
+      }
+
+      for (const [index, source] of qualificationSources.entries()) {
+        const entrySpot = plan.spots.find(
+          (spot) => spot.teamIndex === teams.length + index
+        );
+        if (!entrySpot)
+          throw conflict("Generated qualification spot is missing");
+        await tx.insert(championshipProgressionRoutes).values({
+          championshipId: championship.id,
+          sourceKind: "classification-rank",
+          sourceGroupId: sourceGroups[index]!.id,
+          sourceOutcome: "rank",
+          sourceRank: source.rank,
+          destinationSpotId: spotByKey.get(entrySpot.key)!.id
         });
       }
 
@@ -542,6 +592,7 @@ export async function generateSingleElimination(
         after: {
           engine: stage.engine,
           teamCount: teams.length,
+          qualificationSourceCount: qualificationSources.length,
           bracketSize: plan.bracketSize,
           matchCount: plan.matches.length,
           byeCount: plan.matches.filter((match) => match.byeTeamIndex !== null)

@@ -2360,6 +2360,78 @@ describe("championship format and scheduling", () => {
     expect(boundedFormat.spots.items).toHaveLength(2);
   });
 
+  it("materializes a pending bracket fed by configurable group ranks", async () => {
+    const fixture = await createFormatFixture(4);
+    let revision = fixture.championship.revision;
+    let format = await successfulJson(
+      await request(`/api/championships/${fixture.championship.uuid}/stages`, {
+        method: "POST",
+        body: command(admin, revision, {
+          name: "Fase de grupos",
+          engine: "standings"
+        })
+      })
+    );
+    revision = format.championshipRevision;
+    let groupStage = format.stages.items[0]!;
+    const groups = [];
+
+    for (let index = 0; index < 2; index += 1) {
+      format = await successfulJson(
+        await request(
+          `/api/championships/${fixture.championship.uuid}/stages/${groupStage.uuid}/groups`,
+          {
+            method: "POST",
+            body: command(admin, revision, {
+              expectedStageRevision: groupStage.revision,
+              name: `Grupo ${index + 1}`,
+              teamIds: fixture.teams
+                .slice(index * 2, index * 2 + 2)
+                .map((team) => team.uuid)
+            })
+          }
+        )
+      );
+      revision = format.championshipRevision;
+      groupStage = format.stages.items[0]!;
+      groups.push(format.groups.items[index]!);
+    }
+
+    const response = await request(
+      `/api/championships/${fixture.championship.uuid}/stages/single-elimination`,
+      {
+        method: "POST",
+        body: command(admin, revision, {
+          name: "Fase final",
+          qualificationSources: [
+            { groupId: groups[0].uuid, rank: 1, label: "1º do Grupo 1" },
+            { groupId: groups[1].uuid, rank: 2, label: "2º do Grupo 2" },
+            { groupId: groups[1].uuid, rank: 1, label: "1º do Grupo 2" },
+            { groupId: groups[0].uuid, rank: 2, label: "2º do Grupo 1" }
+          ],
+          createCompetitionRounds: true
+        })
+      }
+    );
+
+    expect(response.status).toBe(200);
+    format = await response.json();
+    expect(format.stages.items).toHaveLength(2);
+    expect(format.matches.items).toHaveLength(3);
+    expect(
+      format.routes.items.filter(
+        (route: { sourceKind: string }) =>
+          route.sourceKind === "classification-rank"
+      )
+    ).toHaveLength(4);
+    expect(
+      format.matches.items.every(
+        (match: { sideA: { team: unknown }; sideB: { team: unknown } }) =>
+          match.sideA.team === null && match.sideB.team === null
+      )
+    ).toBe(true);
+  });
+
   it("keeps private graphs staff-only and exposes them after publication", async () => {
     const fixture = await createFormatFixture(2);
     let championship = fixture.championship;

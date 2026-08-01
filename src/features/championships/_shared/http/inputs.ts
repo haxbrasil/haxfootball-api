@@ -562,11 +562,22 @@ export const generateSingleEliminationBodySchema = t.Composite([
   championshipCommandSchema,
   t.Object({
     name: t.String({ minLength: 1, maxLength: 120 }),
-    teamIds: t.Array(t.String({ format: "uuid" }), {
-      minItems: 2,
-      maxItems: 64,
-      uniqueItems: true
-    }),
+    teamIds: t.Optional(
+      t.Array(t.String({ format: "uuid" }), {
+        maxItems: 64,
+        uniqueItems: true
+      })
+    ),
+    qualificationSources: t.Optional(
+      t.Array(
+        t.Object({
+          groupId: t.String({ format: "uuid" }),
+          rank: t.Integer({ minimum: 1, maximum: 64 }),
+          label: t.Optional(t.String({ minLength: 1, maxLength: 160 }))
+        }),
+        { maxItems: 64 }
+      )
+    ),
     createCompetitionRounds: t.Optional(t.Boolean()),
     competitionRoundMode: t.Optional(
       t.Union([t.Literal("per-bracket-round"), t.Literal("single-period")])
