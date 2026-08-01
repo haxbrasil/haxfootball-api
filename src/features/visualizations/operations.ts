@@ -344,32 +344,37 @@ export async function getChampionshipVisualizations(
     limit: 500,
     actorAccountUuid
   });
+  const teamMetrics = statistics.teams.items.flatMap((row) =>
+    row.team
+      ? [
+          {
+            teamId: row.team.uuid,
+            team: row.team.name,
+            played: row.played,
+            wins: row.wins,
+            draws: row.draws,
+            losses: row.losses,
+            pointsFor: row.pointsFor,
+            pointsAgainst: row.pointsAgainst,
+            differential: row.differential
+          }
+        ]
+      : []
+  );
+  const playerMetrics = statistics.players.items.map((row) => ({
+    participantId: row.participantUuid,
+    accountId: row.accountUuid,
+    player: row.displayName,
+    matchesPlayed: row.matchesPlayed,
+    playingTimeSeconds: row.playingTimeSeconds,
+    ...row.metrics
+  }));
   const sources: Record<string, DataRow[]> = {
-    teams: statistics.teams.items.flatMap((row) =>
-      row.team
-        ? [
-            {
-              teamId: row.team.uuid,
-              team: row.team.name,
-              played: row.played,
-              wins: row.wins,
-              draws: row.draws,
-              losses: row.losses,
-              pointsFor: row.pointsFor,
-              pointsAgainst: row.pointsAgainst,
-              differential: row.differential
-            }
-          ]
-        : []
-    ),
-    players: statistics.players.items.map((row) => ({
-      participantId: row.participantUuid,
-      accountId: row.accountUuid,
-      player: row.displayName,
-      matchesPlayed: row.matchesPlayed,
-      playingTimeSeconds: row.playingTimeSeconds,
-      ...row.metrics
-    }))
+    playerMetrics,
+    teamMetrics,
+    // Keep the original names available for existing manually-authored charts.
+    players: playerMetrics,
+    teams: teamMetrics
   };
   return boundedDashboard(
     instances
