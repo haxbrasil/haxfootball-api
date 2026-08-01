@@ -7,6 +7,7 @@ import {
   toEventSchemaResponse
 } from "@/features/event-schemas/_shared/http/responses";
 import { eventSchemaVersions } from "@/features/event-schemas/db";
+import { matches } from "@/features/matches/db";
 import {
   isBreakingSchemaChange,
   validateEventSchemaDefinition
@@ -31,6 +32,18 @@ export async function updateEventSchema(
 
   if (row.version.version !== row.latestVersion) {
     throw badRequest("Only the latest event schema version can be updated");
+  }
+
+  const [usage] = await db
+    .select({ id: matches.id })
+    .from(matches)
+    .where(eq(matches.eventSchemaVersionId, row.version.id))
+    .limit(1);
+
+  if (usage) {
+    throw badRequest(
+      "Referenced event schema versions are immutable; publish a new version"
+    );
   }
 
   const definition = validateEventSchemaDefinition(input.definition);

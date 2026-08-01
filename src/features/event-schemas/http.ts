@@ -33,6 +33,12 @@ import {
   notFoundErrorResponseSchema
 } from "@/shared/http/errors";
 import { paginationQuerySchema } from "@lib";
+import {
+  cloneEventSchema,
+  getEventSchemaDraft,
+  saveEventSchemaDraft,
+  validateEventSchemaDraft
+} from "@/features/event-schemas/manual-drafts";
 
 export {
   eventSchemaIdParamsSchema,
@@ -152,6 +158,46 @@ export const eventSchemaRoutes = new Elysia({
       }
     }
   )
+  .get("/:id/draft", ({ params }) => getEventSchemaDraft(params.id), {
+    params: eventSchemaIdParamsSchema,
+    response: { 200: t.Unknown() },
+    detail: { tags: ["Event Schemas"], summary: "Get an event schema draft" }
+  })
+  .put(
+    "/:id/draft",
+    ({ params, body }) => saveEventSchemaDraft(params.id, body),
+    {
+      params: eventSchemaIdParamsSchema,
+      body: t.Object({
+        definition: t.Unknown(),
+        expectedRevision: t.Optional(t.Integer({ minimum: 0 }))
+      }),
+      response: { 200: t.Unknown() },
+      detail: { tags: ["Event Schemas"], summary: "Save an event schema draft" }
+    }
+  )
+  .post(
+    "/:id/draft/validate",
+    ({ params }) => validateEventSchemaDraft(params.id),
+    {
+      params: eventSchemaIdParamsSchema,
+      response: { 200: t.Unknown() },
+      detail: {
+        tags: ["Event Schemas"],
+        summary: "Validate an event schema draft"
+      }
+    }
+  )
+  .post("/:id/clone", ({ params, body }) => cloneEventSchema(params.id, body), {
+    params: eventSchemaIdParamsSchema,
+    body: t.Object({
+      name: t.String({ minLength: 1, maxLength: 64 }),
+      title: t.Optional(t.String()),
+      description: t.Optional(t.String())
+    }),
+    response: { 200: t.Unknown() },
+    detail: { tags: ["Event Schemas"], summary: "Clone an event schema" }
+  })
   .patch(
     "/:id/versions/:version",
     ({ body, params }) => updateEventSchema(params.id, params.version, body),

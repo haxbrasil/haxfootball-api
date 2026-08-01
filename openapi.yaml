@@ -9345,6 +9345,17 @@ components:
         description:
           minLength: 1
           type: string
+        managementMode:
+          enum:
+            - manual
+            - external
+          type: string
+        managementSource:
+          anyOf:
+            - minLength: 1
+              type: string
+            - type: "null"
+          nullable: true
         name:
           maxLength: 64
           minLength: 1
@@ -10001,6 +10012,16 @@ components:
           type: string
         isLatest:
           type: boolean
+        managementMode:
+          enum:
+            - manual
+            - external
+          type: string
+        managementSource:
+          anyOf:
+            - type: string
+            - type: "null"
+          nullable: true
         name:
           maxLength: 64
           minLength: 1
@@ -10026,6 +10047,8 @@ components:
         - name
         - title
         - description
+        - managementMode
+        - managementSource
         - version
         - isLatest
         - definition
@@ -24376,6 +24399,236 @@ paths:
       summary: Get latest event schema
       tags:
         - Event Schemas
+  /api/event-schemas/{id}/clone:
+    post:
+      operationId: postApiEvent-schemasByIdClone
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                description:
+                  type: string
+                name:
+                  maxLength: 64
+                  minLength: 1
+                  type: string
+                title:
+                  type: string
+              required:
+                - name
+              type: object
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: {}
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForbiddenError"
+          description: Response for status 403
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictError"
+          description: Response for status 409
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Clone an event schema
+      tags:
+        - Event Schemas
+  /api/event-schemas/{id}/draft:
+    get:
+      operationId: getApiEvent-schemasByIdDraft
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: {}
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForbiddenError"
+          description: Response for status 403
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictError"
+          description: Response for status 409
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Get an event schema draft
+      tags:
+        - Event Schemas
+    put:
+      operationId: putApiEvent-schemasByIdDraft
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                definition: {}
+                expectedRevision:
+                  anyOf:
+                    - default: 0
+                      format: integer
+                      type: string
+                    - minimum: 0
+                      type: integer
+                  minimum: 0
+              required:
+                - definition
+              type: object
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: {}
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForbiddenError"
+          description: Response for status 403
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictError"
+          description: Response for status 409
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Save an event schema draft
+      tags:
+        - Event Schemas
+  /api/event-schemas/{id}/draft/validate:
+    post:
+      operationId: postApiEvent-schemasByIdDraftValidate
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: {}
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForbiddenError"
+          description: Response for status 403
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictError"
+          description: Response for status 409
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Validate an event schema draft
+      tags:
+        - Event Schemas
   /api/event-schemas/{id}/versions:
     post:
       operationId: postApiEvent-schemasByIdVersions
@@ -24897,6 +25150,125 @@ paths:
                 $ref: "#/components/schemas/InternalServerError"
           description: Response for status 500
       summary: Update a game mode
+      tags:
+        - Game Modes
+  /api/game-modes/{id}/event-schemas:
+    get:
+      operationId: getApiGame-modesByIdEvent-schemas
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: {}
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForbiddenError"
+          description: Response for status 403
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictError"
+          description: Response for status 409
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: List compatible event schemas
+      tags:
+        - Game Modes
+    put:
+      operationId: putApiGame-modesByIdEvent-schemas
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                items:
+                  items:
+                    properties:
+                      eventSchemaId:
+                        format: uuid
+                        type: string
+                      isDefault:
+                        type: boolean
+                    required:
+                      - eventSchemaId
+                    type: object
+                  maxItems: 100
+                  type: array
+              required:
+                - items
+              type: object
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: {}
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForbiddenError"
+          description: Response for status 403
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictError"
+          description: Response for status 409
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Replace compatible event schemas
       tags:
         - Game Modes
   /api/graphql:
@@ -29471,6 +29843,636 @@ paths:
       summary: Get a localized value
       tags:
         - Localization
+  /api/visualizations/championships/{id}:
+    get:
+      operationId: getApiVisualizationsChampionshipsById
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+        - in: query
+          name: surface
+          required: true
+          schema:
+            enum:
+              - overview
+              - statistics
+            type: string
+        - in: query
+          name: actorAccountUuid
+          required: false
+          schema:
+            format: uuid
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: {}
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForbiddenError"
+          description: Response for status 403
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictError"
+          description: Response for status 409
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Render championship visualizations
+      tags:
+        - Visualizations
+  /api/visualizations/championships/{id}/configuration:
+    get:
+      operationId: getApiVisualizationsChampionshipsByIdConfiguration
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: {}
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForbiddenError"
+          description: Response for status 403
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictError"
+          description: Response for status 409
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Get championship visualization configuration
+      tags:
+        - Visualizations
+  /api/visualizations/championships/{id}/instances:
+    put:
+      operationId: putApiVisualizationsChampionshipsByIdInstances
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                actorAccountUuid:
+                  format: uuid
+                  type: string
+                displayOrder:
+                  anyOf:
+                    - default: 0
+                      format: integer
+                      type: string
+                    - minimum: 0
+                      type: integer
+                  minimum: 0
+                expectedRevision:
+                  anyOf:
+                    - default: 0
+                      format: integer
+                      type: string
+                    - minimum: 0
+                      type: integer
+                  minimum: 0
+                height:
+                  enum:
+                    - short
+                    - medium
+                    - tall
+                    - viewport
+                  type: string
+                overrides:
+                  patternProperties:
+                    ^(.*)$: {}
+                  type: object
+                surface:
+                  enum:
+                    - overview
+                    - statistics
+                  type: string
+                templateVersionId:
+                  anyOf:
+                    - default: 0
+                      format: integer
+                      type: string
+                    - minimum: 1
+                      type: integer
+                  minimum: 1
+                titleOverride:
+                  anyOf:
+                    - maxLength: 160
+                      type: string
+                    - type: "null"
+                  nullable: true
+                uuid:
+                  format: uuid
+                  type: string
+                visibility:
+                  enum:
+                    - draft
+                    - published
+                  type: string
+                width:
+                  enum:
+                    - compact
+                    - half
+                    - full
+                  type: string
+              required:
+                - templateVersionId
+                - surface
+              type: object
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: {}
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForbiddenError"
+          description: Response for status 403
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictError"
+          description: Response for status 409
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Create or update a championship visualization
+      tags:
+        - Visualizations
+  /api/visualizations/matches/{id}:
+    get:
+      operationId: getApiVisualizationsMatchesById
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            minLength: 1
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: {}
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForbiddenError"
+          description: Response for status 403
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictError"
+          description: Response for status 409
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Render published match visualizations
+      tags:
+        - Visualizations
+  /api/visualizations/preview:
+    post:
+      operationId: postApiVisualizationsPreview
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                datasets:
+                  patternProperties:
+                    ^(.*)$:
+                      items:
+                        patternProperties:
+                          ^(.*)$: {}
+                        type: object
+                      type: array
+                  type: object
+                specification: {}
+              required:
+                - specification
+              type: object
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: {}
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForbiddenError"
+          description: Response for status 403
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictError"
+          description: Response for status 409
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Preview a visualization
+      tags:
+        - Visualizations
+  /api/visualizations/templates:
+    get:
+      operationId: getApiVisualizationsTemplates
+      parameters:
+        - in: query
+          name: scope
+          required: false
+          schema:
+            enum:
+              - match
+              - championship
+            type: string
+        - in: query
+          name: includeArchived
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: {}
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForbiddenError"
+          description: Response for status 403
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictError"
+          description: Response for status 409
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: List visualization templates
+      tags:
+        - Visualizations
+    post:
+      operationId: postApiVisualizationsTemplates
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                actorAccountUuid:
+                  format: uuid
+                  type: string
+                description:
+                  anyOf:
+                    - maxLength: 1000
+                      type: string
+                    - type: "null"
+                  nullable: true
+                internalNotes:
+                  anyOf:
+                    - maxLength: 4000
+                      type: string
+                    - type: "null"
+                  nullable: true
+                name:
+                  maxLength: 64
+                  minLength: 1
+                  pattern: ^[a-z][a-z0-9-]{0,63}$
+                  type: string
+                scope:
+                  enum:
+                    - match
+                    - championship
+                  type: string
+                specification: {}
+                tags:
+                  items:
+                    maxLength: 40
+                    minLength: 1
+                    type: string
+                  maxItems: 20
+                  type: array
+                title:
+                  maxLength: 160
+                  minLength: 1
+                  type: string
+              required:
+                - name
+                - title
+                - scope
+                - specification
+              type: object
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema: {}
+          description: Response for status 201
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForbiddenError"
+          description: Response for status 403
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictError"
+          description: Response for status 409
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Create a visualization template
+      tags:
+        - Visualizations
+  /api/visualizations/templates/{id}/draft:
+    put:
+      operationId: putApiVisualizationsTemplatesByIdDraft
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                actorAccountUuid:
+                  format: uuid
+                  type: string
+                expectedRevision:
+                  anyOf:
+                    - default: 0
+                      format: integer
+                      type: string
+                    - minimum: 0
+                      type: integer
+                  minimum: 0
+                specification: {}
+              required:
+                - specification
+                - expectedRevision
+              type: object
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: {}
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForbiddenError"
+          description: Response for status 403
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictError"
+          description: Response for status 409
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Update a visualization draft
+      tags:
+        - Visualizations
+  /api/visualizations/templates/{id}/publish:
+    post:
+      operationId: postApiVisualizationsTemplatesByIdPublish
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                actorAccountUuid:
+                  format: uuid
+                  type: string
+                expectedRevision:
+                  anyOf:
+                    - default: 0
+                      format: integer
+                      type: string
+                    - minimum: 0
+                      type: integer
+                  minimum: 0
+              required:
+                - expectedRevision
+              type: object
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: {}
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForbiddenError"
+          description: Response for status 403
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictError"
+          description: Response for status 409
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Publish a visualization template
+      tags:
+        - Visualizations
   /artifacts/rooms/{branch}/{sha}/{assetName}:
     get:
       operationId: getArtifactsRoomsByBranchByShaByAssetName

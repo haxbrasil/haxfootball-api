@@ -20,6 +20,7 @@ import { roleRoutes } from "@/features/roles/http";
 import { publicRoomArtifactRoutes, roomRoutes } from "@/features/rooms/http";
 import { sessionRoutes } from "@/features/sessions/http";
 import { eventSchemaRoutes } from "@/features/event-schemas/http";
+import { visualizationRoutes } from "@/features/visualizations/http";
 import { withJwtGuard } from "@/guards/jwt.guard";
 import { withCommonErrorResponses } from "@/plugins/common-error-responses";
 import { errorHandler } from "@/plugins/error-handler";
@@ -82,6 +83,7 @@ app
       .use(recordingRoutes)
       .use(roomRoutes)
       .use(eventSchemaRoutes)
+      .use(visualizationRoutes)
   );
 
 function normalizedOpenApiDocument(): unknown {

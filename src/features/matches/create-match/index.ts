@@ -28,6 +28,7 @@ import { assertCompletedMatchFields } from "@/features/matches/_shared/domain/va
 import { eventSchemaReferenceSchema } from "@/features/event-schemas/http";
 import { badRequest } from "@/shared/http/errors";
 import { roomInstances } from "@/features/rooms/db";
+import { assertGameModeSchemaCompatible } from "@/features/game-modes/schema-compatibility";
 
 export const createMatchBodySchema = t.Object({
   status: matchStatusSchema,
@@ -74,6 +75,7 @@ export async function createMatch(
   const eventSchemaVersionId = await resolveMatchEventSchemaVersionId(
     input.eventSchema
   );
+  await assertGameModeSchemaCompatible(gameModeId, eventSchemaVersionId);
   const initialEvents = input.events ?? [];
   const persistedInitialEvents = await resolveMatchEvents(initialEvents, 1);
   const matchValues = {

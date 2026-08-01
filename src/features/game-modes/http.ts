@@ -14,6 +14,7 @@ import {
   gameModeNameParamsSchema,
   gameModeLanguageQuerySchema,
   gameModeReferenceSchema,
+  gameModeUuidSchema,
   gameModeUuidParamsSchema
 } from "@/features/game-modes/_shared/http/inputs";
 import { gameModeResponseSchema } from "@/features/game-modes/_shared/http/responses";
@@ -25,6 +26,10 @@ import {
   badRequestErrorResponseSchema,
   notFoundErrorResponseSchema
 } from "@/shared/http/errors";
+import {
+  listGameModeSchemaCompatibility,
+  replaceGameModeSchemaCompatibility
+} from "@/features/game-modes/schema-compatibility";
 
 export {
   gameModeNameSchema,
@@ -106,6 +111,36 @@ export const gameModeRoutes = new Elysia({
       detail: {
         tags: ["Game Modes"],
         summary: "Create a game mode"
+      }
+    }
+  )
+  .get(
+    "/:id/event-schemas",
+    ({ params }) => listGameModeSchemaCompatibility(params.id),
+    {
+      params: gameModeUuidParamsSchema,
+      response: { 200: t.Unknown() },
+      detail: { tags: ["Game Modes"], summary: "List compatible event schemas" }
+    }
+  )
+  .put(
+    "/:id/event-schemas",
+    ({ params, body }) => replaceGameModeSchemaCompatibility(params.id, body),
+    {
+      params: gameModeUuidParamsSchema,
+      body: t.Object({
+        items: t.Array(
+          t.Object({
+            eventSchemaId: gameModeUuidSchema,
+            isDefault: t.Optional(t.Boolean())
+          }),
+          { maxItems: 100 }
+        )
+      }),
+      response: { 200: t.Unknown() },
+      detail: {
+        tags: ["Game Modes"],
+        summary: "Replace compatible event schemas"
       }
     }
   )

@@ -16,6 +16,10 @@ export const createEventSchemaBodySchema = t.Object({
   name: eventSchemaNameSchema,
   title: t.Optional(t.String({ minLength: 1 })),
   description: t.Optional(t.String({ minLength: 1 })),
+  managementMode: t.Optional(
+    t.Union([t.Literal("manual"), t.Literal("external")])
+  ),
+  managementSource: t.Optional(t.Nullable(t.String({ minLength: 1 }))),
   definition: t.Unknown()
 });
 
@@ -47,7 +51,9 @@ export async function createEventSchema(
       uuid: crypto.randomUUID(),
       name: input.name,
       title: input.title ?? null,
-      description: input.description ?? null
+      description: input.description ?? null,
+      managementMode: input.managementMode ?? "manual",
+      managementSource: input.managementSource ?? null
     })
     .returning();
 

@@ -12,3 +12,4 @@ export * from "@/features/recordings/db";
 export * from "@/features/roles/db";
 export * from "@/features/rooms/db";
 export * from "@/features/event-schemas/db";
+export * from "@/features/visualizations/db";

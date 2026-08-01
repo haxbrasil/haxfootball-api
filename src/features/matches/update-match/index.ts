@@ -28,6 +28,7 @@ import {
   assertMatchIsEditable
 } from "@/features/matches/_shared/domain/validation";
 import { assertPhysicalMatchesUnclaimed } from "@/features/matches/evidence-claims";
+import { assertGameModeSchemaCompatible } from "@/features/game-modes/schema-compatibility";
 
 export const updateMatchBodySchema = t.Partial(
   t.Object({
@@ -56,6 +57,10 @@ export async function updateMatch(
   const nextGameModeId = await resolveGameModeId(input.gameMode);
   const nextEventSchemaVersionId = await resolveMatchEventSchemaVersionId(
     input.eventSchema
+  );
+  await assertGameModeSchemaCompatible(
+    nextGameModeId ?? current.match.gameModeId,
+    nextEventSchemaVersionId ?? current.match.eventSchemaVersionId
   );
 
   assertCompletedMatchFields({
