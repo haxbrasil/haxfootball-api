@@ -35,6 +35,20 @@ describe("visualization pipeline", () => {
     ]);
   });
 
+  it("keeps the first sort as the primary ranking after limiting results", () => {
+    expect(
+      executePipeline(rows, [
+        { type: "sort", field: "yards", direction: "desc" },
+        { type: "limit", count: 3 },
+        { type: "sort", field: "attempts", direction: "asc" }
+      ])
+    ).toEqual([
+      { player: "B", team: "red", yards: 20, attempts: 4 },
+      { player: "C", team: "blue", yards: 15, attempts: 3 },
+      { player: "A", team: "red", yards: 10, attempts: 2 }
+    ]);
+  });
+
   it.each([
     ["sum", 30],
     ["count", 2],

@@ -60,10 +60,19 @@ export function executePipeline(
   operations: unknown[] = []
 ): DataRow[] {
   let rows = input.map((row) => ({ ...row }));
+  const sortCriteria: Array<{ field: string; direction: 1 | -1 }> = [];
   for (const raw of operations) {
     if (!isRecord(raw) || typeof raw.type !== "string")
       throw badRequest("Invalid pipeline operation");
-    rows = applyOperation(rows, raw as PipelineOperation);
+    const operation = raw as PipelineOperation;
+    if (operation.type === "sort") {
+      const criterion = sortCriterion(operation);
+      if (!sortCriteria.some((item) => item.field === criterion.field))
+        sortCriteria.push(criterion);
+      rows = sortRows(rows, sortCriteria);
+    } else {
+      rows = applyOperation(rows, operation);
+    }
     if (rows.length > visualizationLimits.rowsPerDataset)
       rows = rows.slice(0, visualizationLimits.rowsPerDataset);
   }
@@ -105,11 +114,7 @@ function applyOperation(
       }));
     }
     case "sort": {
-      const field = requiredString(operation.field, "Sort field");
-      const direction = operation.direction === "desc" ? -1 : 1;
-      return [...rows].sort(
-        (a, b) => compare(read(a, field), read(b, field)) * direction
-      );
+      return sortRows(rows, [sortCriterion(operation)]);
     }
     case "limit":
       return rows.slice(
@@ -204,6 +209,28 @@ function applyOperation(
     default:
       throw badRequest(`Unsupported pipeline operation: ${operation.type}`);
   }
+}
+
+function sortCriterion(operation: PipelineOperation) {
+  return {
+    field: requiredString(operation.field, "Sort field"),
+    direction: operation.direction === "desc" ? -1 : 1
+  } as const;
+}
+
+function sortRows(
+  rows: DataRow[],
+  criteria: ReadonlyArray<{ field: string; direction: 1 | -1 }>
+) {
+  return [...rows].sort((left, right) => {
+    for (const criterion of criteria) {
+      const result =
+        compare(read(left, criterion.field), read(right, criterion.field)) *
+        criterion.direction;
+      if (result !== 0) return result;
+    }
+    return 0;
+  });
 }
 
 function aggregate(
