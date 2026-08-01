@@ -92,6 +92,10 @@ export const visualizationTemplateDrafts = sqliteTable(
     specification: text("specification", { mode: "json" })
       .$type<VisualizationSpec>()
       .notNull(),
+    name: text("name").notNull(),
+    title: text("title").notNull(),
+    description: text("description"),
+    scope: text("scope", { enum: ["match", "championship"] }).notNull(),
     revision: integer("revision").notNull().default(0),
     updatedAt: text("updated_at")
       .notNull()
@@ -110,6 +114,10 @@ export const visualizationTemplateVersions = sqliteTable(
     specification: text("specification", { mode: "json" })
       .$type<VisualizationSpec>()
       .notNull(),
+    name: text("name").notNull(),
+    title: text("title").notNull(),
+    description: text("description"),
+    scope: text("scope", { enum: ["match", "championship"] }).notNull(),
     createdAt: text("created_at")
       .notNull()
       .$defaultFn(() => new Date().toISOString())

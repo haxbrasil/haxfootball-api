@@ -73,6 +73,14 @@ export const visualizationRoutes = new Elysia({
       params: t.Object({ id: t.String({ format: "uuid" }) }),
       body: t.Object({
         specification: specificationSchema,
+        name: t.String({
+          minLength: 1,
+          maxLength: 64,
+          pattern: "^[a-z][a-z0-9-]{0,63}$"
+        }),
+        title: t.String({ minLength: 1, maxLength: 160 }),
+        description: t.Optional(t.Nullable(t.String({ maxLength: 1000 }))),
+        scope: t.Union([t.Literal("match"), t.Literal("championship")]),
         expectedRevision: t.Integer({ minimum: 0 }),
         actorAccountUuid: t.Optional(t.String({ format: "uuid" }))
       }),

@@ -36,6 +36,11 @@ export type TemplateInput = {
   actorAccountUuid?: string;
 };
 
+type TemplateMetadata = Pick<
+  TemplateInput,
+  "name" | "title" | "description" | "scope"
+>;
+
 export async function listVisualizationTemplates(
   scope?: "match" | "championship",
   includeArchived = false
@@ -72,7 +77,14 @@ export async function createVisualizationTemplate(input: TemplateInput) {
       .returning();
     const [draft] = await tx
       .insert(visualizationTemplateDrafts)
-      .values({ familyId: family.id, specification: input.specification })
+      .values({
+        familyId: family.id,
+        specification: input.specification,
+        name: family.name,
+        title: family.title,
+        description: family.description,
+        scope: family.scope
+      })
       .returning();
     await tx.insert(visualizationAuditEvents).values({
       familyId: family.id,
@@ -88,11 +100,16 @@ export async function updateVisualizationDraft(
   uuid: string,
   input: {
     specification: VisualizationSpec;
+    name: string;
+    title: string;
+    description?: string | null;
+    scope: "match" | "championship";
     expectedRevision: number;
     actorAccountUuid?: string;
   }
 ) {
   validateVisualizationSpecification(input.specification);
+  validateTemplateMetadata(input);
   return withDatabaseTransaction(async (tx) => {
     const family = await requireFamily(tx, uuid);
     const [draft] = await tx
@@ -104,23 +121,48 @@ export async function updateVisualizationDraft(
       throw conflict("Visualization draft revision conflict", {
         currentRevision: draft.revision
       });
+    const metadata: TemplateMetadata = {
+      name: input.name,
+      title: input.title,
+      description: input.description ?? null,
+      scope: input.scope
+    };
+    if (
+      JSON.stringify(draft.specification) ===
+        JSON.stringify(input.specification) &&
+      draft.name === metadata.name &&
+      draft.title === metadata.title &&
+      draft.description === metadata.description &&
+      draft.scope === metadata.scope
+    )
+      return toTemplate(family, draft, await versionsFor(tx, family.id));
     const [updated] = await tx
       .update(visualizationTemplateDrafts)
       .set({
         specification: input.specification,
+        ...metadata,
         revision: draft.revision + 1,
         updatedAt: new Date().toISOString()
       })
       .where(eq(visualizationTemplateDrafts.id, draft.id))
       .returning();
+    const [updatedFamily] = await tx
+      .update(visualizationTemplateFamilies)
+      .set({
+        ...metadata,
+        revision: family.revision + 1,
+        updatedAt: new Date().toISOString()
+      })
+      .where(eq(visualizationTemplateFamilies.id, family.id))
+      .returning();
     await tx.insert(visualizationAuditEvents).values({
       familyId: family.id,
       action: "visualization-template.draft-updated",
       actorAccountUuid: input.actorAccountUuid,
-      before: draft,
-      after: updated
+      before: { family, draft },
+      after: { family: updatedFamily, draft: updated }
     });
-    return toTemplate(family, updated, await versionsFor(tx, family.id));
+    return toTemplate(updatedFamily, updated, await versionsFor(tx, family.id));
   });
 }
 
@@ -141,12 +183,27 @@ export async function publishVisualizationTemplate(
       });
     validateVisualizationSpecification(draft.specification);
     const versions = await versionsFor(tx, family.id);
+    const latest = versions[0];
+    if (
+      latest &&
+      JSON.stringify(latest.specification) ===
+        JSON.stringify(draft.specification) &&
+      latest.name === draft.name &&
+      latest.title === draft.title &&
+      latest.description === draft.description &&
+      latest.scope === draft.scope
+    )
+      return { ...toTemplate(family, draft, versions), published: false };
     const [version] = await tx
       .insert(visualizationTemplateVersions)
       .values({
         familyId: family.id,
         version: (versions[0]?.version ?? 0) + 1,
-        specification: draft.specification
+        specification: draft.specification,
+        name: draft.name,
+        title: draft.title,
+        description: draft.description,
+        scope: draft.scope
       })
       .returning();
     await tx.insert(visualizationAuditEvents).values({
@@ -155,7 +212,10 @@ export async function publishVisualizationTemplate(
       actorAccountUuid: input.actorAccountUuid,
       after: version
     });
-    return toTemplate(family, draft, [version, ...versions]);
+    return {
+      ...toTemplate(family, draft, [version, ...versions]),
+      published: true
+    };
   });
 }
 
@@ -319,7 +379,7 @@ export async function getChampionshipVisualizations(
           sources
         ),
         id: instance.uuid,
-        title: instance.titleOverride ?? family.title,
+        title: instance.titleOverride ?? version.title,
         layout: { width: instance.width, height: instance.height },
         revision: instance.revision
       }))
@@ -368,15 +428,15 @@ export async function getChampionshipVisualizationConfiguration(
       id: instance.uuid,
       template: {
         id: family.uuid,
-        title: family.title,
+        title: version.title,
         version: version.version,
         templateVersionId: version.id
       }
     })),
     templates: templates.map(({ family, version }) => ({
       id: family.uuid,
-      title: family.title,
-      description: family.description,
+      title: version.title,
+      description: version.description,
       version: version.version,
       templateVersionId: version.id
     }))
@@ -509,8 +569,8 @@ function renderTemplate(
 ) {
   return {
     id: template.family.uuid,
-    title: template.family.title,
-    description: template.family.description,
+    title: template.version.title,
+    description: template.version.description,
     version: template.version.version,
     ...renderSpecification(template.version.specification, sources)
   };
@@ -525,8 +585,8 @@ function safeRenderTemplate(
   } catch (error) {
     return {
       id: template.family.uuid,
-      title: template.family.title,
-      description: template.family.description,
+      title: template.version.title,
+      description: template.version.description,
       version: template.version.version,
       option: {},
       datasets: [],
@@ -614,6 +674,13 @@ async function requireFamily(executor: any, uuid: string) {
     .where(eq(visualizationTemplateFamilies.uuid, uuid));
   if (!family) throw notFound("Visualization template not found");
   return family as typeof visualizationTemplateFamilies.$inferSelect;
+}
+
+function validateTemplateMetadata(value: TemplateMetadata) {
+  if (!/^[a-z][a-z0-9-]{0,63}$/.test(value.name))
+    throw badRequest("Visualization template identifier is invalid");
+  if (!value.title.trim())
+    throw badRequest("Visualization template title is required");
 }
 function syntheticSources(): Record<string, DataRow[]> {
   return {
