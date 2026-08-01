@@ -122,6 +122,7 @@ import {
   createChampionshipRouteBodySchema,
   createChampionshipSpotBodySchema,
   createChampionshipStageBodySchema,
+  deleteChampionshipStageBodySchema,
   createChampionshipScheduleProposalBodySchema,
   decideChampionshipScheduleProposalBodySchema,
   authorizeChampionshipLatePlayBodySchema,
@@ -230,6 +231,7 @@ import {
   createChampionshipRoute,
   createChampionshipSpot,
   createChampionshipStage,
+  deleteChampionshipStage,
   generateDoubleElimination,
   generateSingleElimination,
   getChampionshipFormat,
@@ -390,6 +392,7 @@ export const championshipRoutes = new Elysia({
     CreateChampionshipRouteBody: createChampionshipRouteBodySchema,
     CreateChampionshipSpotBody: createChampionshipSpotBodySchema,
     CreateChampionshipStageBody: createChampionshipStageBodySchema,
+    DeleteChampionshipStageBody: deleteChampionshipStageBodySchema,
     CreateChampionshipGroupBody: createChampionshipGroupBodySchema,
     ConfigureChampionshipStandingsBody:
       configureChampionshipStandingsBodySchema,
@@ -1276,6 +1279,20 @@ export const championshipRoutes = new Elysia({
       detail: {
         tags: ["Championships"],
         summary: "Update a championship stage"
+      }
+    }
+  )
+  .delete(
+    "/:id/stages/:stageId",
+    ({ params, body }) =>
+      deleteChampionshipStage(params.id, params.stageId, body),
+    {
+      params: championshipStageIdParamsSchema,
+      body: t.Ref("DeleteChampionshipStageBody"),
+      response: { 200: t.Ref("ChampionshipFormat") },
+      detail: {
+        tags: ["Championships"],
+        summary: "Delete an empty championship stage"
       }
     }
   )

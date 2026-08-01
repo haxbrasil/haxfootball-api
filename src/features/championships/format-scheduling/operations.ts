@@ -2,6 +2,7 @@ import { and, asc, count, eq, inArray, sql } from "drizzle-orm";
 import { db, type DatabaseExecutor, type DbTransaction } from "@/db/client";
 import type {
   ChampionshipFormatQuery,
+  DeleteChampionshipStageInput,
   CreateChampionshipCompetitionRoundInput,
   CreateChampionshipMatchInput,
   CreateChampionshipRouteInput,
@@ -177,6 +178,71 @@ export async function updateChampionshipStage(
         targetUuid: stage.uuid,
         before: stage,
         after: updated
+      };
+    }
+  );
+}
+
+export async function deleteChampionshipStage(
+  championshipUuid: string,
+  stageUuid: string,
+  input: DeleteChampionshipStageInput
+): Promise<ChampionshipFormatResponse> {
+  return executeChampionshipCommand(
+    {
+      championshipUuid,
+      actorAccountUuid: input.actorAccountUuid,
+      commandUuid: input.commandUuid,
+      expectedRevision: input.expectedRevision,
+      permission: "championship:admin",
+      action: "format.stage.deleted"
+    },
+    async (tx, championship) => {
+      const stage = await requireStage(tx, championship.id, stageUuid);
+      const [groups, spots, matches, rounds] = await Promise.all([
+        tx
+          .select({ total: count() })
+          .from(championshipGroups)
+          .where(eq(championshipGroups.stageId, stage.id)),
+        tx
+          .select({ total: count() })
+          .from(championshipSpots)
+          .where(eq(championshipSpots.stageId, stage.id)),
+        tx
+          .select({ total: count() })
+          .from(championshipMatches)
+          .where(eq(championshipMatches.stageId, stage.id)),
+        tx
+          .select({ total: count() })
+          .from(championshipCompetitionRounds)
+          .where(eq(championshipCompetitionRounds.stageId, stage.id))
+      ]);
+      const contents =
+        Number(groups[0]?.total ?? 0) +
+        Number(spots[0]?.total ?? 0) +
+        Number(matches[0]?.total ?? 0) +
+        Number(rounds[0]?.total ?? 0);
+
+      if (contents > 0) {
+        throw conflict("Only empty championship stages can be deleted", {
+          groups: Number(groups[0]?.total ?? 0),
+          spots: Number(spots[0]?.total ?? 0),
+          matches: Number(matches[0]?.total ?? 0),
+          rounds: Number(rounds[0]?.total ?? 0)
+        });
+      }
+
+      await tx
+        .delete(championshipStages)
+        .where(eq(championshipStages.id, stage.id));
+      const response = await projectChampionshipFormat(tx, championship);
+
+      return {
+        response: () => response,
+        targetType: "stage",
+        targetUuid: stage.uuid,
+        before: stage,
+        after: null
       };
     }
   );

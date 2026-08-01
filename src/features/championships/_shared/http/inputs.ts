@@ -452,6 +452,8 @@ export const updateChampionshipStageBodySchema = t.Composite([
   })
 ]);
 
+export const deleteChampionshipStageBodySchema = championshipCommandSchema;
+
 const championshipStandingsCriterionSchema = t.Union([
   t.Literal("points"),
   t.Literal("wins"),
@@ -1276,6 +1278,9 @@ export type CreateChampionshipStageInput = Static<
 >;
 export type UpdateChampionshipStageInput = Static<
   typeof updateChampionshipStageBodySchema
+>;
+export type DeleteChampionshipStageInput = Static<
+  typeof deleteChampionshipStageBodySchema
 >;
 export type CreateChampionshipGroupInput = Static<
   typeof createChampionshipGroupBodySchema
