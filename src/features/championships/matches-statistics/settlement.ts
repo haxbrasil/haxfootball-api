@@ -52,6 +52,7 @@ import {
   championshipTeams
 } from "@/features/championships/people/db";
 import { refreshChampionshipRecords } from "@/features/championships/history/records";
+import { reconcileCalculatedChampionshipHonors } from "@/features/championships/history/honors";
 import { matches, matchPlayerStints } from "@/features/matches/db";
 import { players } from "@/features/players/db";
 import { badRequest, conflict } from "@/shared/http/errors";
@@ -234,6 +235,13 @@ export async function settleChampionshipMatch(
       );
       await refreshChampionshipRecords(tx, championship.id);
       await applyProgression(tx, context, result);
+      const recalculatedHonorUuids = await reconcileCalculatedChampionshipHonors(
+        tx,
+        championship.id,
+        actor.account.id,
+        ["spot-result", "metric-ranking"],
+        input.note ?? "Resultado oficial da partida atualizado"
+      );
       const [updatedMatch] = await tx
         .update(championshipMatches)
         .set({
@@ -269,7 +277,8 @@ export async function settleChampionshipMatch(
           invalidatedMatches: preview.downstream.map(
             (impact) => impact.matchUuid
           ),
-          progression: preview.progression
+          progression: preview.progression,
+          recalculatedHonorUuids
         },
         outboxTopic: "championship.match.settled"
       };

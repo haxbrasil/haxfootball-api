@@ -5728,6 +5728,105 @@ describe("championship honor catalog and edition honors", () => {
     expect(staffResponse.status).toBe(200);
     expect(await paginatedItems(staffResponse)).toHaveLength(1);
   });
+
+  it("previews placement titles and recalculates them after a correction", async () => {
+    const definitionResponse = await request("/api/championships/honor-definitions", {
+      method: "POST",
+      body: {
+        actorAccountUuid: admin.uuid,
+        slug: uniqueSlug("cup-champion"),
+        kind: "title",
+        name: "Campeão da copa",
+        recipientTypes: ["team"],
+        minimumRecipients: 1,
+        maximumRecipients: 1,
+        aggregateByIdentity: false
+      }
+    });
+    const definition = await definitionResponse.json();
+    const published = await (
+      await request(`/api/championships/honor-definitions/${definition.uuid}/publish`, {
+        method: "POST",
+        body: { actorAccountUuid: admin.uuid, expectedRevision: 0 }
+      })
+    ).json();
+    let championship = await createChampionship(admin, competitionType, {
+      name: "Calculated Honors Cup"
+    });
+    const teams = [];
+    for (const name of ["Aurora", "Carbono"]) {
+      const response = await request(`/api/championships/${championship.uuid}/teams`, {
+        method: "POST",
+        body: command(admin, championship.revision, { name })
+      });
+      expect(response.status).toBe(201);
+      teams.push(await response.json());
+      championship = await getChampionship(championship.uuid);
+    }
+    const offeringResponse = await request(`/api/championships/${championship.uuid}/honors`, {
+      method: "POST",
+      body: command(admin, championship.revision, {
+        definitionVersionUuid: published.versions[0].uuid,
+        state: "announced",
+        decisionPolicy: { type: "placement", ranks: [1] }
+      })
+    });
+    const honor = await offeringResponse.json();
+    championship = await getChampionship(championship.uuid);
+    await request(`/api/championships/${championship.uuid}/placements`, {
+      method: "PUT",
+      body: command(admin, championship.revision, {
+        reason: "Classificação inicial confirmada",
+        placements: [
+          { teamUuid: teams[0].uuid, rank: 1 },
+          { teamUuid: teams[1].uuid, rank: 2 }
+        ]
+      })
+    });
+    const preview = await (
+      await request(
+        `/api/championships/${championship.uuid}/honors/${honor.uuid}/resolution-preview?actorAccountUuid=${admin.uuid}`
+      )
+    ).json();
+    expect(preview).toMatchObject({
+      ready: true,
+      contenders: [{ displayLabel: "Aurora", rank: 1 }]
+    });
+    championship = await getChampionship(championship.uuid);
+    const resolvedResponse = await request(
+      `/api/championships/${championship.uuid}/honors/${honor.uuid}/resolve`,
+      {
+        method: "POST",
+        body: command(admin, championship.revision, {
+          reason: "Resultado calculado conferido"
+        })
+      }
+    );
+    expect(await resolvedResponse.json()).toMatchObject({
+      state: "awarded",
+      grants: [expect.objectContaining({ displayLabel: "Aurora", revokedAt: null })]
+    });
+    championship = await getChampionship(championship.uuid);
+    const correctionResponse = await request(`/api/championships/${championship.uuid}/placements`, {
+      method: "PUT",
+      body: command(admin, championship.revision, {
+        reason: "Classificação corrigida pela organização",
+        placements: [
+          { teamUuid: teams[1].uuid, rank: 1 },
+          { teamUuid: teams[0].uuid, rank: 2 }
+        ]
+      })
+    });
+    expect(correctionResponse.status).toBe(200);
+    const honors = await paginatedItems<any>(
+      await request(
+        `/api/championships/${championship.uuid}/honors?actorAccountUuid=${admin.uuid}&includeDrafts=true&limit=20`
+      )
+    );
+    expect(honors[0].grants.filter((grant: any) => !grant.revokedAt)).toEqual([
+      expect.objectContaining({ displayLabel: "Carbono", rank: 1 })
+    ]);
+  });
 });
 
 describe("championship placements, awards, and archives", () => {
@@ -6151,7 +6250,7 @@ describe("championship placements, awards, and archives", () => {
     expect(await complete.json()).toMatchObject({ lifecycle: "completed" });
   });
 
-  it("snapshots title identities and completes a current cup only after placements", async () => {
+  it("snapshots placement identities without inventing a title", async () => {
     let championship = await createChampionship(admin, competitionType, {
       name: "Archive Cup"
     });
@@ -6260,7 +6359,7 @@ describe("championship placements, awards, and archives", () => {
     );
     expect(identityHistoryResponse.status).toBe(200);
     expect(await identityHistoryResponse.json()).toMatchObject({
-      titles: 1,
+      titles: 0,
       editions: [
         {
           championshipUuid: championship.uuid,

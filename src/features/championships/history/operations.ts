@@ -26,6 +26,7 @@ import {
   championshipRecords
 } from "@/features/championships/history/db";
 import { championshipMatchNeedsSettlement } from "@/features/championships/history/completion";
+import { reconcileCalculatedChampionshipHonors } from "@/features/championships/history/honors";
 import type {
   AccountChampionshipHistoryResponse,
   ChampionshipAwardResponse,
@@ -285,6 +286,13 @@ export async function replaceChampionshipPlacements(
           })
           .where(eq(championshipSpots.id, spot.id));
       }
+      const affectedHonorUuids = await reconcileCalculatedChampionshipHonors(
+        tx,
+        championship.id,
+        actor.account.id,
+        ["placement"],
+        input.reason
+      );
       const response = await getChampionshipHistoryFrom(tx, championship);
 
       return {
@@ -292,7 +300,10 @@ export async function replaceChampionshipPlacements(
         targetType: "championship-placements",
         targetUuid: championship.uuid,
         before,
-        after: response.placements.items,
+        after: {
+          placements: response.placements.items,
+          recalculatedHonorUuids: affectedHonorUuids
+        },
         reason: input.reason
       };
     }
@@ -449,6 +460,7 @@ export async function getTeamIdentityHistory(
       and(
         eq(championshipHonorGrants.teamIdentityIdSnapshot, identity.id),
         eq(championshipHonorDefinitions.kind, "title"),
+        eq(championshipHonorDefinitionVersions.aggregateByIdentity, true),
         eq(championships.visibility, "public"),
         isNull(championshipHonorGrants.revokedAt)
       )

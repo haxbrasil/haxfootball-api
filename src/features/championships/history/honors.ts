@@ -496,6 +496,69 @@ export async function resolveChampionshipHonor(
   );
 }
 
+export async function reconcileCalculatedChampionshipHonors(
+  database: DatabaseExecutor,
+  championshipId: number,
+  actorAccountId: number,
+  policyTypes: Array<"placement" | "spot-result" | "metric-ranking">,
+  reason: string
+) {
+  const honors = await database
+    .select()
+    .from(championshipHonors)
+    .where(
+      and(
+        eq(championshipHonors.championshipId, championshipId),
+        eq(championshipHonors.state, "awarded")
+      )
+    );
+  const affected = honors.filter((honor) =>
+    policyTypes.includes(honor.decisionPolicy.type as (typeof policyTypes)[number])
+  );
+  const now = new Date().toISOString();
+  for (const honor of affected) {
+    const preview = await deriveHonorResolution(database, championshipId, honor);
+    await database
+      .update(championshipHonorGrants)
+      .set({
+        revokedAt: now,
+        revokedByAccountId: actorAccountId,
+        revocationReason: reason
+      })
+      .where(
+        and(
+          eq(championshipHonorGrants.honorId, honor.id),
+          isNull(championshipHonorGrants.revokedAt)
+        )
+      );
+    if (preview.ready) {
+      for (const contender of preview.contenders) {
+        const target = await resolveHonorTarget(database, championshipId, contender.target);
+        await database.insert(championshipHonorGrants).values({
+          honorId: honor.id,
+          targetType: contender.target.type,
+          ...target.columns,
+          teamIdentityIdSnapshot: target.identitySnapshotId,
+          displayLabelSnapshot: contender.displayLabel,
+          rank: contender.rank,
+          note: preview.explanation,
+          awardedByAccountId: actorAccountId
+        });
+      }
+    }
+    await database
+      .update(championshipHonors)
+      .set({
+        state: preview.ready ? "awarded" : "deciding",
+        awardedAt: preview.ready ? now : null,
+        revision: honor.revision + 1,
+        updatedAt: now
+      })
+      .where(eq(championshipHonors.id, honor.id));
+  }
+  return affected.map((honor) => honor.uuid);
+}
+
 export async function createChampionshipHonorGrant(
   championshipUuid: string,
   honorUuid: string,
@@ -719,10 +782,10 @@ async function deriveHonorResolution(
   let explanation = "";
 
   if (policy.type === "staff-selection") {
-    blockers.push("This honor requires a staff-selected recipient");
-    explanation = "Recipient selected by the organization.";
+    blockers.push("Esta conquista exige a escolha de um vencedor pela organização");
+    explanation = "Vencedor escolhido pela organização.";
   } else if (policy.type === "hybrid") {
-    blockers.push("This honor requires staff confirmation");
+    blockers.push("Esta conquista exige uma decisão da organização");
     explanation = policy.note;
   } else if (policy.type === "placement") {
     const rows = await database
@@ -741,8 +804,8 @@ async function deriveHonorResolution(
       if (target) contenders.push({ target, displayLabel: team.name, rank: placement.rank, value: null, tied: false });
     }
     const missing = policy.ranks.filter((rank) => !rows.some((row) => row.placement.rank === rank));
-    if (missing.length) blockers.push(`Missing official placement: ${missing.join(", ")}`);
-    explanation = `Result based on official placement ${policy.ranks.join(", ")}.`;
+    if (missing.length) blockers.push(`Colocação oficial ainda não definida: ${missing.join(", ")}`);
+    explanation = `Resultado baseado na colocação oficial ${policy.ranks.join(", ")}.`;
   } else if (policy.type === "spot-result") {
     const spots = await database
       .select()
@@ -756,7 +819,7 @@ async function deriveHonorResolution(
     for (const spotUuid of policy.spotUuids) {
       const spot = spots.find((item) => item.uuid === spotUuid);
       if (!spot) {
-        blockers.push(`Configured spot ${spotUuid} no longer exists`);
+        blockers.push(`O spot configurado ${spotUuid} não existe mais`);
         continue;
       }
       let teamId = spot.currentTeamId;
@@ -775,7 +838,7 @@ async function deriveHonorResolution(
           )
           .limit(1);
         if (!match) {
-          blockers.push(`No match is connected to ${spot.label}`);
+          blockers.push(`Nenhuma partida está ligada a ${spot.label}`);
           continue;
         }
         const [result] = await database
@@ -788,7 +851,7 @@ async function deriveHonorResolution(
             )
           );
         if (!result || result.sideAOutcome === "draw") {
-          blockers.push(`The result for ${match.label} is not decisive yet`);
+          blockers.push(`O resultado de ${match.label} ainda não está definido`);
           continue;
         }
         const winnerId = result.sideAOutcome === "win" ? result.sideATeamId : result.sideBTeamId;
@@ -796,19 +859,19 @@ async function deriveHonorResolution(
         teamId = policy.outcome === "winner" ? winnerId : loserId;
       }
       if (!teamId) {
-        blockers.push(`${spot.label} has no team yet`);
+        blockers.push(`${spot.label} ainda não tem equipe`);
         continue;
       }
       const [team] = await database.select().from(championshipTeams).where(eq(championshipTeams.id, teamId));
       if (!team) continue;
       const target = await honorTeamTarget(database, team, version.recipientTypes);
       if (!target) {
-        blockers.push(`${team.name} has no identity compatible with this title`);
+        blockers.push(`${team.name} não tem uma identidade compatível com este título`);
         continue;
       }
       contenders.push({ target, displayLabel: team.name, rank: contenders.length + 1, value: null, tied: false });
     }
-    explanation = `Result based on the configured ${policy.outcome === "occupant" ? "spot" : "match outcome"}.`;
+    explanation = `Resultado baseado ${policy.outcome === "occupant" ? "no spot configurado" : "no resultado da partida configurada"}.`;
   } else {
     const currentResults = await database
       .select({ id: championshipMatchResultRevisions.id })
@@ -819,7 +882,7 @@ async function deriveHonorResolution(
           eq(championshipMatchResultRevisions.state, "current")
         )
       );
-    if (!currentResults.length) blockers.push("No official match statistics are available");
+    if (!currentResults.length) blockers.push("Ainda não há estatísticas oficiais disponíveis");
     const mappings = await database
       .select({ sourceMetricKey: championshipMetricMappings.sourceMetricKey })
       .from(championshipMetricMappings)
@@ -893,13 +956,13 @@ async function deriveHonorResolution(
       }
       contenders = rankMetricRows(rankedTeams);
     }
-    if (!contenders.length && !blockers.length) blockers.push("The configured metric has no eligible values");
-    explanation = `${policy.direction === "highest" ? "Highest" : "Lowest"} ${policy.metricKey} among eligible recipients.`;
+    if (!contenders.length && !blockers.length) blockers.push("A estatística configurada ainda não tem valores elegíveis");
+    explanation = `${policy.direction === "highest" ? "Maior" : "Menor"} valor de ${policy.metricKey} entre os participantes elegíveis.`;
   }
 
   const limited = contenders.slice(0, version.maximumRecipients);
   if (limited.length < version.minimumRecipients && !blockers.length) {
-    blockers.push("There are not enough eligible recipients to grant this honor");
+    blockers.push("Ainda não há vencedores elegíveis em quantidade suficiente");
   }
   return {
     honorUuid: honor.uuid,
