@@ -743,6 +743,22 @@ export const championshipFormatMatchResponseSchema = t.Object({
   bracketPosition: t.Nullable(t.Integer()),
   evidenceRevision: t.Integer(),
   resultRevision: t.Integer(),
+  result: t.Nullable(
+    t.Object({
+      sideAOfficialScore: t.Integer({ minimum: 0 }),
+      sideBOfficialScore: t.Integer({ minimum: 0 }),
+      sideAOutcome: t.Union([
+        t.Literal("win"),
+        t.Literal("loss"),
+        t.Literal("draw")
+      ]),
+      sideBOutcome: t.Union([
+        t.Literal("win"),
+        t.Literal("loss"),
+        t.Literal("draw")
+      ])
+    })
+  ),
   scheduleRevision: t.Integer(),
   revision: t.Integer(),
   createdAt: t.String(),

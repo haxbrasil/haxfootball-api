@@ -1516,6 +1516,20 @@ export async function projectChampionshipFormat(
           .where(inArray(championshipRoomPrograms.id, associationIds))
       : [];
 
+  const resultRows = projectedMatchIds.size
+    ? await database
+        .select()
+        .from(championshipMatchResultRevisions)
+        .where(
+          and(
+            inArray(championshipMatchResultRevisions.championshipMatchId, [
+              ...projectedMatchIds
+            ]),
+            eq(championshipMatchResultRevisions.state, "current")
+          )
+        )
+    : [];
+
   for (const association of associations) {
     programIds.add(association.roomProgramId);
   }
@@ -1540,6 +1554,9 @@ export async function projectChampionshipFormat(
   );
   const associationById = new Map(
     associations.map((association) => [association.id, association])
+  );
+  const resultByMatchId = new Map(
+    resultRows.map((result) => [result.championshipMatchId, result])
   );
   const stageById = new Map(
     [...rows.stages, ...referencedStages].map((stage) => [stage.id, stage])
@@ -1677,6 +1694,7 @@ export async function projectChampionshipFormat(
         const program = match.roomProgramId
           ? programById.get(match.roomProgramId)
           : null;
+        const result = resultByMatchId.get(match.id) ?? null;
 
         return {
           uuid: match.uuid,
@@ -1710,6 +1728,14 @@ export async function projectChampionshipFormat(
           bracketPosition: match.bracketPosition,
           evidenceRevision: match.evidenceRevision,
           resultRevision: match.resultRevision,
+          result: result
+            ? {
+                sideAOfficialScore: result.sideAOfficialScore,
+                sideBOfficialScore: result.sideBOfficialScore,
+                sideAOutcome: result.sideAOutcome,
+                sideBOutcome: result.sideBOutcome
+              }
+            : null,
           scheduleRevision: match.scheduleRevision,
           revision: match.revision,
           createdAt: match.createdAt,
