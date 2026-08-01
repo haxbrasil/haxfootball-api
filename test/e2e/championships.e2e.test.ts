@@ -1448,6 +1448,44 @@ describe("championship registration, rosters, and salary", () => {
 });
 
 describe("championship draft and trades", () => {
+  it("prevents an unpicked player from withdrawing while the draft is live", async () => {
+    const fixture = await createDraftFixture({
+      teamCount: 2,
+      playerCount: 2,
+      rounds: 1
+    });
+    let championship = fixture.championship;
+    const draft = fixture.draft.draft!;
+    const startResponse = await request(
+      `/api/championships/${championship.uuid}/draft/start`,
+      {
+        method: "POST",
+        body: command(admin, championship.revision, {
+          expectedDraftRevision: draft.revision
+        })
+      }
+    );
+
+    expect(startResponse.status).toBe(200);
+    championship = await getChampionship(championship.uuid);
+    const withdrawResponse = await request(
+      `/api/championships/${championship.uuid}/registrations/self/withdraw`,
+      {
+        method: "POST",
+        body: command(fixture.players[0]!, championship.revision, {})
+      }
+    );
+
+    expect(withdrawResponse.status).toBe(409);
+    expect(await withdrawResponse.json()).toEqual({
+      error: {
+        code: "CONFLICT",
+        message:
+          "Participants cannot withdraw while a draft is live or after it has completed"
+      }
+    });
+  });
+
   it("cancels a configured draft and allows a fresh configuration", async () => {
     const fixture = await createDraftFixture({
       teamCount: 2,

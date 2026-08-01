@@ -5,6 +5,7 @@ import { accounts } from "@/features/accounts/db";
 import { executeChampionshipCommand } from "@/features/championships/core/commands";
 import { championships } from "@/features/championships/core/db";
 import { championshipParticipantPrices } from "@/features/championships/finance/db";
+import { championshipDrafts } from "@/features/championships/draft-trades/db";
 import {
   championshipParticipants,
   championshipTeamMemberships
@@ -286,6 +287,7 @@ export async function withdrawChampionshipRegistration(
       }
 
       await assertParticipantNotRostered(tx, participant.id);
+      await assertChampionshipDraftAllowsWithdrawal(tx, championship.id);
       const now = new Date().toISOString();
       await tx
         .update(championshipParticipants)
@@ -441,6 +443,22 @@ async function assertAccountNotRegistered(
     throw conflict("Account is already registered for this championship", {
       participantUuid: existing.uuid
     });
+  }
+}
+
+async function assertChampionshipDraftAllowsWithdrawal(
+  tx: DbTransaction,
+  championshipId: number
+) {
+  const [draft] = await tx
+    .select({ state: championshipDrafts.state })
+    .from(championshipDrafts)
+    .where(eq(championshipDrafts.championshipId, championshipId));
+
+  if (draft && ["live", "completed"].includes(draft.state)) {
+    throw conflict(
+      "Participants cannot withdraw while a draft is live or after it has completed"
+    );
   }
 }
 
