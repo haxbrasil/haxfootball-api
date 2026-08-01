@@ -1,4 +1,4 @@
-import { and, asc, count, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, count, eq, inArray, or, sql } from "drizzle-orm";
 import { db, type DatabaseExecutor, type DbTransaction } from "@/db/client";
 import type {
   ChampionshipFormatQuery,
@@ -32,14 +32,25 @@ import {
 } from "@/features/championships/core/db";
 import { championshipTeams } from "@/features/championships/people/db";
 import {
+  championshipClassificationRules,
+  championshipClassificationRuns,
   championshipCompetitionRounds,
   championshipGroups,
+  championshipLatePlayAuthorizations,
   championshipMatches,
   championshipProgressionRoutes,
   championshipScheduleProposals,
   championshipSpots,
   championshipStages
 } from "@/features/championships/format-scheduling/db";
+import {
+  championshipMatchAppearances,
+  championshipMatchAttributions,
+  championshipMatchEvidence,
+  championshipMatchEvidenceRounds,
+  championshipMatchResultRevisions,
+  championshipStatisticEntries
+} from "@/features/championships/matches-statistics/db";
 import {
   championshipScheduleStatusFor,
   validateChampionshipScheduledTime
@@ -199,39 +210,7 @@ export async function deleteChampionshipStage(
     },
     async (tx, championship) => {
       const stage = await requireStage(tx, championship.id, stageUuid);
-      const [groups, spots, matches, rounds] = await Promise.all([
-        tx
-          .select({ total: count() })
-          .from(championshipGroups)
-          .where(eq(championshipGroups.stageId, stage.id)),
-        tx
-          .select({ total: count() })
-          .from(championshipSpots)
-          .where(eq(championshipSpots.stageId, stage.id)),
-        tx
-          .select({ total: count() })
-          .from(championshipMatches)
-          .where(eq(championshipMatches.stageId, stage.id)),
-        tx
-          .select({ total: count() })
-          .from(championshipCompetitionRounds)
-          .where(eq(championshipCompetitionRounds.stageId, stage.id))
-      ]);
-      const contents =
-        Number(groups[0]?.total ?? 0) +
-        Number(spots[0]?.total ?? 0) +
-        Number(matches[0]?.total ?? 0) +
-        Number(rounds[0]?.total ?? 0);
-
-      if (contents > 0) {
-        throw conflict("Only empty championship stages can be deleted", {
-          groups: Number(groups[0]?.total ?? 0),
-          spots: Number(spots[0]?.total ?? 0),
-          matches: Number(matches[0]?.total ?? 0),
-          rounds: Number(rounds[0]?.total ?? 0)
-        });
-      }
-
+      await deleteStageContents(tx, stage.id);
       await tx
         .delete(championshipStages)
         .where(eq(championshipStages.id, stage.id));
@@ -246,6 +225,148 @@ export async function deleteChampionshipStage(
       };
     }
   );
+}
+
+/** Deletes a stage's owned graph. Physical room games are intentionally never deleted. */
+async function deleteStageContents(tx: DbTransaction, stageId: number) {
+  const [matches, groups, spots] = await Promise.all([
+    tx
+      .select({ id: championshipMatches.id })
+      .from(championshipMatches)
+      .where(eq(championshipMatches.stageId, stageId)),
+    tx
+      .select({ id: championshipGroups.id })
+      .from(championshipGroups)
+      .where(eq(championshipGroups.stageId, stageId)),
+    tx
+      .select({ id: championshipSpots.id })
+      .from(championshipSpots)
+      .where(eq(championshipSpots.stageId, stageId))
+  ]);
+  const matchIds = matches.map((match) => match.id);
+  const groupIds = groups.map((group) => group.id);
+  const spotIds = spots.map((spot) => spot.id);
+
+  if (matchIds.length) {
+    const [evidence, resultRevisions] = await Promise.all([
+      tx
+        .select({ id: championshipMatchEvidence.id })
+        .from(championshipMatchEvidence)
+        .where(
+          inArray(championshipMatchEvidence.championshipMatchId, matchIds)
+        ),
+      tx
+        .select({ id: championshipMatchResultRevisions.id })
+        .from(championshipMatchResultRevisions)
+        .where(
+          inArray(
+            championshipMatchResultRevisions.championshipMatchId,
+            matchIds
+          )
+        )
+    ]);
+    const evidenceIds = evidence.map((item) => item.id);
+    const resultRevisionIds = resultRevisions.map((item) => item.id);
+
+    if (resultRevisionIds.length) {
+      await Promise.all([
+        tx
+          .delete(championshipStatisticEntries)
+          .where(
+            inArray(
+              championshipStatisticEntries.resultRevisionId,
+              resultRevisionIds
+            )
+          ),
+        tx
+          .delete(championshipMatchAppearances)
+          .where(
+            inArray(
+              championshipMatchAppearances.resultRevisionId,
+              resultRevisionIds
+            )
+          ),
+        tx
+          .delete(championshipMatchAttributions)
+          .where(
+            inArray(
+              championshipMatchAttributions.resultRevisionId,
+              resultRevisionIds
+            )
+          )
+      ]);
+      await tx
+        .delete(championshipMatchResultRevisions)
+        .where(inArray(championshipMatchResultRevisions.id, resultRevisionIds));
+    }
+    if (evidenceIds.length) {
+      await tx
+        .delete(championshipMatchEvidenceRounds)
+        .where(
+          inArray(championshipMatchEvidenceRounds.evidenceId, evidenceIds)
+        );
+      await tx
+        .delete(championshipMatchEvidence)
+        .where(inArray(championshipMatchEvidence.id, evidenceIds));
+    }
+    await Promise.all([
+      tx
+        .delete(championshipScheduleProposals)
+        .where(
+          inArray(championshipScheduleProposals.championshipMatchId, matchIds)
+        ),
+      tx
+        .delete(championshipLatePlayAuthorizations)
+        .where(
+          inArray(
+            championshipLatePlayAuthorizations.championshipMatchId,
+            matchIds
+          )
+        )
+    ]);
+  }
+
+  const routePredicates = [
+    matchIds.length
+      ? inArray(championshipProgressionRoutes.sourceMatchId, matchIds)
+      : undefined,
+    groupIds.length
+      ? inArray(championshipProgressionRoutes.sourceGroupId, groupIds)
+      : undefined,
+    spotIds.length
+      ? inArray(championshipProgressionRoutes.destinationSpotId, spotIds)
+      : undefined
+  ].filter(Boolean);
+  if (routePredicates.length) {
+    await tx
+      .delete(championshipProgressionRoutes)
+      .where(or(...routePredicates));
+  }
+
+  await tx
+    .delete(championshipClassificationRuns)
+    .where(eq(championshipClassificationRuns.stageId, stageId));
+  await tx
+    .delete(championshipClassificationRules)
+    .where(eq(championshipClassificationRules.stageId, stageId));
+  if (matchIds.length) {
+    await tx
+      .delete(championshipMatches)
+      .where(inArray(championshipMatches.id, matchIds));
+  }
+  await tx
+    .delete(championshipCompetitionRounds)
+    .where(eq(championshipCompetitionRounds.stageId, stageId));
+  if (spotIds.length) {
+    await tx
+      .delete(championshipSpots)
+      .where(inArray(championshipSpots.id, spotIds));
+  }
+  if (groupIds.length) {
+    await tx
+      .delete(championshipGroups)
+      .where(inArray(championshipGroups.id, groupIds));
+  }
 }
 
 export async function generateSingleElimination(

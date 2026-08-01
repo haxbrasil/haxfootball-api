@@ -2756,6 +2756,23 @@ describe("championship format and scheduling", () => {
       sideA: { team: { uuid: fixture.teams[0].uuid } },
       sideB: { team: { uuid: fixture.teams[1].uuid } }
     });
+
+    const deleteResponse = await request(
+      `/api/championships/${fixture.championship.uuid}/stages/${stage.uuid}`,
+      {
+        method: "DELETE",
+        body: command(admin, scheduled.championshipRevision, {})
+      }
+    );
+
+    expect(deleteResponse.status).toBe(200);
+    const deleted = await deleteResponse.json();
+    expect(deleted.stages.items).toHaveLength(0);
+    expect(deleted.groups.items).toHaveLength(0);
+    expect(deleted.spots.items).toHaveLength(0);
+    expect(deleted.matches.items).toHaveLength(0);
+    expect(deleted.routes.items).toHaveLength(0);
+    expect(deleted.competitionRounds.items).toHaveLength(0);
   });
 
   it("can place an entire elimination event in one competition period", async () => {
