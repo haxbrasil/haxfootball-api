@@ -26,6 +26,273 @@ export const championshipAwardTargetSchema = t.Object({
   uuid: t.String({ format: "uuid" })
 });
 
+export const championshipHonorKindSchema = t.Union([
+  t.Literal("title"),
+  t.Literal("award")
+]);
+
+export const championshipHonorRecipientTypeSchema = t.Union([
+  t.Literal("team"),
+  t.Literal("team-identity"),
+  t.Literal("participant"),
+  t.Literal("account"),
+  t.Literal("historical-player")
+]);
+
+export const championshipHonorDecisionPolicySchema = t.Union([
+  t.Object({
+    type: t.Literal("placement"),
+    ranks: t.Array(t.Integer({ minimum: 1, maximum: 1_000 }), {
+      minItems: 1,
+      maxItems: 128,
+      uniqueItems: true
+    })
+  }),
+  t.Object({
+    type: t.Literal("spot-result"),
+    spotUuids: t.Array(t.String({ format: "uuid" }), {
+      minItems: 1,
+      maxItems: 128,
+      uniqueItems: true
+    }),
+    outcome: t.Union([
+      t.Literal("winner"),
+      t.Literal("loser"),
+      t.Literal("occupant")
+    ])
+  }),
+  t.Object({
+    type: t.Literal("metric-ranking"),
+    metricKey: t.String({ minLength: 1, maxLength: 160 }),
+    direction: t.Union([t.Literal("highest"), t.Literal("lowest")]),
+    limit: t.Integer({ minimum: 1, maximum: 128 })
+  }),
+  t.Object({ type: t.Literal("staff-selection") }),
+  t.Object({
+    type: t.Literal("hybrid"),
+    note: t.String({ minLength: 1, maxLength: 2_000 })
+  })
+]);
+
+const championshipHonorDefinitionFieldsSchema = t.Object({
+  name: t.String({ minLength: 1, maxLength: 160 }),
+  description: t.Optional(t.Union([t.String({ maxLength: 2_000 }), t.Null()])),
+  recipientTypes: t.Array(championshipHonorRecipientTypeSchema, {
+    minItems: 1,
+    maxItems: 5,
+    uniqueItems: true
+  }),
+  minimumRecipients: t.Integer({ minimum: 0, maximum: 128 }),
+  maximumRecipients: t.Integer({ minimum: 1, maximum: 128 }),
+  aggregateByIdentity: t.Boolean(),
+  presentation: t.Optional(t.Record(t.String(), t.Unknown()))
+});
+
+export const createChampionshipHonorDefinitionBodySchema = t.Composite([
+  championshipHonorDefinitionFieldsSchema,
+  t.Object({
+    actorAccountUuid: t.String({ format: "uuid" }),
+    slug: t.String({
+      minLength: 1,
+      maxLength: 80,
+      pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    }),
+    kind: championshipHonorKindSchema
+  })
+]);
+
+export const updateChampionshipHonorDefinitionDraftBodySchema = t.Composite([
+  championshipHonorDefinitionFieldsSchema,
+  t.Object({
+    actorAccountUuid: t.String({ format: "uuid" }),
+    expectedRevision: t.Integer({ minimum: 0 })
+  })
+]);
+
+export const publishChampionshipHonorDefinitionBodySchema = t.Object({
+  actorAccountUuid: t.String({ format: "uuid" }),
+  expectedRevision: t.Integer({ minimum: 0 })
+});
+
+export const archiveChampionshipHonorDefinitionBodySchema = t.Object({
+  actorAccountUuid: t.String({ format: "uuid" }),
+  expectedRevision: t.Integer({ minimum: 0 }),
+  archived: t.Boolean()
+});
+
+export const championshipHonorDefinitionIdParamsSchema = t.Object({
+  definitionId: t.String({ format: "uuid" })
+});
+
+export const listChampionshipHonorDefinitionsQuerySchema = t.Composite([
+  paginationQuerySchema,
+  t.Object({
+    kind: t.Optional(championshipHonorKindSchema),
+    state: t.Optional(
+      t.Union([t.Literal("active"), t.Literal("archived"), t.Literal("all")])
+    )
+  })
+]);
+
+export const championshipHonorDefinitionResponseSchema = t.Object({
+  uuid: t.String({ format: "uuid" }),
+  slug: t.String(),
+  kind: championshipHonorKindSchema,
+  state: t.Union([t.Literal("active"), t.Literal("archived")]),
+  revision: t.Integer({ minimum: 0 }),
+  draft: t.Object({
+    name: t.String(),
+    description: t.Nullable(t.String()),
+    recipientTypes: t.Array(championshipHonorRecipientTypeSchema),
+    minimumRecipients: t.Integer(),
+    maximumRecipients: t.Integer(),
+    aggregateByIdentity: t.Boolean(),
+    presentation: t.Record(t.String(), t.Unknown()),
+    revision: t.Integer({ minimum: 0 }),
+    updatedAt: t.String()
+  }),
+  versions: t.Array(
+    t.Object({
+      uuid: t.String({ format: "uuid" }),
+      version: t.Integer({ minimum: 1 }),
+      name: t.String(),
+      description: t.Nullable(t.String()),
+      recipientTypes: t.Array(championshipHonorRecipientTypeSchema),
+      minimumRecipients: t.Integer(),
+      maximumRecipients: t.Integer(),
+      aggregateByIdentity: t.Boolean(),
+      presentation: t.Record(t.String(), t.Unknown()),
+      publishedAt: t.String()
+    })
+  ),
+  createdAt: t.String(),
+  updatedAt: t.String()
+});
+
+export const listChampionshipHonorDefinitionsResponseSchema =
+  paginatedResponseSchema(championshipHonorDefinitionResponseSchema);
+
+export const createChampionshipHonorBodySchema = t.Composite([
+  championshipCommandSchema,
+  t.Object({
+    definitionVersionUuid: t.String({ format: "uuid" }),
+    state: t.Optional(t.Union([t.Literal("draft"), t.Literal("announced")])),
+    nameOverride: t.Optional(t.Union([t.String({ maxLength: 160 }), t.Null()])),
+    descriptionOverride: t.Optional(
+      t.Union([t.String({ maxLength: 2_000 }), t.Null()])
+    ),
+    decisionPolicy: championshipHonorDecisionPolicySchema,
+    displayOrder: t.Optional(t.Integer({ minimum: 0, maximum: 10_000 }))
+  })
+]);
+
+export const updateChampionshipHonorBodySchema = t.Composite([
+  championshipCommandSchema,
+  t.Object({
+    state: t.Optional(
+      t.Union([
+        t.Literal("draft"),
+        t.Literal("announced"),
+        t.Literal("deciding"),
+        t.Literal("void")
+      ])
+    ),
+    nameOverride: t.Optional(t.Union([t.String({ maxLength: 160 }), t.Null()])),
+    descriptionOverride: t.Optional(
+      t.Union([t.String({ maxLength: 2_000 }), t.Null()])
+    ),
+    decisionPolicy: t.Optional(championshipHonorDecisionPolicySchema),
+    displayOrder: t.Optional(t.Integer({ minimum: 0, maximum: 10_000 })),
+    reason: t.String({ minLength: 3, maxLength: 2_000 })
+  })
+]);
+
+export const createChampionshipHonorGrantBodySchema = t.Composite([
+  championshipCommandSchema,
+  t.Object({
+    target: championshipAwardTargetSchema,
+    rank: t.Optional(t.Union([t.Integer({ minimum: 1 }), t.Null()])),
+    note: t.Optional(t.Union([t.String({ maxLength: 2_000 }), t.Null()])),
+    reason: t.String({ minLength: 3, maxLength: 2_000 })
+  })
+]);
+
+export const revokeChampionshipHonorGrantBodySchema = t.Composite([
+  championshipCommandSchema,
+  t.Object({ reason: t.String({ minLength: 3, maxLength: 2_000 }) })
+]);
+
+export const championshipHonorIdParamsSchema = t.Object({
+  id: t.String({ format: "uuid" }),
+  honorId: t.String({ format: "uuid" })
+});
+
+export const championshipHonorGrantIdParamsSchema = t.Object({
+  id: t.String({ format: "uuid" }),
+  honorId: t.String({ format: "uuid" }),
+  grantId: t.String({ format: "uuid" })
+});
+
+export const championshipHonorsQuerySchema = t.Composite([
+  paginationQuerySchema,
+  t.Object({
+    actorAccountUuid: t.Optional(t.String({ format: "uuid" })),
+    includeDrafts: t.Optional(t.Boolean())
+  })
+]);
+
+export const championshipHonorResponseSchema = t.Object({
+  uuid: t.String({ format: "uuid" }),
+  state: t.Union([
+    t.Literal("draft"),
+    t.Literal("announced"),
+    t.Literal("deciding"),
+    t.Literal("awarded"),
+    t.Literal("void")
+  ]),
+  revision: t.Integer({ minimum: 0 }),
+  displayOrder: t.Integer(),
+  name: t.String(),
+  description: t.Nullable(t.String()),
+  kind: championshipHonorKindSchema,
+  definition: t.Object({
+    uuid: t.String({ format: "uuid" }),
+    slug: t.String(),
+    versionUuid: t.String({ format: "uuid" }),
+    version: t.Integer({ minimum: 1 }),
+    recipientTypes: t.Array(championshipHonorRecipientTypeSchema),
+    minimumRecipients: t.Integer(),
+    maximumRecipients: t.Integer(),
+    aggregateByIdentity: t.Boolean(),
+    presentation: t.Record(t.String(), t.Unknown())
+  }),
+  decisionPolicy: championshipHonorDecisionPolicySchema,
+  grants: t.Array(
+    t.Object({
+      uuid: t.String({ format: "uuid" }),
+      target: championshipAwardTargetSchema,
+      displayLabel: t.String(),
+      identitySnapshot: t.Nullable(
+        t.Object({ uuid: t.String({ format: "uuid" }), name: t.String() })
+      ),
+      rank: t.Nullable(t.Integer()),
+      note: t.Nullable(t.String()),
+      awardedAt: t.String(),
+      revokedAt: t.Nullable(t.String()),
+      revocationReason: t.Nullable(t.String())
+    })
+  ),
+  announcedAt: t.Nullable(t.String()),
+  awardedAt: t.Nullable(t.String()),
+  voidedAt: t.Nullable(t.String()),
+  createdAt: t.String(),
+  updatedAt: t.String()
+});
+
+export const listChampionshipHonorsResponseSchema = paginatedResponseSchema(
+  championshipHonorResponseSchema
+);
+
 export const championshipPlacementInputSchema = t.Object({
   teamUuid: t.String({ format: "uuid" }),
   rank: t.Integer({ minimum: 1, maximum: 1_000 })
@@ -404,4 +671,40 @@ export type LinkChampionshipHistoricalPlayerInput = Static<
 >;
 export type ChampionshipHistoricalPlayerResponse = Static<
   typeof championshipHistoricalPlayerResponseSchema
+>;
+export type CreateChampionshipHonorDefinitionInput = Static<
+  typeof createChampionshipHonorDefinitionBodySchema
+>;
+export type UpdateChampionshipHonorDefinitionDraftInput = Static<
+  typeof updateChampionshipHonorDefinitionDraftBodySchema
+>;
+export type PublishChampionshipHonorDefinitionInput = Static<
+  typeof publishChampionshipHonorDefinitionBodySchema
+>;
+export type ArchiveChampionshipHonorDefinitionInput = Static<
+  typeof archiveChampionshipHonorDefinitionBodySchema
+>;
+export type ListChampionshipHonorDefinitionsQuery = Static<
+  typeof listChampionshipHonorDefinitionsQuerySchema
+>;
+export type ChampionshipHonorDefinitionResponse = Static<
+  typeof championshipHonorDefinitionResponseSchema
+>;
+export type CreateChampionshipHonorInput = Static<
+  typeof createChampionshipHonorBodySchema
+>;
+export type UpdateChampionshipHonorInput = Static<
+  typeof updateChampionshipHonorBodySchema
+>;
+export type CreateChampionshipHonorGrantInput = Static<
+  typeof createChampionshipHonorGrantBodySchema
+>;
+export type RevokeChampionshipHonorGrantInput = Static<
+  typeof revokeChampionshipHonorGrantBodySchema
+>;
+export type ChampionshipHonorsQuery = Static<
+  typeof championshipHonorsQuerySchema
+>;
+export type ChampionshipHonorResponse = Static<
+  typeof championshipHonorResponseSchema
 >;

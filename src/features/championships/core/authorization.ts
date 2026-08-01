@@ -9,7 +9,8 @@ import { forbidden, notFound } from "@/shared/http/errors";
 export const championshipPermissionKeys = [
   "championship:admin",
   "championship:operate",
-  "championship-history:admin"
+  "championship-history:admin",
+  "honor-definition:admin"
 ] as const;
 
 export type ChampionshipPermission =

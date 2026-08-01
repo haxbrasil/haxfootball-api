@@ -308,14 +308,31 @@ import {
   championshipHistoricalImportsQuerySchema,
   championshipHistoricalPlayerIdParamsSchema,
   championshipHistoricalPlayerResponseSchema,
+  championshipHonorDefinitionIdParamsSchema,
+  championshipHonorDefinitionResponseSchema,
+  championshipHonorGrantIdParamsSchema,
+  championshipHonorIdParamsSchema,
+  championshipHonorResponseSchema,
+  championshipHonorsQuerySchema,
   createChampionshipAwardBodySchema,
+  createChampionshipHonorBodySchema,
+  createChampionshipHonorDefinitionBodySchema,
+  createChampionshipHonorGrantBodySchema,
+  archiveChampionshipHonorDefinitionBodySchema,
   applyChampionshipHistoricalImportBodySchema,
   linkChampionshipHistoricalPlayerBodySchema,
   listChampionshipHistoricalImportsResponseSchema,
+  listChampionshipHonorDefinitionsQuerySchema,
+  listChampionshipHonorDefinitionsResponseSchema,
+  listChampionshipHonorsResponseSchema,
+  publishChampionshipHonorDefinitionBodySchema,
   previewChampionshipHistoricalImportBodySchema,
   replaceChampionshipPlacementsBodySchema,
   rollbackChampionshipHistoricalImportBodySchema,
   teamIdentityHistoryResponseSchema,
+  updateChampionshipHonorBodySchema,
+  updateChampionshipHonorDefinitionDraftBodySchema,
+  revokeChampionshipHonorGrantBodySchema,
   updateChampionshipAwardBodySchema
 } from "@/features/championships/history/contracts";
 import {
@@ -326,6 +343,18 @@ import {
   replaceChampionshipPlacements,
   updateChampionshipAward
 } from "@/features/championships/history/operations";
+import {
+  archiveChampionshipHonorDefinition,
+  createChampionshipHonor,
+  createChampionshipHonorDefinition,
+  createChampionshipHonorGrant,
+  listChampionshipHonorDefinitions,
+  listChampionshipHonors,
+  publishChampionshipHonorDefinition,
+  revokeChampionshipHonorGrant,
+  updateChampionshipHonor,
+  updateChampionshipHonorDefinitionDraft
+} from "@/features/championships/history/honors";
 import {
   applyChampionshipHistoricalImport,
   getChampionshipHistoricalImport,
@@ -366,6 +395,11 @@ export const championshipRoutes = new Elysia({
     ListChampionshipHistoricalImports:
       listChampionshipHistoricalImportsResponseSchema,
     ChampionshipAward: championshipAwardResponseSchema,
+    ChampionshipHonorDefinition: championshipHonorDefinitionResponseSchema,
+    ListChampionshipHonorDefinitions:
+      listChampionshipHonorDefinitionsResponseSchema,
+    ChampionshipHonor: championshipHonorResponseSchema,
+    ListChampionshipHonors: listChampionshipHonorsResponseSchema,
     TeamIdentityHistory: teamIdentityHistoryResponseSchema,
     AccountChampionshipHistory: accountChampionshipHistoryResponseSchema,
     ChampionshipInboxItem: championshipInboxItemResponseSchema,
@@ -481,6 +515,18 @@ export const championshipRoutes = new Elysia({
     UpdateTeamIdentityBody: updateTeamIdentityBodySchema,
     UpdateCompetitionTypeBody: updateCompetitionTypeBodySchema,
     CreateChampionshipAwardBody: createChampionshipAwardBodySchema,
+    CreateChampionshipHonorDefinitionBody:
+      createChampionshipHonorDefinitionBodySchema,
+    UpdateChampionshipHonorDefinitionDraftBody:
+      updateChampionshipHonorDefinitionDraftBodySchema,
+    PublishChampionshipHonorDefinitionBody:
+      publishChampionshipHonorDefinitionBodySchema,
+    ArchiveChampionshipHonorDefinitionBody:
+      archiveChampionshipHonorDefinitionBodySchema,
+    CreateChampionshipHonorBody: createChampionshipHonorBodySchema,
+    UpdateChampionshipHonorBody: updateChampionshipHonorBodySchema,
+    CreateChampionshipHonorGrantBody: createChampionshipHonorGrantBodySchema,
+    RevokeChampionshipHonorGrantBody: revokeChampionshipHonorGrantBodySchema,
     ReplaceChampionshipPlacementsBody: replaceChampionshipPlacementsBodySchema,
     PreviewChampionshipHistoricalImportBody:
       previewChampionshipHistoricalImportBodySchema,
@@ -500,6 +546,75 @@ export const championshipRoutes = new Elysia({
       summary: "List championship competition types"
     }
   })
+  .get(
+    "/honor-definitions",
+    ({ query }) => listChampionshipHonorDefinitions(query),
+    {
+      query: listChampionshipHonorDefinitionsQuerySchema,
+      response: { 200: t.Ref("ListChampionshipHonorDefinitions") },
+      detail: {
+        tags: ["Championships"],
+        summary: "List reusable championship honor definitions"
+      }
+    }
+  )
+  .post(
+    "/honor-definitions",
+    ({ body, set }) => {
+      set.status = 201;
+      return createChampionshipHonorDefinition(body);
+    },
+    {
+      body: t.Ref("CreateChampionshipHonorDefinitionBody"),
+      response: { 201: t.Ref("ChampionshipHonorDefinition") },
+      detail: {
+        tags: ["Championships"],
+        summary: "Create a reusable championship honor definition"
+      }
+    }
+  )
+  .put(
+    "/honor-definitions/:definitionId/draft",
+    ({ params, body }) =>
+      updateChampionshipHonorDefinitionDraft(params.definitionId, body),
+    {
+      params: championshipHonorDefinitionIdParamsSchema,
+      body: t.Ref("UpdateChampionshipHonorDefinitionDraftBody"),
+      response: { 200: t.Ref("ChampionshipHonorDefinition") },
+      detail: {
+        tags: ["Championships"],
+        summary: "Update a championship honor definition draft"
+      }
+    }
+  )
+  .post(
+    "/honor-definitions/:definitionId/publish",
+    ({ params, body }) =>
+      publishChampionshipHonorDefinition(params.definitionId, body),
+    {
+      params: championshipHonorDefinitionIdParamsSchema,
+      body: t.Ref("PublishChampionshipHonorDefinitionBody"),
+      response: { 200: t.Intersect([t.Ref("ChampionshipHonorDefinition"), t.Object({ published: t.Boolean() })]) },
+      detail: {
+        tags: ["Championships"],
+        summary: "Publish an immutable championship honor definition version"
+      }
+    }
+  )
+  .post(
+    "/honor-definitions/:definitionId/archive",
+    ({ params, body }) =>
+      archiveChampionshipHonorDefinition(params.definitionId, body),
+    {
+      params: championshipHonorDefinitionIdParamsSchema,
+      body: t.Ref("ArchiveChampionshipHonorDefinitionBody"),
+      response: { 200: t.Ref("ChampionshipHonorDefinition") },
+      detail: {
+        tags: ["Championships"],
+        summary: "Archive or restore a championship honor definition"
+      }
+    }
+  )
   .post(
     "/competition-types",
     ({ body, set }) => {
@@ -636,6 +751,75 @@ export const championshipRoutes = new Elysia({
       detail: {
         tags: ["Championships"],
         summary: "Get championship placements, awards, and records"
+      }
+    }
+  )
+  .get(
+    "/:id/honors",
+    ({ params, query }) => listChampionshipHonors(params.id, query),
+    {
+      params: championshipIdParamsSchema,
+      query: championshipHonorsQuerySchema,
+      response: { 200: t.Ref("ListChampionshipHonors") },
+      detail: {
+        tags: ["Championships"],
+        summary: "List honors in dispute and awarded in a championship"
+      }
+    }
+  )
+  .post(
+    "/:id/honors",
+    ({ params, body, set }) => {
+      set.status = 201;
+      return createChampionshipHonor(params.id, body);
+    },
+    {
+      params: championshipIdParamsSchema,
+      body: t.Ref("CreateChampionshipHonorBody"),
+      response: { 201: t.Ref("ChampionshipHonor") },
+      detail: {
+        tags: ["Championships"],
+        summary: "Add a published honor to a championship"
+      }
+    }
+  )
+  .patch(
+    "/:id/honors/:honorId",
+    ({ params, body }) => updateChampionshipHonor(params.id, params.honorId, body),
+    {
+      params: championshipHonorIdParamsSchema,
+      body: t.Ref("UpdateChampionshipHonorBody"),
+      response: { 200: t.Ref("ChampionshipHonor") },
+      detail: {
+        tags: ["Championships"],
+        summary: "Update a championship honor"
+      }
+    }
+  )
+  .post(
+    "/:id/honors/:honorId/grants",
+    ({ params, body }) => createChampionshipHonorGrant(params.id, params.honorId, body),
+    {
+      params: championshipHonorIdParamsSchema,
+      body: t.Ref("CreateChampionshipHonorGrantBody"),
+      response: { 200: t.Ref("ChampionshipHonor") },
+      detail: {
+        tags: ["Championships"],
+        summary: "Award a championship honor"
+      }
+    }
+  )
+  .post(
+    "/:id/honors/:honorId/grants/:grantId/revoke",
+    ({ params, body }) =>
+      revokeChampionshipHonorGrant(params.id, params.honorId, params.grantId, body),
+    {
+      params: championshipHonorGrantIdParamsSchema,
+      body: t.Ref("RevokeChampionshipHonorGrantBody"),
+      response: { 200: t.Ref("ChampionshipHonor") },
+      detail: {
+        tags: ["Championships"],
+        summary: "Revoke a championship honor grant"
       }
     }
   )

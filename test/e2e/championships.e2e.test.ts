@@ -5574,6 +5574,162 @@ describe("championship historical reconstruction", () => {
   });
 });
 
+describe("championship honor catalog and edition honors", () => {
+  it("seeds the catalog permission and publishes immutable reusable definitions", async () => {
+    const permissionKeys = (
+      await paginatedItems<{ key: string }>(
+        await request("/api/permissions?limit=100")
+      )
+    ).map(({ key }) => key);
+    expect(permissionKeys).toContain("honor-definition:admin");
+
+    const createResponse = await request(
+      "/api/championships/honor-definitions",
+      {
+        method: "POST",
+        body: {
+          actorAccountUuid: admin.uuid,
+          slug: uniqueSlug("most-valuable-player"),
+          kind: "award",
+          name: "Jogador mais valioso",
+          description: "Reconhece o principal destaque da edição.",
+          recipientTypes: ["participant", "account"],
+          minimumRecipients: 1,
+          maximumRecipients: 1,
+          aggregateByIdentity: false,
+          presentation: { icon: "star" }
+        }
+      }
+    );
+    expect(createResponse.status).toBe(201);
+    const definition = await createResponse.json();
+    expect(definition).toMatchObject({
+      kind: "award",
+      draft: { name: "Jogador mais valioso", revision: 0 },
+      versions: []
+    });
+
+    const publishResponse = await request(
+      `/api/championships/honor-definitions/${definition.uuid}/publish`,
+      {
+        method: "POST",
+        body: {
+          actorAccountUuid: admin.uuid,
+          expectedRevision: definition.draft.revision
+        }
+      }
+    );
+    expect(publishResponse.status).toBe(200);
+    const published = await publishResponse.json();
+    expect(published.published).toBe(true);
+    expect(published.versions).toEqual([
+      expect.objectContaining({ version: 1, name: "Jogador mais valioso" })
+    ]);
+
+    const retry = await request(
+      `/api/championships/honor-definitions/${definition.uuid}/publish`,
+      {
+        method: "POST",
+        body: {
+          actorAccountUuid: admin.uuid,
+          expectedRevision: definition.draft.revision
+        }
+      }
+    );
+    expect(retry.status).toBe(200);
+    expect((await retry.json()).published).toBe(false);
+  });
+
+  it("announces an honor before it has a winner and later awards it", async () => {
+    const definitionResponse = await request(
+      "/api/championships/honor-definitions",
+      {
+        method: "POST",
+        body: {
+          actorAccountUuid: admin.uuid,
+          slug: uniqueSlug("cup-mvp"),
+          kind: "award",
+          name: "MVP da copa",
+          description: "Premiação individual da edição.",
+          recipientTypes: ["account"],
+          minimumRecipients: 1,
+          maximumRecipients: 1,
+          aggregateByIdentity: false
+        }
+      }
+    );
+    const definition = await definitionResponse.json();
+    const publishResponse = await request(
+      `/api/championships/honor-definitions/${definition.uuid}/publish`,
+      {
+        method: "POST",
+        body: {
+          actorAccountUuid: admin.uuid,
+          expectedRevision: 0
+        }
+      }
+    );
+    const version = (await publishResponse.json()).versions[0];
+    let championship = await createChampionship(admin, competitionType, {
+      name: "Honors Cup"
+    });
+
+    const offeringResponse = await request(
+      `/api/championships/${championship.uuid}/honors`,
+      {
+        method: "POST",
+        body: command(admin, championship.revision, {
+          definitionVersionUuid: version.uuid,
+          state: "announced",
+          decisionPolicy: { type: "staff-selection" },
+          displayOrder: 1
+        })
+      }
+    );
+    expect(offeringResponse.status).toBe(201);
+    const honor = await offeringResponse.json();
+    expect(honor).toMatchObject({
+      state: "announced",
+      name: "MVP da copa",
+      grants: []
+    });
+
+    championship = await getChampionship(championship.uuid);
+    const grantResponse = await request(
+      `/api/championships/${championship.uuid}/honors/${honor.uuid}/grants`,
+      {
+        method: "POST",
+        body: command(admin, championship.revision, {
+          target: { type: "account", uuid: admin.uuid },
+          note: "Escolha confirmada pela organização",
+          reason: "Resultado oficial da votação"
+        })
+      }
+    );
+    expect(grantResponse.status).toBe(200);
+    expect(await grantResponse.json()).toMatchObject({
+      state: "awarded",
+      grants: [
+        {
+          target: { type: "account", uuid: admin.uuid },
+          displayLabel: admin.name,
+          revokedAt: null
+        }
+      ]
+    });
+
+    const publicResponse = await request(
+      `/api/championships/${championship.uuid}/honors?limit=20`
+    );
+    expect(publicResponse.status).toBe(403);
+    const staffResponse = await request(
+      `/api/championships/${championship.uuid}/honors?actorAccountUuid=${admin.uuid}&includeDrafts=true&limit=20`
+    );
+    expect(staffResponse.status).toBe(200);
+    expect(await paginatedItems(staffResponse)).toHaveLength(1);
+  });
+});
+
 describe("championship placements, awards, and archives", () => {
   it("completes double elimination without playing an inactive grand-final reset", async () => {
     const fixture = await createFormatFixture(2);

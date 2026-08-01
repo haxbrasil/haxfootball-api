@@ -395,6 +395,26 @@ components:
         - expectedRevision
         - reason
       type: object
+    ArchiveChampionshipHonorDefinitionBody:
+      properties:
+        actorAccountUuid:
+          format: uuid
+          type: string
+        archived:
+          type: boolean
+        expectedRevision:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - minimum: 0
+              type: integer
+          minimum: 0
+      required:
+        - actorAccountUuid
+        - expectedRevision
+        - archived
+      type: object
     AssociateMatchRecordingBody:
       properties:
         recordingId:
@@ -2798,6 +2818,49 @@ components:
                         type: object
                       - type: "null"
                     nullable: true
+                  result:
+                    anyOf:
+                      - properties:
+                          sideAOfficialScore:
+                            anyOf:
+                              - default: 0
+                                format: integer
+                                type: string
+                              - minimum: 0
+                                type: integer
+                            minimum: 0
+                          sideAOutcome:
+                            anyOf:
+                              - const: win
+                                type: string
+                              - const: loss
+                                type: string
+                              - const: draw
+                                type: string
+                          sideBOfficialScore:
+                            anyOf:
+                              - default: 0
+                                format: integer
+                                type: string
+                              - minimum: 0
+                                type: integer
+                            minimum: 0
+                          sideBOutcome:
+                            anyOf:
+                              - const: win
+                                type: string
+                              - const: loss
+                                type: string
+                              - const: draw
+                                type: string
+                        required:
+                          - sideAOfficialScore
+                          - sideBOfficialScore
+                          - sideAOutcome
+                          - sideBOutcome
+                        type: object
+                      - type: "null"
+                    nullable: true
                   resultRevision:
                     anyOf:
                       - default: 0
@@ -2944,6 +3007,7 @@ components:
                   - bracketPosition
                   - evidenceRevision
                   - resultRevision
+                  - result
                   - scheduleRevision
                   - revision
                   - createdAt
@@ -3758,6 +3822,476 @@ components:
         - placements
         - awards
         - records
+      type: object
+    ChampionshipHonor:
+      properties:
+        announcedAt:
+          anyOf:
+            - type: string
+            - type: "null"
+          nullable: true
+        awardedAt:
+          anyOf:
+            - type: string
+            - type: "null"
+          nullable: true
+        createdAt:
+          type: string
+        decisionPolicy:
+          anyOf:
+            - properties:
+                ranks:
+                  items:
+                    anyOf:
+                      - default: 0
+                        format: integer
+                        type: string
+                      - maximum: 1000
+                        minimum: 1
+                        type: integer
+                    maximum: 1000
+                    minimum: 1
+                  maxItems: 128
+                  minItems: 1
+                  type: array
+                  uniqueItems: true
+                type:
+                  const: placement
+                  type: string
+              required:
+                - type
+                - ranks
+              type: object
+            - properties:
+                outcome:
+                  anyOf:
+                    - const: winner
+                      type: string
+                    - const: loser
+                      type: string
+                    - const: occupant
+                      type: string
+                spotUuids:
+                  items:
+                    format: uuid
+                    type: string
+                  maxItems: 128
+                  minItems: 1
+                  type: array
+                  uniqueItems: true
+                type:
+                  const: spot-result
+                  type: string
+              required:
+                - type
+                - spotUuids
+                - outcome
+              type: object
+            - properties:
+                direction:
+                  anyOf:
+                    - const: highest
+                      type: string
+                    - const: lowest
+                      type: string
+                limit:
+                  anyOf:
+                    - default: 0
+                      format: integer
+                      type: string
+                    - maximum: 128
+                      minimum: 1
+                      type: integer
+                  maximum: 128
+                  minimum: 1
+                metricKey:
+                  maxLength: 160
+                  minLength: 1
+                  type: string
+                type:
+                  const: metric-ranking
+                  type: string
+              required:
+                - type
+                - metricKey
+                - direction
+                - limit
+              type: object
+            - properties:
+                type:
+                  const: staff-selection
+                  type: string
+              required:
+                - type
+              type: object
+            - properties:
+                note:
+                  maxLength: 2000
+                  minLength: 1
+                  type: string
+                type:
+                  const: hybrid
+                  type: string
+              required:
+                - type
+                - note
+              type: object
+        definition:
+          properties:
+            aggregateByIdentity:
+              type: boolean
+            maximumRecipients:
+              anyOf:
+                - default: 0
+                  format: integer
+                  type: string
+                - type: integer
+            minimumRecipients:
+              anyOf:
+                - default: 0
+                  format: integer
+                  type: string
+                - type: integer
+            presentation:
+              patternProperties:
+                ^(.*)$: {}
+              type: object
+            recipientTypes:
+              items:
+                enum:
+                  - team
+                  - team-identity
+                  - participant
+                  - account
+                  - historical-player
+                type: string
+              type: array
+            slug:
+              type: string
+            uuid:
+              format: uuid
+              type: string
+            version:
+              anyOf:
+                - default: 0
+                  format: integer
+                  type: string
+                - minimum: 1
+                  type: integer
+              minimum: 1
+            versionUuid:
+              format: uuid
+              type: string
+          required:
+            - uuid
+            - slug
+            - versionUuid
+            - version
+            - recipientTypes
+            - minimumRecipients
+            - maximumRecipients
+            - aggregateByIdentity
+            - presentation
+          type: object
+        description:
+          anyOf:
+            - type: string
+            - type: "null"
+          nullable: true
+        displayOrder:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - type: integer
+        grants:
+          items:
+            properties:
+              awardedAt:
+                type: string
+              displayLabel:
+                type: string
+              identitySnapshot:
+                anyOf:
+                  - properties:
+                      name:
+                        type: string
+                      uuid:
+                        format: uuid
+                        type: string
+                    required:
+                      - uuid
+                      - name
+                    type: object
+                  - type: "null"
+                nullable: true
+              note:
+                anyOf:
+                  - type: string
+                  - type: "null"
+                nullable: true
+              rank:
+                anyOf:
+                  - anyOf:
+                      - default: 0
+                        format: integer
+                        type: string
+                      - type: integer
+                  - type: "null"
+                nullable: true
+              revocationReason:
+                anyOf:
+                  - type: string
+                  - type: "null"
+                nullable: true
+              revokedAt:
+                anyOf:
+                  - type: string
+                  - type: "null"
+                nullable: true
+              target:
+                properties:
+                  type:
+                    enum:
+                      - team
+                      - team-identity
+                      - participant
+                      - account
+                      - historical-player
+                    type: string
+                  uuid:
+                    format: uuid
+                    type: string
+                required:
+                  - type
+                  - uuid
+                type: object
+              uuid:
+                format: uuid
+                type: string
+            required:
+              - uuid
+              - target
+              - displayLabel
+              - identitySnapshot
+              - rank
+              - note
+              - awardedAt
+              - revokedAt
+              - revocationReason
+            type: object
+          type: array
+        kind:
+          enum:
+            - title
+            - award
+          type: string
+        name:
+          type: string
+        revision:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - minimum: 0
+              type: integer
+          minimum: 0
+        state:
+          enum:
+            - draft
+            - announced
+            - deciding
+            - awarded
+            - void
+          type: string
+        updatedAt:
+          type: string
+        uuid:
+          format: uuid
+          type: string
+        voidedAt:
+          anyOf:
+            - type: string
+            - type: "null"
+          nullable: true
+      required:
+        - uuid
+        - state
+        - revision
+        - displayOrder
+        - name
+        - description
+        - kind
+        - definition
+        - decisionPolicy
+        - grants
+        - announcedAt
+        - awardedAt
+        - voidedAt
+        - createdAt
+        - updatedAt
+      type: object
+    ChampionshipHonorDefinition:
+      properties:
+        createdAt:
+          type: string
+        draft:
+          properties:
+            aggregateByIdentity:
+              type: boolean
+            description:
+              anyOf:
+                - type: string
+                - type: "null"
+              nullable: true
+            maximumRecipients:
+              anyOf:
+                - default: 0
+                  format: integer
+                  type: string
+                - type: integer
+            minimumRecipients:
+              anyOf:
+                - default: 0
+                  format: integer
+                  type: string
+                - type: integer
+            name:
+              type: string
+            presentation:
+              patternProperties:
+                ^(.*)$: {}
+              type: object
+            recipientTypes:
+              items:
+                enum:
+                  - team
+                  - team-identity
+                  - participant
+                  - account
+                  - historical-player
+                type: string
+              type: array
+            revision:
+              anyOf:
+                - default: 0
+                  format: integer
+                  type: string
+                - minimum: 0
+                  type: integer
+              minimum: 0
+            updatedAt:
+              type: string
+          required:
+            - name
+            - description
+            - recipientTypes
+            - minimumRecipients
+            - maximumRecipients
+            - aggregateByIdentity
+            - presentation
+            - revision
+            - updatedAt
+          type: object
+        kind:
+          enum:
+            - title
+            - award
+          type: string
+        revision:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - minimum: 0
+              type: integer
+          minimum: 0
+        slug:
+          type: string
+        state:
+          enum:
+            - active
+            - archived
+          type: string
+        updatedAt:
+          type: string
+        uuid:
+          format: uuid
+          type: string
+        versions:
+          items:
+            properties:
+              aggregateByIdentity:
+                type: boolean
+              description:
+                anyOf:
+                  - type: string
+                  - type: "null"
+                nullable: true
+              maximumRecipients:
+                anyOf:
+                  - default: 0
+                    format: integer
+                    type: string
+                  - type: integer
+              minimumRecipients:
+                anyOf:
+                  - default: 0
+                    format: integer
+                    type: string
+                  - type: integer
+              name:
+                type: string
+              presentation:
+                patternProperties:
+                  ^(.*)$: {}
+                type: object
+              publishedAt:
+                type: string
+              recipientTypes:
+                items:
+                  enum:
+                    - team
+                    - team-identity
+                    - participant
+                    - account
+                    - historical-player
+                  type: string
+                type: array
+              uuid:
+                format: uuid
+                type: string
+              version:
+                anyOf:
+                  - default: 0
+                    format: integer
+                    type: string
+                  - minimum: 1
+                    type: integer
+                minimum: 1
+            required:
+              - uuid
+              - version
+              - name
+              - description
+              - recipientTypes
+              - minimumRecipients
+              - maximumRecipients
+              - aggregateByIdentity
+              - presentation
+              - publishedAt
+            type: object
+          type: array
+      required:
+        - uuid
+        - slug
+        - kind
+        - state
+        - revision
+        - draft
+        - versions
+        - createdAt
+        - updatedAt
       type: object
     ChampionshipInboxItem:
       properties:
@@ -8554,6 +9088,288 @@ components:
         - expectedStageRevision
         - name
       type: object
+    CreateChampionshipHonorBody:
+      properties:
+        actorAccountUuid:
+          format: uuid
+          type: string
+        commandUuid:
+          format: uuid
+          type: string
+        decisionPolicy:
+          anyOf:
+            - properties:
+                ranks:
+                  items:
+                    anyOf:
+                      - default: 0
+                        format: integer
+                        type: string
+                      - maximum: 1000
+                        minimum: 1
+                        type: integer
+                    maximum: 1000
+                    minimum: 1
+                  maxItems: 128
+                  minItems: 1
+                  type: array
+                  uniqueItems: true
+                type:
+                  const: placement
+                  type: string
+              required:
+                - type
+                - ranks
+              type: object
+            - properties:
+                outcome:
+                  anyOf:
+                    - const: winner
+                      type: string
+                    - const: loser
+                      type: string
+                    - const: occupant
+                      type: string
+                spotUuids:
+                  items:
+                    format: uuid
+                    type: string
+                  maxItems: 128
+                  minItems: 1
+                  type: array
+                  uniqueItems: true
+                type:
+                  const: spot-result
+                  type: string
+              required:
+                - type
+                - spotUuids
+                - outcome
+              type: object
+            - properties:
+                direction:
+                  anyOf:
+                    - const: highest
+                      type: string
+                    - const: lowest
+                      type: string
+                limit:
+                  anyOf:
+                    - default: 0
+                      format: integer
+                      type: string
+                    - maximum: 128
+                      minimum: 1
+                      type: integer
+                  maximum: 128
+                  minimum: 1
+                metricKey:
+                  maxLength: 160
+                  minLength: 1
+                  type: string
+                type:
+                  const: metric-ranking
+                  type: string
+              required:
+                - type
+                - metricKey
+                - direction
+                - limit
+              type: object
+            - properties:
+                type:
+                  const: staff-selection
+                  type: string
+              required:
+                - type
+              type: object
+            - properties:
+                note:
+                  maxLength: 2000
+                  minLength: 1
+                  type: string
+                type:
+                  const: hybrid
+                  type: string
+              required:
+                - type
+                - note
+              type: object
+        definitionVersionUuid:
+          format: uuid
+          type: string
+        descriptionOverride:
+          anyOf:
+            - maxLength: 2000
+              type: string
+            - type: "null"
+        displayOrder:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - maximum: 10000
+              minimum: 0
+              type: integer
+          maximum: 10000
+          minimum: 0
+        expectedRevision:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - minimum: 0
+              type: integer
+          minimum: 0
+        nameOverride:
+          anyOf:
+            - maxLength: 160
+              type: string
+            - type: "null"
+        state:
+          enum:
+            - draft
+            - announced
+          type: string
+      required:
+        - actorAccountUuid
+        - commandUuid
+        - expectedRevision
+        - definitionVersionUuid
+        - decisionPolicy
+      type: object
+    CreateChampionshipHonorDefinitionBody:
+      properties:
+        actorAccountUuid:
+          format: uuid
+          type: string
+        aggregateByIdentity:
+          type: boolean
+        description:
+          anyOf:
+            - maxLength: 2000
+              type: string
+            - type: "null"
+        kind:
+          enum:
+            - title
+            - award
+          type: string
+        maximumRecipients:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - maximum: 128
+              minimum: 1
+              type: integer
+          maximum: 128
+          minimum: 1
+        minimumRecipients:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - maximum: 128
+              minimum: 0
+              type: integer
+          maximum: 128
+          minimum: 0
+        name:
+          maxLength: 160
+          minLength: 1
+          type: string
+        presentation:
+          patternProperties:
+            ^(.*)$: {}
+          type: object
+        recipientTypes:
+          items:
+            enum:
+              - team
+              - team-identity
+              - participant
+              - account
+              - historical-player
+            type: string
+          maxItems: 5
+          minItems: 1
+          type: array
+          uniqueItems: true
+        slug:
+          maxLength: 80
+          minLength: 1
+          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+          type: string
+      required:
+        - name
+        - recipientTypes
+        - minimumRecipients
+        - maximumRecipients
+        - aggregateByIdentity
+        - actorAccountUuid
+        - slug
+        - kind
+      type: object
+    CreateChampionshipHonorGrantBody:
+      properties:
+        actorAccountUuid:
+          format: uuid
+          type: string
+        commandUuid:
+          format: uuid
+          type: string
+        expectedRevision:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - minimum: 0
+              type: integer
+          minimum: 0
+        note:
+          anyOf:
+            - maxLength: 2000
+              type: string
+            - type: "null"
+        rank:
+          anyOf:
+            - anyOf:
+                - default: 0
+                  format: integer
+                  type: string
+                - minimum: 1
+                  type: integer
+              minimum: 1
+            - type: "null"
+        reason:
+          maxLength: 2000
+          minLength: 3
+          type: string
+        target:
+          properties:
+            type:
+              enum:
+                - team
+                - team-identity
+                - participant
+                - account
+                - historical-player
+              type: string
+            uuid:
+              format: uuid
+              type: string
+          required:
+            - type
+            - uuid
+          type: object
+      required:
+        - actorAccountUuid
+        - commandUuid
+        - expectedRevision
+        - target
+        - reason
+      type: object
     CreateChampionshipMatchBody:
       properties:
         actorAccountUuid:
@@ -10690,6 +11506,30 @@ components:
         - items
         - page
       type: object
+    ListChampionshipHonorDefinitions:
+      properties:
+        items:
+          items:
+            $ref: "#/components/schemas/ChampionshipHonorDefinition"
+          type: array
+        page:
+          $ref: "#/components/schemas/PageInfo"
+      required:
+        - items
+        - page
+      type: object
+    ListChampionshipHonors:
+      properties:
+        items:
+          items:
+            $ref: "#/components/schemas/ChampionshipHonor"
+          type: array
+        page:
+          $ref: "#/components/schemas/PageInfo"
+      required:
+        - items
+        - page
+      type: object
     ListChampionshipInbox:
       properties:
         items:
@@ -12699,6 +13539,23 @@ components:
         - teamIds
         - grandFinalReset
       type: object
+    PublishChampionshipHonorDefinitionBody:
+      properties:
+        actorAccountUuid:
+          format: uuid
+          type: string
+        expectedRevision:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - minimum: 0
+              type: integer
+          minimum: 0
+      required:
+        - actorAccountUuid
+        - expectedRevision
+      type: object
     PublishEventSchemaVersionBody:
       properties:
         definition: {}
@@ -13589,6 +14446,32 @@ components:
             - playerId
             - account
           type: object
+    RevokeChampionshipHonorGrantBody:
+      properties:
+        actorAccountUuid:
+          format: uuid
+          type: string
+        commandUuid:
+          format: uuid
+          type: string
+        expectedRevision:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - minimum: 0
+              type: integer
+          minimum: 0
+        reason:
+          maxLength: 2000
+          minLength: 3
+          type: string
+      required:
+        - actorAccountUuid
+        - commandUuid
+        - expectedRevision
+        - reason
+      type: object
     RevokeChampionshipLatePlayBody:
       properties:
         actorAccountUuid:
@@ -15303,6 +16186,228 @@ components:
         - accountUuid
         - permission
         - operation
+      type: object
+    UpdateChampionshipHonorBody:
+      properties:
+        actorAccountUuid:
+          format: uuid
+          type: string
+        commandUuid:
+          format: uuid
+          type: string
+        decisionPolicy:
+          anyOf:
+            - properties:
+                ranks:
+                  items:
+                    anyOf:
+                      - default: 0
+                        format: integer
+                        type: string
+                      - maximum: 1000
+                        minimum: 1
+                        type: integer
+                    maximum: 1000
+                    minimum: 1
+                  maxItems: 128
+                  minItems: 1
+                  type: array
+                  uniqueItems: true
+                type:
+                  const: placement
+                  type: string
+              required:
+                - type
+                - ranks
+              type: object
+            - properties:
+                outcome:
+                  anyOf:
+                    - const: winner
+                      type: string
+                    - const: loser
+                      type: string
+                    - const: occupant
+                      type: string
+                spotUuids:
+                  items:
+                    format: uuid
+                    type: string
+                  maxItems: 128
+                  minItems: 1
+                  type: array
+                  uniqueItems: true
+                type:
+                  const: spot-result
+                  type: string
+              required:
+                - type
+                - spotUuids
+                - outcome
+              type: object
+            - properties:
+                direction:
+                  anyOf:
+                    - const: highest
+                      type: string
+                    - const: lowest
+                      type: string
+                limit:
+                  anyOf:
+                    - default: 0
+                      format: integer
+                      type: string
+                    - maximum: 128
+                      minimum: 1
+                      type: integer
+                  maximum: 128
+                  minimum: 1
+                metricKey:
+                  maxLength: 160
+                  minLength: 1
+                  type: string
+                type:
+                  const: metric-ranking
+                  type: string
+              required:
+                - type
+                - metricKey
+                - direction
+                - limit
+              type: object
+            - properties:
+                type:
+                  const: staff-selection
+                  type: string
+              required:
+                - type
+              type: object
+            - properties:
+                note:
+                  maxLength: 2000
+                  minLength: 1
+                  type: string
+                type:
+                  const: hybrid
+                  type: string
+              required:
+                - type
+                - note
+              type: object
+        descriptionOverride:
+          anyOf:
+            - maxLength: 2000
+              type: string
+            - type: "null"
+        displayOrder:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - maximum: 10000
+              minimum: 0
+              type: integer
+          maximum: 10000
+          minimum: 0
+        expectedRevision:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - minimum: 0
+              type: integer
+          minimum: 0
+        nameOverride:
+          anyOf:
+            - maxLength: 160
+              type: string
+            - type: "null"
+        reason:
+          maxLength: 2000
+          minLength: 3
+          type: string
+        state:
+          enum:
+            - draft
+            - announced
+            - deciding
+            - void
+          type: string
+      required:
+        - actorAccountUuid
+        - commandUuid
+        - expectedRevision
+        - reason
+      type: object
+    UpdateChampionshipHonorDefinitionDraftBody:
+      properties:
+        actorAccountUuid:
+          format: uuid
+          type: string
+        aggregateByIdentity:
+          type: boolean
+        description:
+          anyOf:
+            - maxLength: 2000
+              type: string
+            - type: "null"
+        expectedRevision:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - minimum: 0
+              type: integer
+          minimum: 0
+        maximumRecipients:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - maximum: 128
+              minimum: 1
+              type: integer
+          maximum: 128
+          minimum: 1
+        minimumRecipients:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - maximum: 128
+              minimum: 0
+              type: integer
+          maximum: 128
+          minimum: 0
+        name:
+          maxLength: 160
+          minLength: 1
+          type: string
+        presentation:
+          patternProperties:
+            ^(.*)$: {}
+          type: object
+        recipientTypes:
+          items:
+            enum:
+              - team
+              - team-identity
+              - participant
+              - account
+              - historical-player
+            type: string
+          maxItems: 5
+          minItems: 1
+          type: array
+          uniqueItems: true
+      required:
+        - name
+        - recipientTypes
+        - minimumRecipients
+        - maximumRecipients
+        - aggregateByIdentity
+        - actorAccountUuid
+        - expectedRevision
       type: object
     UpdateChampionshipInboxItemBody:
       properties:
@@ -17156,6 +18261,309 @@ paths:
                 $ref: "#/components/schemas/InternalServerError"
           description: Response for status 500
       summary: Update a championship competition type
+      tags:
+        - Championships
+  /api/championships/honor-definitions:
+    get:
+      operationId: getApiChampionshipsHonor-definitions
+      parameters:
+        - in: query
+          name: limit
+          required: false
+          schema:
+            anyOf:
+              - default: 0
+                format: integer
+                type: string
+              - maximum: 100
+                minimum: 1
+                type: integer
+            maximum: 100
+            minimum: 1
+        - in: query
+          name: cursor
+          required: false
+          schema:
+            minLength: 1
+            type: string
+        - in: query
+          name: kind
+          required: false
+          schema:
+            enum:
+              - title
+              - award
+            type: string
+        - in: query
+          name: state
+          required: false
+          schema:
+            enum:
+              - active
+              - archived
+              - all
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListChampionshipHonorDefinitions"
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForbiddenError"
+          description: Response for status 403
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictError"
+          description: Response for status 409
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: List reusable championship honor definitions
+      tags:
+        - Championships
+    post:
+      operationId: postApiChampionshipsHonor-definitions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateChampionshipHonorDefinitionBody"
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChampionshipHonorDefinition"
+          description: Response for status 201
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForbiddenError"
+          description: Response for status 403
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictError"
+          description: Response for status 409
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Create a reusable championship honor definition
+      tags:
+        - Championships
+  /api/championships/honor-definitions/{definitionId}/archive:
+    post:
+      operationId: postApiChampionshipsHonor-definitionsByDefinitionIdArchive
+      parameters:
+        - in: path
+          name: definitionId
+          required: true
+          schema:
+            format: uuid
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ArchiveChampionshipHonorDefinitionBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChampionshipHonorDefinition"
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForbiddenError"
+          description: Response for status 403
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictError"
+          description: Response for status 409
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Archive or restore a championship honor definition
+      tags:
+        - Championships
+  /api/championships/honor-definitions/{definitionId}/draft:
+    put:
+      operationId: putApiChampionshipsHonor-definitionsByDefinitionIdDraft
+      parameters:
+        - in: path
+          name: definitionId
+          required: true
+          schema:
+            format: uuid
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateChampionshipHonorDefinitionDraftBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChampionshipHonorDefinition"
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForbiddenError"
+          description: Response for status 403
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictError"
+          description: Response for status 409
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Update a championship honor definition draft
+      tags:
+        - Championships
+  /api/championships/honor-definitions/{definitionId}/publish:
+    post:
+      operationId: postApiChampionshipsHonor-definitionsByDefinitionIdPublish
+      parameters:
+        - in: path
+          name: definitionId
+          required: true
+          schema:
+            format: uuid
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PublishChampionshipHonorDefinitionBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ChampionshipHonorDefinition"
+                  - properties:
+                      published:
+                        type: boolean
+                    required:
+                      - published
+                    type: object
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForbiddenError"
+          description: Response for status 403
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictError"
+          description: Response for status 409
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Publish an immutable championship honor definition version
       tags:
         - Championships
   /api/championships/inbox:
@@ -19714,6 +21122,333 @@ paths:
                 $ref: "#/components/schemas/InternalServerError"
           description: Response for status 500
       summary: Get championship placements, awards, and records
+      tags:
+        - Championships
+  /api/championships/{id}/honors:
+    get:
+      operationId: getApiChampionshipsByIdHonors
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+        - in: query
+          name: limit
+          required: false
+          schema:
+            anyOf:
+              - default: 0
+                format: integer
+                type: string
+              - maximum: 100
+                minimum: 1
+                type: integer
+            maximum: 100
+            minimum: 1
+        - in: query
+          name: cursor
+          required: false
+          schema:
+            minLength: 1
+            type: string
+        - in: query
+          name: actorAccountUuid
+          required: false
+          schema:
+            format: uuid
+            type: string
+        - in: query
+          name: includeDrafts
+          required: false
+          schema:
+            type: boolean
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListChampionshipHonors"
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForbiddenError"
+          description: Response for status 403
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictError"
+          description: Response for status 409
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: List honors in dispute and awarded in a championship
+      tags:
+        - Championships
+    post:
+      operationId: postApiChampionshipsByIdHonors
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateChampionshipHonorBody"
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChampionshipHonor"
+          description: Response for status 201
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForbiddenError"
+          description: Response for status 403
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictError"
+          description: Response for status 409
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Add a published honor to a championship
+      tags:
+        - Championships
+  /api/championships/{id}/honors/{honorId}:
+    patch:
+      operationId: patchApiChampionshipsByIdHonorsByHonorId
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+        - in: path
+          name: honorId
+          required: true
+          schema:
+            format: uuid
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateChampionshipHonorBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChampionshipHonor"
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForbiddenError"
+          description: Response for status 403
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictError"
+          description: Response for status 409
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Update a championship honor
+      tags:
+        - Championships
+  /api/championships/{id}/honors/{honorId}/grants:
+    post:
+      operationId: postApiChampionshipsByIdHonorsByHonorIdGrants
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+        - in: path
+          name: honorId
+          required: true
+          schema:
+            format: uuid
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateChampionshipHonorGrantBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChampionshipHonor"
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForbiddenError"
+          description: Response for status 403
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictError"
+          description: Response for status 409
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Award a championship honor
+      tags:
+        - Championships
+  /api/championships/{id}/honors/{honorId}/grants/{grantId}/revoke:
+    post:
+      operationId: postApiChampionshipsByIdHonorsByHonorIdGrantsByGrantIdRevoke
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+        - in: path
+          name: honorId
+          required: true
+          schema:
+            format: uuid
+            type: string
+        - in: path
+          name: grantId
+          required: true
+          schema:
+            format: uuid
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RevokeChampionshipHonorGrantBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChampionshipHonor"
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForbiddenError"
+          description: Response for status 403
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictError"
+          description: Response for status 409
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Revoke a championship honor grant
       tags:
         - Championships
   /api/championships/{id}/matches/{championshipMatchId}:
@@ -30351,6 +32086,12 @@ paths:
                 actorAccountUuid:
                   format: uuid
                   type: string
+                description:
+                  anyOf:
+                    - maxLength: 1000
+                      type: string
+                    - type: "null"
+                  nullable: true
                 expectedRevision:
                   anyOf:
                     - default: 0
@@ -30359,9 +32100,26 @@ paths:
                     - minimum: 0
                       type: integer
                   minimum: 0
+                name:
+                  maxLength: 64
+                  minLength: 1
+                  pattern: ^[a-z][a-z0-9-]{0,63}$
+                  type: string
+                scope:
+                  enum:
+                    - match
+                    - championship
+                  type: string
                 specification: {}
+                title:
+                  maxLength: 160
+                  minLength: 1
+                  type: string
               required:
                 - specification
+                - name
+                - title
+                - scope
                 - expectedRevision
               type: object
         required: true
