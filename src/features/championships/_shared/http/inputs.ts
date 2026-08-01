@@ -354,6 +354,14 @@ export const endChampionshipDraftBodySchema = t.Composite([
   })
 ]);
 
+export const cancelChampionshipDraftBodySchema = t.Composite([
+  championshipCommandSchema,
+  t.Object({
+    expectedDraftRevision: t.Integer({ minimum: 0 }),
+    reason: t.String({ minLength: 1, maxLength: 1_000 })
+  })
+]);
+
 export const championshipDraftCorrectionPreviewQuerySchema = t.Object({
   actorAccountUuid: t.String({ format: "uuid" })
 });
@@ -1268,6 +1276,9 @@ export type MakeChampionshipDraftPickInput = Static<
 >;
 export type EndChampionshipDraftInput = Static<
   typeof endChampionshipDraftBodySchema
+>;
+export type CancelChampionshipDraftInput = Static<
+  typeof cancelChampionshipDraftBodySchema
 >;
 export type VoidChampionshipDraftPickInput = Static<
   typeof voidChampionshipDraftPickBodySchema

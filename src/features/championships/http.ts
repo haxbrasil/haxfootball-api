@@ -44,6 +44,7 @@ import {
 import {
   addChampionshipCommentBodySchema,
   championshipAssignmentIdParamsSchema,
+  cancelChampionshipDraftBodySchema,
   championshipCollaborationQuerySchema,
   championshipCompetitionTypeIdParamsSchema,
   championshipDraftCorrectionPreviewQuerySchema,
@@ -211,6 +212,7 @@ import {
 } from "@/features/championships/finance/projections";
 import {
   configureChampionshipDraft,
+  cancelChampionshipDraft,
   endChampionshipDraft,
   getChampionshipDraft,
   getChampionshipDraftCorrectionPreview,
@@ -415,6 +417,7 @@ export const championshipRoutes = new Elysia({
     ExecuteChampionshipRosterMoveBody: executeChampionshipRosterMoveBodySchema,
     ReorderChampionshipRosterBody: reorderChampionshipRosterBodySchema,
     EndChampionshipDraftBody: endChampionshipDraftBodySchema,
+    CancelChampionshipDraftBody: cancelChampionshipDraftBodySchema,
     FreezeChampionshipPricesBody: freezeChampionshipPricesBodySchema,
     AddChampionshipCommentBody: addChampionshipCommentBodySchema,
     ListChampionshipAssignments: listChampionshipAssignmentsResponseSchema,
@@ -1135,6 +1138,19 @@ export const championshipRoutes = new Elysia({
       detail: {
         tags: ["Championships"],
         summary: "Explicitly end a live championship draft"
+      }
+    }
+  )
+  .post(
+    "/:id/draft/cancel",
+    ({ params, body }) => cancelChampionshipDraft(params.id, body),
+    {
+      params: championshipIdParamsSchema,
+      body: t.Ref("CancelChampionshipDraftBody"),
+      response: { 200: t.Ref("ChampionshipDraft") },
+      detail: {
+        tags: ["Championships"],
+        summary: "Cancel a championship draft without completed picks"
       }
     }
   )

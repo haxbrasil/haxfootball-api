@@ -7,6 +7,7 @@ import {
 } from "@/db/client";
 import type {
   ChampionshipDraftQuery,
+  CancelChampionshipDraftInput,
   ConfigureChampionshipDraftInput,
   EndChampionshipDraftInput,
   MakeChampionshipDraftPickInput,
@@ -103,7 +104,11 @@ export async function configureChampionshipDraft(
         .from(championshipDrafts)
         .where(eq(championshipDrafts.championshipId, championship.id));
 
-      if (existingDraft && existingDraft.state !== "setup") {
+      if (
+        existingDraft &&
+        existingDraft.state !== "setup" &&
+        existingDraft.state !== "canceled"
+      ) {
         throw conflict("Draft order is immutable after the draft starts", {
           draftRevision: existingDraft.revision,
           draftState: existingDraft.state
@@ -123,10 +128,14 @@ export async function configureChampionshipDraft(
         [draft] = await tx
           .update(championshipDrafts)
           .set({
+            state: "setup",
             rounds: input.rounds,
             countdownSeconds: input.countdownSeconds,
             nextTurnSequence: 1,
             revision: existingDraft.revision + 1,
+            startedAt: null,
+            completedAt: null,
+            canceledAt: null,
             updatedAt: now
           })
           .where(eq(championshipDrafts.id, existingDraft.id))
@@ -615,6 +624,103 @@ export async function endChampionshipDraft(
   );
 }
 
+export async function cancelChampionshipDraft(
+  championshipUuid: string,
+  input: CancelChampionshipDraftInput
+): Promise<ChampionshipDraftResponse> {
+  await catchUpChampionshipDraft(championshipUuid, new Date(), "request");
+
+  return executeChampionshipCommand(
+    {
+      championshipUuid,
+      actorAccountUuid: input.actorAccountUuid,
+      commandUuid: input.commandUuid,
+      expectedRevision: input.expectedRevision,
+      permission: "championship:admin",
+      action: "draft.canceled"
+    },
+    async (tx, championship) => {
+      const draft = await requireDraft(tx, championship.id);
+      requireDraftRevision(draft, input.expectedDraftRevision);
+
+      if (draft.state !== "setup" && draft.state !== "live") {
+        throw conflict("Only a setup or live draft can be canceled", {
+          draftState: draft.state
+        });
+      }
+
+      const filledTurns = await tx
+        .select({ uuid: championshipDraftTurns.uuid })
+        .from(championshipDraftTurns)
+        .where(
+          and(
+            eq(championshipDraftTurns.draftId, draft.id),
+            eq(championshipDraftTurns.state, "filled")
+          )
+        )
+        .limit(101);
+
+      if (filledTurns.length > 0) {
+        throw conflict("Draft picks must be reversed before cancellation", {
+          filledPickCount: filledTurns.length,
+          filledTurnUuids: filledTurns.slice(0, 100).map(({ uuid }) => uuid),
+          truncated: filledTurns.length > 100
+        });
+      }
+
+      const now = new Date().toISOString();
+      await tx
+        .update(championshipDraftTurns)
+        .set({
+          state: "voided",
+          deadlineAt: null,
+          revision: sql`${championshipDraftTurns.revision} + 1`,
+          updatedAt: now
+        })
+        .where(
+          and(
+            eq(championshipDraftTurns.draftId, draft.id),
+            inArray(championshipDraftTurns.state, [
+              "pending",
+              "open",
+              "overdue"
+            ])
+          )
+        );
+      const [updatedDraft] = await tx
+        .update(championshipDrafts)
+        .set({
+          state: "canceled",
+          nextTurnSequence: (await maximumDraftTurnSequence(tx, draft.id)) + 1,
+          revision: draft.revision + 1,
+          completedAt: null,
+          canceledAt: now,
+          updatedAt: now
+        })
+        .where(eq(championshipDrafts.id, draft.id))
+        .returning();
+      const response = await projectChampionshipDraft(
+        tx,
+        championship,
+        projectionQuery(input.actorAccountUuid)
+      );
+
+      return {
+        response: () => response,
+        targetType: "draft",
+        targetUuid: draft.uuid,
+        before: { state: draft.state, revision: draft.revision },
+        after: {
+          state: updatedDraft.state,
+          revision: updatedDraft.revision
+        },
+        reason: input.reason,
+        outboxTopic: "championship.draft.canceled"
+      };
+    }
+  );
+}
+
 export async function getChampionshipDraftCorrectionPreview(
   championshipUuid: string,
   turnUuid: string,
@@ -943,7 +1049,7 @@ async function projectChampionshipDraft(
     .from(championshipDrafts)
     .where(eq(championshipDrafts.championshipId, championship.id));
 
-  if (!draft) {
+  if (!draft || draft.state === "canceled") {
     return { draft: null };
   }
 

@@ -641,6 +641,41 @@ components:
       required:
         - values
       type: object
+    CancelChampionshipDraftBody:
+      properties:
+        actorAccountUuid:
+          format: uuid
+          type: string
+        commandUuid:
+          format: uuid
+          type: string
+        expectedDraftRevision:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - minimum: 0
+              type: integer
+          minimum: 0
+        expectedRevision:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - minimum: 0
+              type: integer
+          minimum: 0
+        reason:
+          maxLength: 1000
+          minLength: 1
+          type: string
+      required:
+        - actorAccountUuid
+        - commandUuid
+        - expectedRevision
+        - expectedDraftRevision
+        - reason
+      type: object
     Championship:
       properties:
         changeSequence:
@@ -18651,6 +18686,62 @@ paths:
                 $ref: "#/components/schemas/InternalServerError"
           description: Response for status 500
       summary: Configure and materialize a championship draft
+      tags:
+        - Championships
+  /api/championships/{id}/draft/cancel:
+    post:
+      operationId: postApiChampionshipsByIdDraftCancel
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CancelChampionshipDraftBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChampionshipDraft"
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForbiddenError"
+          description: Response for status 403
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictError"
+          description: Response for status 409
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Cancel a championship draft without completed picks
       tags:
         - Championships
   /api/championships/{id}/draft/end:

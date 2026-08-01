@@ -1448,6 +1448,141 @@ describe("championship registration, rosters, and salary", () => {
 });
 
 describe("championship draft and trades", () => {
+  it("cancels a configured draft and allows a fresh configuration", async () => {
+    const fixture = await createDraftFixture({
+      teamCount: 2,
+      playerCount: 2,
+      rounds: 2
+    });
+    let championship = fixture.championship;
+    const draft = fixture.draft.draft!;
+    const cancelResponse = await request(
+      `/api/championships/${championship.uuid}/draft/cancel`,
+      {
+        method: "POST",
+        body: command(admin, championship.revision, {
+          expectedDraftRevision: draft.revision,
+          reason: "Draft criado por engano"
+        })
+      }
+    );
+
+    expect(cancelResponse.status).toBe(200);
+    expect(await cancelResponse.json()).toEqual({ draft: null });
+    expect(
+      await (
+        await request(`/api/championships/${championship.uuid}/draft`)
+      ).json()
+    ).toEqual({ draft: null });
+
+    championship = await getChampionship(championship.uuid);
+    const configureResponse = await request(
+      `/api/championships/${championship.uuid}/draft`,
+      {
+        method: "PUT",
+        body: command(admin, championship.revision, {
+          teamIds: fixture.teams.map(({ uuid }) => uuid),
+          rounds: 1,
+          countdownSeconds: 30
+        })
+      }
+    );
+
+    expect(configureResponse.status).toBe(200);
+    expect(await configureResponse.json()).toMatchObject({
+      draft: {
+        state: "setup",
+        rounds: 1,
+        countdownSeconds: 30
+      }
+    });
+  });
+
+  it("cancels a live draft with no picks but protects roster-changing picks", async () => {
+    const emptyFixture = await createDraftFixture({
+      teamCount: 2,
+      playerCount: 2,
+      rounds: 1
+    });
+    let championship = emptyFixture.championship;
+    let draft = emptyFixture.draft.draft!;
+    const startResponse = await request(
+      `/api/championships/${championship.uuid}/draft/start`,
+      {
+        method: "POST",
+        body: command(admin, championship.revision, {
+          expectedDraftRevision: draft.revision
+        })
+      }
+    );
+
+    draft = (await startResponse.json()).draft;
+    championship = await getChampionship(championship.uuid);
+    const cancelResponse = await request(
+      `/api/championships/${championship.uuid}/draft/cancel`,
+      {
+        method: "POST",
+        body: command(admin, championship.revision, {
+          expectedDraftRevision: draft.revision,
+          reason: "Draft não será utilizado"
+        })
+      }
+    );
+
+    expect(cancelResponse.status).toBe(200);
+    expect(await cancelResponse.json()).toEqual({ draft: null });
+
+    const pickedFixture = await createDraftFixture({
+      teamCount: 2,
+      playerCount: 2,
+      rounds: 1
+    });
+    championship = pickedFixture.championship;
+    draft = pickedFixture.draft.draft!;
+    const pickedStart = await request(
+      `/api/championships/${championship.uuid}/draft/start`,
+      {
+        method: "POST",
+        body: command(admin, championship.revision, {
+          expectedDraftRevision: draft.revision
+        })
+      }
+    );
+    draft = (await pickedStart.json()).draft;
+    championship = await getChampionship(championship.uuid);
+    const pickResponse = await request(
+      `/api/championships/${championship.uuid}/draft/picks`,
+      {
+        method: "POST",
+        body: command(pickedFixture.gms[0]!, championship.revision, {
+          expectedDraftRevision: draft.revision,
+          participantId: pickedFixture.playerParticipants[0]!.uuid
+        })
+      }
+    );
+    draft = (await pickResponse.json()).draft;
+    championship = await getChampionship(championship.uuid);
+    const blockedCancel = await request(
+      `/api/championships/${championship.uuid}/draft/cancel`,
+      {
+        method: "POST",
+        body: command(admin, championship.revision, {
+          expectedDraftRevision: draft.revision,
+          reason: "Tentativa com escolha preenchida"
+        })
+      }
+    );
+
+    expect(blockedCancel.status).toBe(409);
+    expect(await blockedCancel.json()).toMatchObject({
+      error: {
+        code: "CONFLICT",
+        message: "Draft picks must be reversed before cancellation",
+        details: { filledPickCount: 1 }
+      }
+    });
+  });
+
   it("materializes a bounded serpentine board and requires active GMs before start", async () => {
     const fixture = await createDraftFixture({
       teamCount: 3,
