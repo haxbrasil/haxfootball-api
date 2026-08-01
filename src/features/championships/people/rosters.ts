@@ -180,11 +180,17 @@ export async function reorderChampionshipRoster(
       if (!team) throw notFound("Championship team not found");
 
       const memberships = await tx
-        .select({ membership: championshipTeamMemberships, participant: championshipParticipants })
+        .select({
+          membership: championshipTeamMemberships,
+          participant: championshipParticipants
+        })
         .from(championshipTeamMemberships)
         .innerJoin(
           championshipParticipants,
-          eq(championshipTeamMemberships.participantId, championshipParticipants.id)
+          eq(
+            championshipTeamMemberships.participantId,
+            championshipParticipants.id
+          )
         )
         .where(
           and(
@@ -193,39 +199,68 @@ export async function reorderChampionshipRoster(
           )
         );
       const membershipByParticipantUuid = new Map(
-        memberships.map(({ membership, participant }) => [participant.uuid, membership])
+        memberships.map(({ membership, participant }) => [
+          participant.uuid,
+          membership
+        ])
       );
 
       if (
         memberships.length !== input.participantIds.length ||
-        input.participantIds.some((uuid) => !membershipByParticipantUuid.has(uuid))
+        input.participantIds.some(
+          (uuid) => !membershipByParticipantUuid.has(uuid)
+        )
       ) {
-        throw conflict("Roster order must contain every active team participant exactly once");
+        throw conflict(
+          "Roster order must contain every active team participant exactly once"
+        );
       }
 
-      for (const [displayOrder, participantUuid] of input.participantIds.entries()) {
+      for (const [
+        displayOrder,
+        participantUuid
+      ] of input.participantIds.entries()) {
         await tx
           .update(championshipTeamMemberships)
           .set({ displayOrder })
-          .where(eq(championshipTeamMemberships.id, membershipByParticipantUuid.get(participantUuid)!.id));
+          .where(
+            eq(
+              championshipTeamMemberships.id,
+              membershipByParticipantUuid.get(participantUuid)!.id
+            )
+          );
       }
 
       const rosterRevision = team.rosterRevision + 1;
       await tx
         .update(championshipTeams)
-        .set({ rosterRevision, revision: team.revision + 1, updatedAt: new Date().toISOString() })
+        .set({
+          rosterRevision,
+          revision: team.revision + 1,
+          updatedAt: new Date().toISOString()
+        })
         .where(eq(championshipTeams.id, team.id));
-      const response = { teamUuid: team.uuid, rosterRevision, participantIds: input.participantIds };
+      const response = {
+        teamUuid: team.uuid,
+        rosterRevision,
+        participantIds: input.participantIds
+      };
 
       return {
         response: () => response,
         targetType: "championship-team",
         targetUuid: team.uuid,
         before: memberships
-          .sort((left, right) => left.membership.displayOrder - right.membership.displayOrder)
+          .sort(
+            (left, right) =>
+              left.membership.displayOrder - right.membership.displayOrder
+          )
           .map(({ participant }) => participant.uuid),
         after: input.participantIds,
-        metadata: { teamUuid: team.uuid, participantCount: input.participantIds.length },
+        metadata: {
+          teamUuid: team.uuid,
+          participantCount: input.participantIds.length
+        },
         outboxTopic: "championship.roster.reordered"
       };
     }
@@ -1054,9 +1089,14 @@ function mapRosterMembership(
   };
 }
 
-async function nextRosterDisplayOrder(database: DatabaseExecutor, teamId: number) {
+async function nextRosterDisplayOrder(
+  database: DatabaseExecutor,
+  teamId: number
+) {
   const [row] = await database
-    .select({ value: sql<number>`coalesce(max(${championshipTeamMemberships.displayOrder}), -1)` })
+    .select({
+      value: sql<number>`coalesce(max(${championshipTeamMemberships.displayOrder}), -1)`
+    })
     .from(championshipTeamMemberships)
     .where(
       and(
