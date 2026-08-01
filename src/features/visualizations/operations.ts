@@ -64,10 +64,11 @@ export async function listVisualizationTemplates(
 export async function createVisualizationTemplate(input: TemplateInput) {
   validateVisualizationSpecification(input.specification);
   return withDatabaseTransaction(async (tx) => {
+    const name = await nextAvailableTemplateName(tx, input.title);
     const [family] = await tx
       .insert(visualizationTemplateFamilies)
       .values({
-        name: input.name,
+        name,
         title: input.title,
         description: input.description ?? null,
         scope: input.scope,
@@ -681,6 +682,33 @@ function validateTemplateMetadata(value: TemplateMetadata) {
     throw badRequest("Visualization template identifier is invalid");
   if (!value.title.trim())
     throw badRequest("Visualization template title is required");
+}
+
+async function nextAvailableTemplateName(executor: any, title: string) {
+  const base = templateIdentifier(title);
+  for (let suffix = 1; ; suffix += 1) {
+    const ending = suffix === 1 ? "" : `-${suffix}`;
+    const candidate = `${base.slice(0, 64 - ending.length).replace(/-+$/, "")}${ending}`;
+    const [existing] = await executor
+      .select({ id: visualizationTemplateFamilies.id })
+      .from(visualizationTemplateFamilies)
+      .where(eq(visualizationTemplateFamilies.name, candidate));
+    if (!existing) return candidate;
+  }
+}
+
+function templateIdentifier(title: string) {
+  const normalized = title
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 64)
+    .replace(/-+$/, "");
+  return normalized && /^[a-z]/.test(normalized)
+    ? normalized
+    : `visualizacao${normalized ? `-${normalized}` : ""}`.slice(0, 64);
 }
 function syntheticSources(): Record<string, DataRow[]> {
   return {
