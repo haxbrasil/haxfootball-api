@@ -281,6 +281,13 @@
       "when": 1785603914274,
       "tag": "0039_absurd_polaris",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "6",
+      "when": 1785606161141,
+      "tag": "0040_seed_visualization_permissions",
+      "breakpoints": true
     }
   ]
 }
