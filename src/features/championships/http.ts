@@ -313,6 +313,7 @@ import {
   championshipHonorGrantIdParamsSchema,
   championshipHonorIdParamsSchema,
   championshipHonorResponseSchema,
+  championshipHonorResolutionPreviewResponseSchema,
   championshipHonorsQuerySchema,
   createChampionshipAwardBodySchema,
   createChampionshipHonorBodySchema,
@@ -333,6 +334,7 @@ import {
   updateChampionshipHonorBodySchema,
   updateChampionshipHonorDefinitionDraftBodySchema,
   revokeChampionshipHonorGrantBodySchema,
+  resolveChampionshipHonorBodySchema,
   updateChampionshipAwardBodySchema
 } from "@/features/championships/history/contracts";
 import {
@@ -350,8 +352,10 @@ import {
   createChampionshipHonorGrant,
   listChampionshipHonorDefinitions,
   listChampionshipHonors,
+  previewChampionshipHonorResolution,
   publishChampionshipHonorDefinition,
   revokeChampionshipHonorGrant,
+  resolveChampionshipHonor,
   updateChampionshipHonor,
   updateChampionshipHonorDefinitionDraft
 } from "@/features/championships/history/honors";
@@ -399,6 +403,8 @@ export const championshipRoutes = new Elysia({
     ListChampionshipHonorDefinitions:
       listChampionshipHonorDefinitionsResponseSchema,
     ChampionshipHonor: championshipHonorResponseSchema,
+    ChampionshipHonorResolutionPreview:
+      championshipHonorResolutionPreviewResponseSchema,
     ListChampionshipHonors: listChampionshipHonorsResponseSchema,
     TeamIdentityHistory: teamIdentityHistoryResponseSchema,
     AccountChampionshipHistory: accountChampionshipHistoryResponseSchema,
@@ -527,6 +533,7 @@ export const championshipRoutes = new Elysia({
     UpdateChampionshipHonorBody: updateChampionshipHonorBodySchema,
     CreateChampionshipHonorGrantBody: createChampionshipHonorGrantBodySchema,
     RevokeChampionshipHonorGrantBody: revokeChampionshipHonorGrantBodySchema,
+    ResolveChampionshipHonorBody: resolveChampionshipHonorBodySchema,
     ReplaceChampionshipPlacementsBody: replaceChampionshipPlacementsBodySchema,
     PreviewChampionshipHistoricalImportBody:
       previewChampionshipHistoricalImportBodySchema,
@@ -793,6 +800,39 @@ export const championshipRoutes = new Elysia({
       detail: {
         tags: ["Championships"],
         summary: "Update a championship honor"
+      }
+    }
+  )
+  .get(
+    "/:id/honors/:honorId/resolution-preview",
+    ({ params, query }) =>
+      previewChampionshipHonorResolution(
+        params.id,
+        params.honorId,
+        query.actorAccountUuid
+      ),
+    {
+      params: championshipHonorIdParamsSchema,
+      query: t.Object({
+        actorAccountUuid: t.Optional(t.String({ format: "uuid" }))
+      }),
+      response: { 200: t.Ref("ChampionshipHonorResolutionPreview") },
+      detail: {
+        tags: ["Championships"],
+        summary: "Preview the calculated result of a championship honor"
+      }
+    }
+  )
+  .post(
+    "/:id/honors/:honorId/resolve",
+    ({ params, body }) => resolveChampionshipHonor(params.id, params.honorId, body),
+    {
+      params: championshipHonorIdParamsSchema,
+      body: t.Ref("ResolveChampionshipHonorBody"),
+      response: { 200: t.Ref("ChampionshipHonor") },
+      detail: {
+        tags: ["Championships"],
+        summary: "Confirm the calculated result of a championship honor"
       }
     }
   )

@@ -4293,6 +4293,172 @@ components:
         - createdAt
         - updatedAt
       type: object
+    ChampionshipHonorResolutionPreview:
+      properties:
+        blockers:
+          items:
+            type: string
+          type: array
+        contenders:
+          items:
+            properties:
+              displayLabel:
+                type: string
+              rank:
+                anyOf:
+                  - default: 0
+                    format: integer
+                    type: string
+                  - minimum: 1
+                    type: integer
+                minimum: 1
+              target:
+                properties:
+                  type:
+                    enum:
+                      - team
+                      - team-identity
+                      - participant
+                      - account
+                      - historical-player
+                    type: string
+                  uuid:
+                    format: uuid
+                    type: string
+                required:
+                  - type
+                  - uuid
+                type: object
+              tied:
+                type: boolean
+              value:
+                anyOf:
+                  - type: number
+                  - type: "null"
+                nullable: true
+            required:
+              - target
+              - displayLabel
+              - rank
+              - value
+              - tied
+            type: object
+          maxItems: 128
+          type: array
+        explanation:
+          type: string
+        honorUuid:
+          format: uuid
+          type: string
+        policy:
+          anyOf:
+            - properties:
+                ranks:
+                  items:
+                    anyOf:
+                      - default: 0
+                        format: integer
+                        type: string
+                      - maximum: 1000
+                        minimum: 1
+                        type: integer
+                    maximum: 1000
+                    minimum: 1
+                  maxItems: 128
+                  minItems: 1
+                  type: array
+                  uniqueItems: true
+                type:
+                  const: placement
+                  type: string
+              required:
+                - type
+                - ranks
+              type: object
+            - properties:
+                outcome:
+                  anyOf:
+                    - const: winner
+                      type: string
+                    - const: loser
+                      type: string
+                    - const: occupant
+                      type: string
+                spotUuids:
+                  items:
+                    format: uuid
+                    type: string
+                  maxItems: 128
+                  minItems: 1
+                  type: array
+                  uniqueItems: true
+                type:
+                  const: spot-result
+                  type: string
+              required:
+                - type
+                - spotUuids
+                - outcome
+              type: object
+            - properties:
+                direction:
+                  anyOf:
+                    - const: highest
+                      type: string
+                    - const: lowest
+                      type: string
+                limit:
+                  anyOf:
+                    - default: 0
+                      format: integer
+                      type: string
+                    - maximum: 128
+                      minimum: 1
+                      type: integer
+                  maximum: 128
+                  minimum: 1
+                metricKey:
+                  maxLength: 160
+                  minLength: 1
+                  type: string
+                type:
+                  const: metric-ranking
+                  type: string
+              required:
+                - type
+                - metricKey
+                - direction
+                - limit
+              type: object
+            - properties:
+                type:
+                  const: staff-selection
+                  type: string
+              required:
+                - type
+              type: object
+            - properties:
+                note:
+                  maxLength: 2000
+                  minLength: 1
+                  type: string
+                type:
+                  const: hybrid
+                  type: string
+              required:
+                - type
+                - note
+              type: object
+        ready:
+          type: boolean
+      required:
+        - honorUuid
+        - policy
+        - ready
+        - explanation
+        - blockers
+        - contenders
+      type: object
     ChampionshipInboxItem:
       properties:
         body:
@@ -14363,6 +14529,32 @@ components:
         - commId
         - roomLink
       type: object
+    ResolveChampionshipHonorBody:
+      properties:
+        actorAccountUuid:
+          format: uuid
+          type: string
+        commandUuid:
+          format: uuid
+          type: string
+        expectedRevision:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - minimum: 0
+              type: integer
+          minimum: 0
+        reason:
+          maxLength: 2000
+          minLength: 3
+          type: string
+      required:
+        - actorAccountUuid
+        - commandUuid
+        - expectedRevision
+        - reason
+      type: object
     ResolveSessionBody:
       properties:
         auth:
@@ -21449,6 +21641,130 @@ paths:
                 $ref: "#/components/schemas/InternalServerError"
           description: Response for status 500
       summary: Revoke a championship honor grant
+      tags:
+        - Championships
+  /api/championships/{id}/honors/{honorId}/resolution-preview:
+    get:
+      operationId: getApiChampionshipsByIdHonorsByHonorIdResolution-preview
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+        - in: path
+          name: honorId
+          required: true
+          schema:
+            format: uuid
+            type: string
+        - in: query
+          name: actorAccountUuid
+          required: false
+          schema:
+            format: uuid
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChampionshipHonorResolutionPreview"
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForbiddenError"
+          description: Response for status 403
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictError"
+          description: Response for status 409
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Preview the calculated result of a championship honor
+      tags:
+        - Championships
+  /api/championships/{id}/honors/{honorId}/resolve:
+    post:
+      operationId: postApiChampionshipsByIdHonorsByHonorIdResolve
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+        - in: path
+          name: honorId
+          required: true
+          schema:
+            format: uuid
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResolveChampionshipHonorBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChampionshipHonor"
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForbiddenError"
+          description: Response for status 403
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictError"
+          description: Response for status 409
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Confirm the calculated result of a championship honor
       tags:
         - Championships
   /api/championships/{id}/matches/{championshipMatchId}:

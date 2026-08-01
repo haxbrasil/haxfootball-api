@@ -1,4 +1,4 @@
-import { and, asc, count, eq, inArray, or } from "drizzle-orm";
+import { and, asc, count, eq, inArray, isNull, or } from "drizzle-orm";
 import { db, type DatabaseExecutor } from "@/db/client";
 import { accounts } from "@/features/accounts/db";
 import { executeChampionshipCommand } from "@/features/championships/core/commands";
@@ -18,6 +18,10 @@ import {
 } from "@/features/championships/people/db";
 import {
   championshipAwards,
+  championshipHonorDefinitions,
+  championshipHonorDefinitionVersions,
+  championshipHonorGrants,
+  championshipHonors,
   championshipPlacements,
   championshipRecords
 } from "@/features/championships/history/db";
@@ -428,6 +432,28 @@ export async function getTeamIdentityHistory(
     )
     .orderBy(asc(championships.completedAt), asc(championshipPlacements.rank))
     .limit(limit + 1);
+  const titleRows = await db
+    .select({ grantId: championshipHonorGrants.id })
+    .from(championshipHonorGrants)
+    .innerJoin(championshipHonors, eq(championshipHonorGrants.honorId, championshipHonors.id))
+    .innerJoin(
+      championshipHonorDefinitionVersions,
+      eq(championshipHonors.definitionVersionId, championshipHonorDefinitionVersions.id)
+    )
+    .innerJoin(
+      championshipHonorDefinitions,
+      eq(championshipHonorDefinitionVersions.definitionId, championshipHonorDefinitions.id)
+    )
+    .innerJoin(championships, eq(championshipHonors.championshipId, championships.id))
+    .where(
+      and(
+        eq(championshipHonorGrants.teamIdentityIdSnapshot, identity.id),
+        eq(championshipHonorDefinitions.kind, "title"),
+        eq(championships.visibility, "public"),
+        isNull(championshipHonorGrants.revokedAt)
+      )
+    )
+    .limit(limit + 1);
 
   return {
     identity: {
@@ -436,7 +462,7 @@ export async function getTeamIdentityHistory(
       name: identity.name,
       abbreviation: identity.abbreviation
     },
-    titles: rows.filter(({ placement }) => placement.rank === 1).length,
+    titles: titleRows.length,
     podiums: rows.filter(({ placement }) => placement.rank <= 3).length,
     editions: rows.slice(0, limit).map(({ placement, championship }) => ({
       championshipUuid: championship.uuid,
@@ -529,6 +555,33 @@ export async function getAccountChampionshipHistory(
           )
         )
       );
+    const honors = await db
+      .select({
+        nameOverride: championshipHonors.nameOverride,
+        definitionName: championshipHonorDefinitionVersions.name
+      })
+      .from(championshipHonorGrants)
+      .innerJoin(championshipHonors, eq(championshipHonorGrants.honorId, championshipHonors.id))
+      .innerJoin(
+        championshipHonorDefinitionVersions,
+        eq(championshipHonors.definitionVersionId, championshipHonorDefinitionVersions.id)
+      )
+      .where(
+        and(
+          eq(championshipHonors.championshipId, row.championship.id),
+          isNull(championshipHonorGrants.revokedAt),
+          or(
+            eq(championshipHonorGrants.participantId, row.participant.id),
+            eq(championshipHonorGrants.accountId, account.id),
+            row.participant.historicalPlayerIdentityId
+              ? eq(
+                  championshipHonorGrants.historicalPlayerIdentityId,
+                  row.participant.historicalPlayerIdentityId
+                )
+              : undefined
+          )
+        )
+      );
     projected.push({
       championshipUuid: row.championship.uuid,
       championshipSlug: row.championship.slug,
@@ -536,7 +589,12 @@ export async function getAccountChampionshipHistory(
       displayNameSnapshot: row.participant.displayNameSnapshot,
       teamName: membership?.team.name ?? null,
       role: membership?.membership.role ?? null,
-      awards: awards.map(({ label }) => label),
+      awards: [
+        ...new Set([
+          ...honors.map(({ nameOverride, definitionName }) => nameOverride ?? definitionName),
+          ...awards.map(({ label }) => label)
+        ])
+      ],
       completedAt: row.championship.completedAt
     });
   }

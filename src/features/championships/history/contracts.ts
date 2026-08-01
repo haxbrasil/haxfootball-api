@@ -222,6 +222,30 @@ export const revokeChampionshipHonorGrantBodySchema = t.Composite([
   t.Object({ reason: t.String({ minLength: 3, maxLength: 2_000 }) })
 ]);
 
+export const championshipHonorResolutionContenderSchema = t.Object({
+  target: championshipAwardTargetSchema,
+  displayLabel: t.String(),
+  rank: t.Integer({ minimum: 1 }),
+  value: t.Nullable(t.Number()),
+  tied: t.Boolean()
+});
+
+export const championshipHonorResolutionPreviewResponseSchema = t.Object({
+  honorUuid: t.String({ format: "uuid" }),
+  policy: championshipHonorDecisionPolicySchema,
+  ready: t.Boolean(),
+  explanation: t.String(),
+  blockers: t.Array(t.String()),
+  contenders: t.Array(championshipHonorResolutionContenderSchema, {
+    maxItems: 128
+  })
+});
+
+export const resolveChampionshipHonorBodySchema = t.Composite([
+  championshipCommandSchema,
+  t.Object({ reason: t.String({ minLength: 3, maxLength: 2_000 }) })
+]);
+
 export const championshipHonorIdParamsSchema = t.Object({
   id: t.String({ format: "uuid" }),
   honorId: t.String({ format: "uuid" })
@@ -707,4 +731,10 @@ export type ChampionshipHonorsQuery = Static<
 >;
 export type ChampionshipHonorResponse = Static<
   typeof championshipHonorResponseSchema
+>;
+export type ChampionshipHonorResolutionPreviewResponse = Static<
+  typeof championshipHonorResolutionPreviewResponseSchema
+>;
+export type ResolveChampionshipHonorInput = Static<
+  typeof resolveChampionshipHonorBodySchema
 >;

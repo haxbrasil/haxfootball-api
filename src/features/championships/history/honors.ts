@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, isNull, ne } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, isNull, ne, or, sql } from "drizzle-orm";
 import { db, type DatabaseExecutor, withDatabaseTransaction } from "@/db/client";
 import { accounts } from "@/features/accounts/db";
 import { executeChampionshipCommand } from "@/features/championships/core/commands";
@@ -8,6 +8,15 @@ import {
   findChampionshipActor
 } from "@/features/championships/core/authorization";
 import { championships } from "@/features/championships/core/db";
+import {
+  championshipMatches,
+  championshipSpots
+} from "@/features/championships/format-scheduling/db";
+import {
+  championshipMatchResultRevisions,
+  championshipMetricMappings,
+  championshipStatisticEntries
+} from "@/features/championships/matches-statistics/db";
 import {
   championshipHistoricalPlayerIdentities,
   championshipParticipants,
@@ -20,12 +29,14 @@ import {
   championshipHonorDefinitions,
   championshipHonorDefinitionVersions,
   championshipHonorGrants,
-  championshipHonors
+  championshipHonors,
+  championshipPlacements
 } from "@/features/championships/history/db";
 import type {
   ArchiveChampionshipHonorDefinitionInput,
   ChampionshipHonorDefinitionResponse,
   ChampionshipHonorResponse,
+  ChampionshipHonorResolutionPreviewResponse,
   ChampionshipHonorsQuery,
   CreateChampionshipHonorDefinitionInput,
   CreateChampionshipHonorGrantInput,
@@ -33,6 +44,7 @@ import type {
   ListChampionshipHonorDefinitionsQuery,
   PublishChampionshipHonorDefinitionInput,
   RevokeChampionshipHonorGrantInput,
+  ResolveChampionshipHonorInput,
   UpdateChampionshipHonorDefinitionDraftInput,
   UpdateChampionshipHonorInput
 } from "@/features/championships/history/contracts";
@@ -393,6 +405,97 @@ export async function updateChampionshipHonor(
   );
 }
 
+export async function previewChampionshipHonorResolution(
+  championshipUuid: string,
+  honorUuid: string,
+  actorAccountUuid?: string
+): Promise<ChampionshipHonorResolutionPreviewResponse> {
+  const [championship] = await db
+    .select()
+    .from(championships)
+    .where(and(eq(championships.uuid, championshipUuid), isNull(championships.deletedAt)));
+  if (!championship) throw notFound("Championship not found");
+  if (championship.visibility !== "public" || actorAccountUuid) {
+    if (!actorAccountUuid) throw forbidden("Private honor previews require staff access");
+    await requireChampionshipActor(db, {
+      actorAccountUuid,
+      championshipId: championship.id,
+      permission: ["championship:admin", "championship:operate"]
+    });
+  }
+  const honor = await requireHonor(db, championship.id, honorUuid);
+  return deriveHonorResolution(db, championship.id, honor);
+}
+
+export async function resolveChampionshipHonor(
+  championshipUuid: string,
+  honorUuid: string,
+  input: ResolveChampionshipHonorInput
+): Promise<ChampionshipHonorResponse> {
+  return executeChampionshipCommand(
+    {
+      championshipUuid,
+      actorAccountUuid: input.actorAccountUuid,
+      commandUuid: input.commandUuid,
+      expectedRevision: input.expectedRevision,
+      permission: ["championship:admin"],
+      action: "history.honor.resolved"
+    },
+    async (tx, championship, actor) => {
+      const honor = await requireHonor(tx, championship.id, honorUuid);
+      if (honor.state === "void") throw badRequest("A void honor cannot be resolved");
+      const preview = await deriveHonorResolution(tx, championship.id, honor);
+      if (!preview.ready) throw badRequest(preview.blockers.join("; "));
+      const now = new Date().toISOString();
+      await tx
+        .update(championshipHonorGrants)
+        .set({
+          revokedAt: now,
+          revokedByAccountId: actor.account.id,
+          revocationReason: input.reason
+        })
+        .where(
+          and(
+            eq(championshipHonorGrants.honorId, honor.id),
+            isNull(championshipHonorGrants.revokedAt)
+          )
+        );
+      for (const contender of preview.contenders) {
+        const target = await resolveHonorTarget(tx, championship.id, contender.target);
+        await tx.insert(championshipHonorGrants).values({
+          honorId: honor.id,
+          targetType: contender.target.type,
+          ...target.columns,
+          teamIdentityIdSnapshot: target.identitySnapshotId,
+          displayLabelSnapshot: contender.displayLabel,
+          rank: contender.rank,
+          note: preview.explanation,
+          awardedByAccountId: actor.account.id
+        });
+      }
+      const [updated] = await tx
+        .update(championshipHonors)
+        .set({
+          state: "awarded",
+          awardedAt: now,
+          revision: honor.revision + 1,
+          updatedAt: now
+        })
+        .where(eq(championshipHonors.id, honor.id))
+        .returning();
+      const response = await projectHonor(tx, updated);
+      return {
+        response: () => response,
+        targetType: "championship-honor",
+        targetUuid: honor.uuid,
+        before: await projectHonor(tx, honor),
+        after: { honor: response, resolution: preview },
+        reason: input.reason
+      };
+    }
+  );
+}
+
 export async function createChampionshipHonorGrant(
   championshipUuid: string,
   honorUuid: string,
@@ -596,6 +699,246 @@ function validateDecisionPolicy(
   if (policy.type === "metric-ranking" && policy.metricKey.trim().length === 0) {
     throw badRequest("Metric ranking requires a metric key");
   }
+}
+
+type ResolutionContender = ChampionshipHonorResolutionPreviewResponse["contenders"][number];
+
+async function deriveHonorResolution(
+  database: DatabaseExecutor,
+  championshipId: number,
+  honor: typeof championshipHonors.$inferSelect
+): Promise<ChampionshipHonorResolutionPreviewResponse> {
+  const [version] = await database
+    .select()
+    .from(championshipHonorDefinitionVersions)
+    .where(eq(championshipHonorDefinitionVersions.id, honor.definitionVersionId));
+  if (!version) throw notFound("Honor definition version not found");
+  const policy = honor.decisionPolicy;
+  let contenders: ResolutionContender[] = [];
+  const blockers: string[] = [];
+  let explanation = "";
+
+  if (policy.type === "staff-selection") {
+    blockers.push("This honor requires a staff-selected recipient");
+    explanation = "Recipient selected by the organization.";
+  } else if (policy.type === "hybrid") {
+    blockers.push("This honor requires staff confirmation");
+    explanation = policy.note;
+  } else if (policy.type === "placement") {
+    const rows = await database
+      .select({ placement: championshipPlacements, team: championshipTeams })
+      .from(championshipPlacements)
+      .innerJoin(championshipTeams, eq(championshipPlacements.teamId, championshipTeams.id))
+      .where(
+        and(
+          eq(championshipPlacements.championshipId, championshipId),
+          inArray(championshipPlacements.rank, policy.ranks)
+        )
+      )
+      .orderBy(asc(championshipPlacements.rank));
+    for (const { placement, team } of rows) {
+      const target = await honorTeamTarget(database, team, version.recipientTypes);
+      if (target) contenders.push({ target, displayLabel: team.name, rank: placement.rank, value: null, tied: false });
+    }
+    const missing = policy.ranks.filter((rank) => !rows.some((row) => row.placement.rank === rank));
+    if (missing.length) blockers.push(`Missing official placement: ${missing.join(", ")}`);
+    explanation = `Result based on official placement ${policy.ranks.join(", ")}.`;
+  } else if (policy.type === "spot-result") {
+    const spots = await database
+      .select()
+      .from(championshipSpots)
+      .where(
+        and(
+          eq(championshipSpots.championshipId, championshipId),
+          inArray(championshipSpots.uuid, policy.spotUuids)
+        )
+      );
+    for (const spotUuid of policy.spotUuids) {
+      const spot = spots.find((item) => item.uuid === spotUuid);
+      if (!spot) {
+        blockers.push(`Configured spot ${spotUuid} no longer exists`);
+        continue;
+      }
+      let teamId = spot.currentTeamId;
+      if (policy.outcome !== "occupant") {
+        const [match] = await database
+          .select()
+          .from(championshipMatches)
+          .where(
+            and(
+              eq(championshipMatches.championshipId, championshipId),
+              or(
+                eq(championshipMatches.sideASpotId, spot.id),
+                eq(championshipMatches.sideBSpotId, spot.id)
+              )
+            )
+          )
+          .limit(1);
+        if (!match) {
+          blockers.push(`No match is connected to ${spot.label}`);
+          continue;
+        }
+        const [result] = await database
+          .select()
+          .from(championshipMatchResultRevisions)
+          .where(
+            and(
+              eq(championshipMatchResultRevisions.championshipMatchId, match.id),
+              eq(championshipMatchResultRevisions.state, "current")
+            )
+          );
+        if (!result || result.sideAOutcome === "draw") {
+          blockers.push(`The result for ${match.label} is not decisive yet`);
+          continue;
+        }
+        const winnerId = result.sideAOutcome === "win" ? result.sideATeamId : result.sideBTeamId;
+        const loserId = result.sideAOutcome === "loss" ? result.sideATeamId : result.sideBTeamId;
+        teamId = policy.outcome === "winner" ? winnerId : loserId;
+      }
+      if (!teamId) {
+        blockers.push(`${spot.label} has no team yet`);
+        continue;
+      }
+      const [team] = await database.select().from(championshipTeams).where(eq(championshipTeams.id, teamId));
+      if (!team) continue;
+      const target = await honorTeamTarget(database, team, version.recipientTypes);
+      if (!target) {
+        blockers.push(`${team.name} has no identity compatible with this title`);
+        continue;
+      }
+      contenders.push({ target, displayLabel: team.name, rank: contenders.length + 1, value: null, tied: false });
+    }
+    explanation = `Result based on the configured ${policy.outcome === "occupant" ? "spot" : "match outcome"}.`;
+  } else {
+    const currentResults = await database
+      .select({ id: championshipMatchResultRevisions.id })
+      .from(championshipMatchResultRevisions)
+      .where(
+        and(
+          eq(championshipMatchResultRevisions.championshipId, championshipId),
+          eq(championshipMatchResultRevisions.state, "current")
+        )
+      );
+    if (!currentResults.length) blockers.push("No official match statistics are available");
+    const mappings = await database
+      .select({ sourceMetricKey: championshipMetricMappings.sourceMetricKey })
+      .from(championshipMetricMappings)
+      .where(
+        and(
+          eq(championshipMetricMappings.championshipId, championshipId),
+          eq(championshipMetricMappings.canonicalMetricKey, policy.metricKey)
+        )
+      );
+    const metricKeys = [...new Set([policy.metricKey, ...mappings.map((row) => row.sourceMetricKey)])];
+    if (currentResults.length && version.recipientTypes.includes("participant")) {
+      const rows = await database
+        .select({
+          participant: championshipParticipants,
+          value: sql<number>`sum(${championshipStatisticEntries.numericValue})`
+        })
+        .from(championshipStatisticEntries)
+        .innerJoin(
+          championshipParticipants,
+          eq(championshipStatisticEntries.participantId, championshipParticipants.id)
+        )
+        .where(
+          and(
+            eq(championshipStatisticEntries.championshipId, championshipId),
+            inArray(championshipStatisticEntries.resultRevisionId, currentResults.map(({ id }) => id)),
+            inArray(championshipStatisticEntries.metricKey, metricKeys)
+          )
+        )
+        .groupBy(championshipParticipants.id)
+        .orderBy(
+          policy.direction === "highest"
+            ? desc(sql`sum(${championshipStatisticEntries.numericValue})`)
+            : asc(sql`sum(${championshipStatisticEntries.numericValue})`),
+          asc(championshipParticipants.id)
+        )
+        .limit(Math.min(128, policy.limit));
+      contenders = rankMetricRows(
+        rows.map(({ participant, value }) => ({
+          target: { type: "participant" as const, uuid: participant.uuid },
+          displayLabel: participant.displayNameSnapshot,
+          value: Number(value)
+        }))
+      );
+    } else if (currentResults.length && (version.recipientTypes.includes("team") || version.recipientTypes.includes("team-identity"))) {
+      const rows = await database
+        .select({
+          team: championshipTeams,
+          value: sql<number>`sum(${championshipStatisticEntries.numericValue})`
+        })
+        .from(championshipStatisticEntries)
+        .innerJoin(championshipTeams, eq(championshipStatisticEntries.teamId, championshipTeams.id))
+        .where(
+          and(
+            eq(championshipStatisticEntries.championshipId, championshipId),
+            inArray(championshipStatisticEntries.resultRevisionId, currentResults.map(({ id }) => id)),
+            inArray(championshipStatisticEntries.metricKey, metricKeys)
+          )
+        )
+        .groupBy(championshipTeams.id)
+        .orderBy(
+          policy.direction === "highest"
+            ? desc(sql`sum(${championshipStatisticEntries.numericValue})`)
+            : asc(sql`sum(${championshipStatisticEntries.numericValue})`),
+          asc(championshipTeams.id)
+        )
+        .limit(Math.min(128, policy.limit));
+      const rankedTeams: Array<{ target: HonorTarget; displayLabel: string; value: number }> = [];
+      for (const { team, value } of rows) {
+        const target = await honorTeamTarget(database, team, version.recipientTypes);
+        if (target) rankedTeams.push({ target, displayLabel: team.name, value: Number(value) });
+      }
+      contenders = rankMetricRows(rankedTeams);
+    }
+    if (!contenders.length && !blockers.length) blockers.push("The configured metric has no eligible values");
+    explanation = `${policy.direction === "highest" ? "Highest" : "Lowest"} ${policy.metricKey} among eligible recipients.`;
+  }
+
+  const limited = contenders.slice(0, version.maximumRecipients);
+  if (limited.length < version.minimumRecipients && !blockers.length) {
+    blockers.push("There are not enough eligible recipients to grant this honor");
+  }
+  return {
+    honorUuid: honor.uuid,
+    policy,
+    ready: blockers.length === 0 && limited.length >= version.minimumRecipients,
+    explanation,
+    blockers,
+    contenders: limited
+  };
+}
+
+async function honorTeamTarget(
+  database: DatabaseExecutor,
+  team: typeof championshipTeams.$inferSelect,
+  recipientTypes: Array<HonorTarget["type"]>
+): Promise<HonorTarget | null> {
+  if (recipientTypes.includes("team")) return { type: "team", uuid: team.uuid };
+  if (recipientTypes.includes("team-identity") && team.teamIdentityId) {
+    const [identity] = await database
+      .select({ uuid: championshipTeamIdentities.uuid })
+      .from(championshipTeamIdentities)
+      .where(eq(championshipTeamIdentities.id, team.teamIdentityId));
+    return identity ? { type: "team-identity", uuid: identity.uuid } : null;
+  }
+  return null;
+}
+
+function rankMetricRows(
+  rows: Array<{ target: HonorTarget; displayLabel: string; value: number }>
+): ResolutionContender[] {
+  let rank = 0;
+  return rows.map((row, index) => {
+    if (index === 0 || row.value !== rows[index - 1]!.value) rank = index + 1;
+    return {
+      ...row,
+      rank,
+      tied: rows.some((other, otherIndex) => otherIndex !== index && other.value === row.value)
+    };
+  });
 }
 
 async function requireDefinition(database: DatabaseExecutor, uuid: string) {
