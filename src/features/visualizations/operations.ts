@@ -23,6 +23,7 @@ import {
   visualizationLimits,
   type DataRow
 } from "@/features/visualizations/pipeline";
+import { compileVisualization } from "@/features/visualizations/compiler";
 
 export type TemplateInput = {
   name: string;
@@ -236,7 +237,7 @@ export async function getMatchVisualizations(matchId: string) {
         )
   };
   return boundedDashboard(
-    compatible.map((template) => renderTemplate(template, sources))
+    compatible.map((template) => safeRenderTemplate(template, sources))
   );
 }
 
@@ -313,7 +314,10 @@ export async function getChampionshipVisualizations(
     instances
       .slice(0, visualizationLimits.chartsPerSurface)
       .map(({ instance, version, family }) => ({
-        ...renderTemplate({ family, version, compatibilities: [] }, sources),
+        ...safeRenderTemplate(
+          { family, version, compatibilities: [] },
+          sources
+        ),
         id: instance.uuid,
         title: instance.titleOverride ?? family.title,
         layout: { width: instance.width, height: instance.height },
@@ -512,19 +516,44 @@ function renderTemplate(
   };
 }
 
+function safeRenderTemplate(
+  template: Parameters<typeof renderTemplate>[0],
+  sources: Record<string, DataRow[]>
+) {
+  try {
+    return renderTemplate(template, sources);
+  } catch (error) {
+    return {
+      id: template.family.uuid,
+      title: template.family.title,
+      description: template.family.description,
+      version: template.version.version,
+      option: {},
+      datasets: [],
+      accessibility: { table: true },
+      interactions: {},
+      renderError:
+        error instanceof Error
+          ? error.message
+          : "Visualization could not render"
+    };
+  }
+}
+
 function renderSpecification(
   specification: VisualizationSpec,
   sources: Record<string, DataRow[]>
 ) {
+  const datasets = specification.datasets.map((dataset) => ({
+    id: dataset.id,
+    rows: executePipeline(
+      sources[dataset.source] ?? [],
+      dataset.operations ?? []
+    )
+  }));
   return {
-    option: specification.option,
-    datasets: specification.datasets.map((dataset) => ({
-      id: dataset.id,
-      rows: executePipeline(
-        sources[dataset.source] ?? [],
-        dataset.operations ?? []
-      )
-    })),
+    option: compileVisualization(specification, datasets),
+    datasets,
     accessibility: specification.accessibility ?? { table: true },
     interactions: specification.interactions ?? {}
   };

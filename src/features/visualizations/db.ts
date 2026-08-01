@@ -10,6 +10,32 @@ import { eventSchemaFamilies } from "@/features/event-schemas/db";
 import { gameModes } from "@/features/game-modes/db";
 
 export type VisualizationScope = "match" | "championship";
+export type VisualizationChartType =
+  | "bar"
+  | "line"
+  | "area"
+  | "scatter"
+  | "bubble"
+  | "pie"
+  | "donut"
+  | "radar"
+  | "heatmap"
+  | "boxplot"
+  | "funnel"
+  | "gauge"
+  | "treemap"
+  | "sunburst"
+  | "sankey"
+  | "graph"
+  | "tree"
+  | "parallel"
+  | "calendar";
+export type VisualizationChart = {
+  type: VisualizationChartType;
+  datasetId: string;
+  fields: Record<string, string | string[]>;
+  settings?: Record<string, unknown>;
+};
 export type VisualizationSpec = {
   datasets: Array<{
     id: string;
@@ -17,6 +43,7 @@ export type VisualizationSpec = {
     operations?: unknown[];
   }>;
   option: Record<string, unknown>;
+  chart?: VisualizationChart;
   interactions?: Record<string, unknown>;
   accessibility?: { summary?: string; table?: boolean };
 };

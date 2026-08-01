@@ -1,4 +1,5 @@
 import { badRequest } from "@/shared/http/errors";
+import { validateVisualizationChart } from "@/features/visualizations/compiler";
 
 export type DataRow = Record<string, unknown>;
 export type PipelineOperation = Record<string, unknown> & { type: string };
@@ -44,6 +45,11 @@ export function validateVisualizationSpecification(value: unknown) {
     ) {
       throw badRequest("Invalid visualization pipeline");
     }
+  }
+  if (value.chart !== undefined) {
+    const chart = validateVisualizationChart(value.chart);
+    if (!datasets.some((dataset) => dataset.id === chart.datasetId))
+      throw badRequest("Visualization chart references an unknown dataset");
   }
   inspectSafeJson(value);
   return value;
@@ -180,9 +186,21 @@ function applyOperation(
         requiredString(operation.column, "Pivot column"),
         requiredString(operation.value, "Pivot value")
       );
-    case "hierarchy":
-    case "edges":
-      return rows;
+    case "hierarchy": {
+      const path = stringArray(operation.path);
+      const value = requiredString(operation.value, "Hierarchy value");
+      return aggregate(rows, path, [{ op: "sum", field: value, as: value }]);
+    }
+    case "edges": {
+      const source = requiredString(operation.source, "Edge source");
+      const target = requiredString(operation.target, "Edge target");
+      const value = requiredString(operation.value, "Edge value");
+      return aggregate(
+        rows,
+        [source, target],
+        [{ op: "sum", field: value, as: value }]
+      ).filter((row) => read(row, source) !== read(row, target));
+    }
     default:
       throw badRequest(`Unsupported pipeline operation: ${operation.type}`);
   }

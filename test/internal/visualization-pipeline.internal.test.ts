@@ -83,6 +83,32 @@ describe("visualization pipeline", () => {
     ).toEqual([{ player: "A", yards: 10, attempts: 2 }]);
   });
 
+  it("shapes hierarchy leaves and weighted edges", () => {
+    const rows = [
+      { team: "A", player: "Ana", opponent: "B", value: 2 },
+      { team: "A", player: "Ana", opponent: "B", value: 3 },
+      { team: "B", player: "Bia", opponent: "B", value: 9 }
+    ];
+    expect(
+      executePipeline(rows, [
+        { type: "hierarchy", path: ["team", "player"], value: "value" }
+      ])
+    ).toEqual([
+      { team: "A", player: "Ana", value: 5 },
+      { team: "B", player: "Bia", value: 9 }
+    ]);
+    expect(
+      executePipeline(rows, [
+        {
+          type: "edges",
+          source: "team",
+          target: "opponent",
+          value: "value"
+        }
+      ])
+    ).toEqual([{ team: "A", opponent: "B", value: 5 }]);
+  });
+
   it.each([
     { option: { formatter: "javascript:alert(1)" } },
     { option: { renderItem: "anything" } },
