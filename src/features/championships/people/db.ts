@@ -205,6 +205,7 @@ export const championshipTeamMemberships = sqliteTable(
     }).notNull(),
     acquisitionReferenceUuid: text("acquisition_reference_uuid"),
     priceUnitsSnapshot: integer("price_units_snapshot"),
+    displayOrder: integer("display_order").notNull().default(0),
     effectiveFromRevision: integer("effective_from_revision").notNull(),
     effectiveToRevision: integer("effective_to_revision"),
     startedAt: text("started_at")
@@ -224,6 +225,7 @@ export const championshipTeamMemberships = sqliteTable(
     index("championship_memberships_team_active_idx").on(
       table.teamId,
       table.endedAt,
+      table.displayOrder,
       table.role
     ),
     uniqueIndex("championship_memberships_participant_active_unique")

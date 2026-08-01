@@ -253,6 +253,7 @@ export async function getChampionshipSalaryProjectionFrom(
                   teamUuid: team.uuid,
                   teamName: team.name,
                   role: membership.role,
+                  displayOrder: membership.displayOrder,
                   priceUnitsSnapshot: membership.priceUnitsSnapshot
                 }
               : null

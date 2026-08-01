@@ -18,6 +18,7 @@ import {
   championshipPresenceResponseSchema,
   championshipRosterMembershipResponseSchema,
   championshipRosterMovePreviewResponseSchema,
+  championshipRosterOrderResponseSchema,
   championshipSalaryProjectionResponseSchema,
   championshipSelfRegistrationResponseSchema,
   championshipSavedViewResponseSchema,
@@ -74,6 +75,7 @@ import {
   createCompetitionTypeBodySchema,
   createTeamIdentityBodySchema,
   executeChampionshipRosterMoveBodySchema,
+  reorderChampionshipRosterBodySchema,
   endChampionshipDraftBodySchema,
   freezeChampionshipPricesBodySchema,
   listChampionshipAuditQuerySchema,
@@ -195,7 +197,8 @@ import {
 import {
   executeChampionshipRosterMove,
   listChampionshipRosterHistory,
-  previewChampionshipRosterMove
+  previewChampionshipRosterMove,
+  reorderChampionshipRoster
 } from "@/features/championships/people/rosters";
 import {
   freezeChampionshipPrices,
@@ -367,6 +370,7 @@ export const championshipRoutes = new Elysia({
     ChampionshipPresence: championshipPresenceResponseSchema,
     ChampionshipRosterMembership: championshipRosterMembershipResponseSchema,
     ChampionshipRosterMovePreview: championshipRosterMovePreviewResponseSchema,
+    ChampionshipRosterOrder: championshipRosterOrderResponseSchema,
     ChampionshipSalaryProjection: championshipSalaryProjectionResponseSchema,
     ChampionshipSelfRegistration: championshipSelfRegistrationResponseSchema,
     ChampionshipSavedView: championshipSavedViewResponseSchema,
@@ -406,6 +410,7 @@ export const championshipRoutes = new Elysia({
     CreateCompetitionTypeBody: createCompetitionTypeBodySchema,
     CreateTeamIdentityBody: createTeamIdentityBodySchema,
     ExecuteChampionshipRosterMoveBody: executeChampionshipRosterMoveBodySchema,
+    ReorderChampionshipRosterBody: reorderChampionshipRosterBodySchema,
     EndChampionshipDraftBody: endChampionshipDraftBodySchema,
     FreezeChampionshipPricesBody: freezeChampionshipPricesBodySchema,
     AddChampionshipCommentBody: addChampionshipCommentBodySchema,
@@ -1036,6 +1041,19 @@ export const championshipRoutes = new Elysia({
       detail: {
         tags: ["Championships"],
         summary: "Execute a staff championship roster move"
+      }
+    }
+  )
+  .put(
+    "/:id/roster-order",
+    ({ params, body }) => reorderChampionshipRoster(params.id, body),
+    {
+      params: championshipIdParamsSchema,
+      body: t.Ref("ReorderChampionshipRosterBody"),
+      response: { 200: t.Ref("ChampionshipRosterOrder") },
+      detail: {
+        tags: ["Championships"],
+        summary: "Reorder an active championship roster"
       }
     }
   )

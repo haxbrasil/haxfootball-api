@@ -297,6 +297,18 @@ export const executeChampionshipRosterMoveBodySchema = t.Composite([
   })
 ]);
 
+export const reorderChampionshipRosterBodySchema = t.Composite([
+  championshipCommandSchema,
+  t.Object({
+    teamId: t.String({ format: "uuid" }),
+    participantIds: t.Array(t.String({ format: "uuid" }), {
+      minItems: 1,
+      maxItems: 128,
+      uniqueItems: true
+    })
+  })
+]);
+
 export const championshipDraftQuerySchema = t.Object({
   actorAccountUuid: t.Optional(t.String({ format: "uuid" })),
   turnLimit: t.Optional(t.Integer({ minimum: 1, maximum: 100 })),
@@ -1225,6 +1237,9 @@ export type PreviewChampionshipRosterMoveInput = Static<
 >;
 export type ExecuteChampionshipRosterMoveInput = Static<
   typeof executeChampionshipRosterMoveBodySchema
+>;
+export type ReorderChampionshipRosterInput = Static<
+  typeof reorderChampionshipRosterBodySchema
 >;
 export type ChampionshipDraftQuery = Static<
   typeof championshipDraftQuerySchema

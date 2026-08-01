@@ -139,6 +139,7 @@ export const championshipRosterMembershipResponseSchema = t.Object({
   ]),
   acquisitionReferenceUuid: t.Nullable(t.String()),
   priceUnitsSnapshot: t.Nullable(t.Integer()),
+  displayOrder: t.Integer(),
   effectiveFromRevision: t.Integer(),
   effectiveToRevision: t.Nullable(t.Integer()),
   startedAt: t.String(),
@@ -163,6 +164,7 @@ export const championshipSalaryParticipantResponseSchema = t.Object({
       teamUuid: t.String({ format: "uuid" }),
       teamName: t.String(),
       role: t.Union([t.Literal("gm"), t.Literal("player")]),
+      displayOrder: t.Integer(),
       priceUnitsSnapshot: t.Nullable(t.Integer())
     })
   )
@@ -249,6 +251,12 @@ export const championshipRosterMovePreviewResponseSchema = t.Object({
       overCapAfter: t.Boolean()
     })
   )
+});
+
+export const championshipRosterOrderResponseSchema = t.Object({
+  teamUuid: t.String({ format: "uuid" }),
+  rosterRevision: t.Integer(),
+  participantIds: t.Array(t.String({ format: "uuid" }))
 });
 
 const championshipDraftTeamResponseSchema = t.Object({
@@ -1172,6 +1180,9 @@ export type ChampionshipSalaryProjectionResponse = Static<
 >;
 export type ChampionshipRosterMovePreviewResponse = Static<
   typeof championshipRosterMovePreviewResponseSchema
+>;
+export type ChampionshipRosterOrderResponse = Static<
+  typeof championshipRosterOrderResponseSchema
 >;
 export type ChampionshipDraftResponse = Static<
   typeof championshipDraftResponseSchema

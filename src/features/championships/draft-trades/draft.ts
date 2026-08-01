@@ -1092,9 +1092,9 @@ async function projectChampionshipDraft(
       createdAt: draft.createdAt,
       updatedAt: draft.updatedAt,
       teams: orderRows.map(({ order, team }) => {
-        const roster = membershipRows.filter(
-          ({ membership }) => membership.teamId === team.id
-        );
+        const roster = membershipRows
+          .filter(({ membership }) => membership.teamId === team.id)
+          .sort((left, right) => left.membership.displayOrder - right.membership.displayOrder);
         const usageUnits = roster.reduce(
           (sum, { membership }) => sum + (membership.priceUnitsSnapshot ?? 0),
           0

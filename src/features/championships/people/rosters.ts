@@ -19,11 +19,13 @@ import {
 import type {
   ChampionshipRosterHistoryQuery,
   ExecuteChampionshipRosterMoveInput,
-  PreviewChampionshipRosterMoveInput
+  PreviewChampionshipRosterMoveInput,
+  ReorderChampionshipRosterInput
 } from "@/features/championships/_shared/http/inputs";
 import type {
   ChampionshipRosterMembershipResponse,
-  ChampionshipRosterMovePreviewResponse
+  ChampionshipRosterMovePreviewResponse,
+  ChampionshipRosterOrderResponse
 } from "@/features/championships/_shared/http/responses";
 import { badRequest, conflict, notFound } from "@/shared/http/errors";
 import {
@@ -152,6 +154,84 @@ export async function executeChampionshipRosterMove(
   );
 }
 
+export async function reorderChampionshipRoster(
+  championshipUuid: string,
+  input: ReorderChampionshipRosterInput
+): Promise<ChampionshipRosterOrderResponse> {
+  return executeChampionshipCommand(
+    {
+      championshipUuid,
+      actorAccountUuid: input.actorAccountUuid,
+      commandUuid: input.commandUuid,
+      expectedRevision: input.expectedRevision,
+      permission: "championship:admin",
+      action: "roster.reordered"
+    },
+    async (tx, championship) => {
+      const [team] = await tx
+        .select()
+        .from(championshipTeams)
+        .where(
+          and(
+            eq(championshipTeams.championshipId, championship.id),
+            eq(championshipTeams.uuid, input.teamId)
+          )
+        );
+      if (!team) throw notFound("Championship team not found");
+
+      const memberships = await tx
+        .select({ membership: championshipTeamMemberships, participant: championshipParticipants })
+        .from(championshipTeamMemberships)
+        .innerJoin(
+          championshipParticipants,
+          eq(championshipTeamMemberships.participantId, championshipParticipants.id)
+        )
+        .where(
+          and(
+            eq(championshipTeamMemberships.teamId, team.id),
+            isNull(championshipTeamMemberships.endedAt)
+          )
+        );
+      const membershipByParticipantUuid = new Map(
+        memberships.map(({ membership, participant }) => [participant.uuid, membership])
+      );
+
+      if (
+        memberships.length !== input.participantIds.length ||
+        input.participantIds.some((uuid) => !membershipByParticipantUuid.has(uuid))
+      ) {
+        throw conflict("Roster order must contain every active team participant exactly once");
+      }
+
+      for (const [displayOrder, participantUuid] of input.participantIds.entries()) {
+        await tx
+          .update(championshipTeamMemberships)
+          .set({ displayOrder })
+          .where(eq(championshipTeamMemberships.id, membershipByParticipantUuid.get(participantUuid)!.id));
+      }
+
+      const rosterRevision = team.rosterRevision + 1;
+      await tx
+        .update(championshipTeams)
+        .set({ rosterRevision, revision: team.revision + 1, updatedAt: new Date().toISOString() })
+        .where(eq(championshipTeams.id, team.id));
+      const response = { teamUuid: team.uuid, rosterRevision, participantIds: input.participantIds };
+
+      return {
+        response: () => response,
+        targetType: "championship-team",
+        targetUuid: team.uuid,
+        before: memberships
+          .sort((left, right) => left.membership.displayOrder - right.membership.displayOrder)
+          .map(({ participant }) => participant.uuid),
+        after: input.participantIds,
+        metadata: { teamUuid: team.uuid, participantCount: input.participantIds.length },
+        outboxTopic: "championship.roster.reordered"
+      };
+    }
+  );
+}
+
 export async function applyChampionshipRosterMove(
   tx: DbTransaction,
   championship: Championship,
@@ -249,6 +329,7 @@ export async function applyChampionshipRosterMove(
         priceUnitsSnapshot: championship.rules.salary.enabled
           ? context.price!.priceUnits
           : null,
+        displayOrder: await nextRosterDisplayOrder(tx, context.targetTeam.id),
         effectiveFromRevision: targetRevision
       })
       .returning();
@@ -601,6 +682,7 @@ export async function applyChampionshipRosterExchange(
         priceUnitsSnapshot: championship.rules.salary.enabled
           ? row.price!.priceUnits
           : null,
+        displayOrder: await nextRosterDisplayOrder(tx, targetTeam.id),
         effectiveFromRevision: targetRevision
       })
       .returning();
@@ -964,9 +1046,23 @@ function mapRosterMembership(
     acquisitionSource: membership.acquisitionSource,
     acquisitionReferenceUuid: membership.acquisitionReferenceUuid,
     priceUnitsSnapshot: membership.priceUnitsSnapshot,
+    displayOrder: membership.displayOrder,
     effectiveFromRevision: membership.effectiveFromRevision,
     effectiveToRevision: membership.effectiveToRevision,
     startedAt: membership.startedAt,
     endedAt: membership.endedAt
   };
+}
+
+async function nextRosterDisplayOrder(database: DatabaseExecutor, teamId: number) {
+  const [row] = await database
+    .select({ value: sql<number>`coalesce(max(${championshipTeamMemberships.displayOrder}), -1)` })
+    .from(championshipTeamMemberships)
+    .where(
+      and(
+        eq(championshipTeamMemberships.teamId, teamId),
+        isNull(championshipTeamMemberships.endedAt)
+      )
+    );
+  return Number(row?.value ?? -1) + 1;
 }

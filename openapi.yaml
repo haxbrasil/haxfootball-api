@@ -5013,6 +5013,12 @@ components:
             - replacement
             - historical-import
           type: string
+        displayOrder:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - type: integer
         effectiveFromRevision:
           anyOf:
             - default: 0
@@ -5082,6 +5088,7 @@ components:
         - acquisitionSource
         - acquisitionReferenceUuid
         - priceUnitsSnapshot
+        - displayOrder
         - effectiveFromRevision
         - effectiveToRevision
         - startedAt
@@ -5226,6 +5233,27 @@ components:
         - requiresCapException
         - violations
         - affectedTeams
+      type: object
+    ChampionshipRosterOrder:
+      properties:
+        participantIds:
+          items:
+            format: uuid
+            type: string
+          type: array
+        rosterRevision:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - type: integer
+        teamUuid:
+          format: uuid
+          type: string
+      required:
+        - teamUuid
+        - rosterRevision
+        - participantIds
       type: object
     ChampionshipRoundRobinPreview:
       properties:
@@ -5517,6 +5545,12 @@ components:
                   membership:
                     anyOf:
                       - properties:
+                          displayOrder:
+                            anyOf:
+                              - default: 0
+                                format: integer
+                                type: string
+                              - type: integer
                           priceUnitsSnapshot:
                             anyOf:
                               - anyOf:
@@ -5545,6 +5579,7 @@ components:
                           - teamUuid
                           - teamName
                           - role
+                          - displayOrder
                           - priceUnitsSnapshot
                         type: object
                       - type: "null"
@@ -13192,6 +13227,40 @@ components:
           type: boolean
       required:
         - deleted
+      type: object
+    ReorderChampionshipRosterBody:
+      properties:
+        actorAccountUuid:
+          format: uuid
+          type: string
+        commandUuid:
+          format: uuid
+          type: string
+        expectedRevision:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - minimum: 0
+              type: integer
+          minimum: 0
+        participantIds:
+          items:
+            format: uuid
+            type: string
+          maxItems: 128
+          minItems: 1
+          type: array
+          uniqueItems: true
+        teamId:
+          format: uuid
+          type: string
+      required:
+        - actorAccountUuid
+        - commandUuid
+        - expectedRevision
+        - teamId
+        - participantIds
       type: object
     ReplaceChampionshipMetricMappingsBody:
       properties:
@@ -21120,6 +21189,62 @@ paths:
                 $ref: "#/components/schemas/InternalServerError"
           description: Response for status 500
       summary: Preview a championship roster move
+      tags:
+        - Championships
+  /api/championships/{id}/roster-order:
+    put:
+      operationId: putApiChampionshipsByIdRoster-order
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReorderChampionshipRosterBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChampionshipRosterOrder"
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForbiddenError"
+          description: Response for status 403
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictError"
+          description: Response for status 409
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Reorder an active championship roster
       tags:
         - Championships
   /api/championships/{id}/salary:
