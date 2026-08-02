@@ -16,6 +16,8 @@
     "db:backup": "bun scripts/sqlite-maintenance.ts backup",
     "db:restore": "bun scripts/sqlite-maintenance.ts restore",
     "db:verify": "bun scripts/sqlite-maintenance.ts verify",
+    "matches:provenance:preview": "bun scripts/backfill-match-room-provenance.ts preview",
+    "matches:provenance:apply": "bun scripts/backfill-match-room-provenance.ts apply",
     "graphql:generate": "graphql-codegen --config codegen.ts",
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",
