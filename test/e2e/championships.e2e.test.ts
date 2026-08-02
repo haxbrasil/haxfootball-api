@@ -1,3 +1,4 @@
+import { Database } from "bun:sqlite";
 import { beforeAll, describe, expect, it } from "bun:test";
 import {
   paginatedBody,
@@ -3740,6 +3741,61 @@ describe("championship scheduling negotiations", () => {
 });
 
 describe("championship match evidence and settlement", () => {
+  it("accepts evidence from any active championship room program", async () => {
+    const defaultProgram = await createRoomProgram("settlement-default");
+    const alternateProgram = await createRoomProgram("settlement-alternate");
+    const fixture = await createSettlementFixture(2, {
+      roomProgramIds: [defaultProgram.uuid, alternateProgram.uuid],
+      defaultRoomProgramId: defaultProgram.uuid
+    });
+    const roomId = createTestRoomInstance(alternateProgram.uuid);
+    const physicalMatch = await createCompletedPhysicalMatch(
+      { red: 2, blue: 1 },
+      { roomId }
+    );
+    const candidates = await successfulJson(
+      await request(
+        `/api/championships/${fixture.championship.uuid}/matches/${fixture.matches[0].uuid}/evidence-candidates?actorAccountUuid=${admin.uuid}&logicalMatchId=${physicalMatch.id}`
+      )
+    );
+
+    expect(candidates.items).toContainEqual(
+      expect.objectContaining({
+        programCompatible: true,
+        expectedProgram: expect.objectContaining({ uuid: defaultProgram.uuid })
+      })
+    );
+
+    await attachEvidence(
+      fixture.championship,
+      fixture.matches[0],
+      physicalMatch.id
+    );
+    const preview = await successfulJson(
+      await request(
+        `/api/championships/${fixture.championship.uuid}/matches/${fixture.matches[0].uuid}/settlement-previews`,
+        {
+          method: "POST",
+          body: {
+            actorAccountUuid: admin.uuid,
+            ...settlementDraft({
+              method: "played",
+              sideAPlayedScore: 2,
+              sideBPlayedScore: 1,
+              sideAOutcome: "win",
+              sideBOutcome: "loss"
+            }),
+            evidenceQualityReviewed: true
+          }
+        }
+      )
+    );
+
+    expect(preview.findings).not.toContainEqual(
+      expect.objectContaining({ code: "program-mismatch" })
+    );
+  });
+
   it("finds evidence by formatted and partial logical match codes", async () => {
     const physicalMatch = await createCompletedPhysicalMatch({
       red: 3,
@@ -4739,9 +4795,13 @@ describe("championship match evidence and settlement", () => {
 
 async function createSettlementFixture(
   teamCount: number,
-  options: { publish?: boolean } = {}
+  options: {
+    publish?: boolean;
+    roomProgramIds?: string[];
+    defaultRoomProgramId?: string;
+  } = {}
 ) {
-  const fixture = await createFormatFixture(teamCount);
+  const fixture = await createFormatFixture(teamCount, options);
   const generatedResponse = await request(
     `/api/championships/${fixture.championship.uuid}/stages/single-elimination`,
     {
@@ -4802,6 +4862,7 @@ async function createCompletedPhysicalMatch(
   options: {
     events?: Array<Record<string, unknown>>;
     eventSchema?: { id: string; version: number };
+    roomId?: string;
   } = {}
 ) {
   const response = await request("/api/matches", {
@@ -4811,6 +4872,7 @@ async function createCompletedPhysicalMatch(
       initiatedAt: "2026-09-01T20:00:00.000Z",
       endedAt: "2026-09-01T20:10:00.000Z",
       score,
+      ...(options.roomId ? { roomId: options.roomId } : {}),
       ...(options.events ? { events: options.events } : {}),
       ...(options.eventSchema ? { eventSchema: options.eventSchema } : {})
     }
@@ -4819,6 +4881,63 @@ async function createCompletedPhysicalMatch(
   expect(response.status).toBe(201);
 
   return response.json() as Promise<{ id: string }>;
+}
+
+function createTestRoomInstance(programUuid: string): string {
+  const database = new Database(Bun.env.DATABASE_FILE);
+  database.exec("PRAGMA foreign_keys = ON");
+
+  try {
+    const program = database
+      .query<{ id: number }, [string]>(
+        "SELECT id FROM room_programs WHERE uuid = ?"
+      )
+      .get(programUuid);
+
+    if (!program) {
+      throw new Error(`Room program ${programUuid} was not found`);
+    }
+
+    const now = new Date().toISOString();
+    const versionUuid = crypto.randomUUID();
+    const version = database
+      .query<{ id: number }, [string, number, string, string, string]>(
+        `INSERT INTO room_program_versions
+          (uuid, program_id, version, artifact, entrypoint, install_strategy, created_at, updated_at)
+         VALUES (?, ?, 'v1.0.0', ?, 'dist/index.js', 'none', ?, ?)
+         RETURNING id`
+      )
+      .get(
+        versionUuid,
+        program.id,
+        JSON.stringify({
+          releaseId: versionUuid,
+          tagName: "v1.0.0",
+          assetName: "room-v1.0.0.tgz",
+          assetUrl: "https://example.com/room-v1.0.0.tgz",
+          publishedAt: now
+        }),
+        now,
+        now
+      );
+
+    if (!version) {
+      throw new Error("Room program version was not created");
+    }
+
+    const roomUuid = crypto.randomUUID();
+    database
+      .query<void, [string, number, number, string, string, string]>(
+        `INSERT INTO room_instances
+          (uuid, program_id, version_id, state, launch_config, public, comm_id_hash, created_at, updated_at)
+         VALUES (?, ?, ?, 'closed', '{}', 0, ?, ?, ?)`
+      )
+      .run(roomUuid, program.id, version.id, `test-${roomUuid}`, now, now);
+
+    return roomUuid;
+  } finally {
+    database.close();
+  }
 }
 
 async function createMatchComposition(

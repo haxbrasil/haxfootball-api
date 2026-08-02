@@ -29,6 +29,7 @@ import {
   championshipRoomContextRank,
   classifyChampionshipRoomContext
 } from "@/features/championships/matches-statistics/room-context";
+import { areProgramsCompatible } from "@/features/championships/matches-statistics/program-compatibility";
 import type { ChampionshipMatchOperationsResponse } from "@/features/championships/matches-statistics/responses";
 import {
   championshipParticipants,
@@ -95,20 +96,11 @@ export async function listChampionshipEvidenceCandidates(
     context.championship.id,
     context.match
   );
-  const allowedProgramRows = await db
-    .select({ uuid: roomPrograms.uuid })
-    .from(championshipRoomPrograms)
-    .innerJoin(
-      roomPrograms,
-      eq(championshipRoomPrograms.roomProgramId, roomPrograms.id)
+  const allowedPrograms = new Set(
+    (await resolveAllowedPrograms(db, context.championship.id)).map(
+      (program) => program.uuid
     )
-    .where(
-      and(
-        eq(championshipRoomPrograms.championshipId, context.championship.id),
-        eq(championshipRoomPrograms.state, "active")
-      )
-    );
-  const allowedPrograms = new Set(allowedProgramRows.map((row) => row.uuid));
+  );
   const limit = query.limit ?? 20;
   const summaries = query.logicalMatchId
     ? { items: [{ id: query.logicalMatchId }], page: { nextCursor: null } }
@@ -125,13 +117,10 @@ export async function listChampionshipEvidenceCandidates(
         .map((round) => round.provenance?.program.uuid)
         .filter((uuid): uuid is string => !!uuid)
     );
-    const programCompatible =
-      actualPrograms.size === 0 ||
-      [...actualPrograms].every((uuid) =>
-        expectedProgram
-          ? uuid === expectedProgram.uuid
-          : allowedPrograms.has(uuid)
-      );
+    const programCompatible = areProgramsCompatible(
+      actualPrograms,
+      allowedPrograms
+    );
     const championshipContext = classifyChampionshipRoomContext(
       championshipUuid,
       evidence.rounds.map((round) => round.provenance?.championshipContextUuid)
@@ -769,6 +758,30 @@ export async function resolveExpectedProgram(
     .where(eq(roomPrograms.id, programId));
 
   return program ?? null;
+}
+
+export async function resolveAllowedPrograms(
+  database: DatabaseExecutor,
+  championshipId: number
+) {
+  return database
+    .select({
+      id: roomPrograms.id,
+      uuid: roomPrograms.uuid,
+      name: roomPrograms.name,
+      title: roomPrograms.title
+    })
+    .from(championshipRoomPrograms)
+    .innerJoin(
+      roomPrograms,
+      eq(championshipRoomPrograms.roomProgramId, roomPrograms.id)
+    )
+    .where(
+      and(
+        eq(championshipRoomPrograms.championshipId, championshipId),
+        eq(championshipRoomPrograms.state, "active")
+      )
+    );
 }
 
 function teamReference(

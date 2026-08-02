@@ -23,9 +23,10 @@ import {
 import {
   projectChampionshipMatchOperations,
   requireMatchContext,
-  resolveExpectedProgram,
+  resolveAllowedPrograms,
   type ChampionshipMatchContext
 } from "@/features/championships/matches-statistics/evidence";
+import { areProgramsCompatible } from "@/features/championships/matches-statistics/program-compatibility";
 import type {
   ChampionshipAttributionInput,
   ChampionshipSettlementDraft,
@@ -424,7 +425,7 @@ export async function buildSettlementPreview(
   input: ChampionshipSettlementDraft
 ): Promise<ChampionshipSettlementPreviewResponse> {
   const result = normalizeSettlement(context, input);
-  const [evidence, evidenceRounds, appearanceReviews, expectedProgram] =
+  const [evidence, evidenceRounds, appearanceReviews, allowedPrograms] =
     await Promise.all([
       database
         .select()
@@ -451,7 +452,7 @@ export async function buildSettlementPreview(
         )
         .orderBy(asc(championshipMatchEvidenceRounds.position)),
       buildAppearanceReviews(database, context, input.attributions ?? []),
-      resolveExpectedProgram(database, context.championship.id, context.match)
+      resolveAllowedPrograms(database, context.championship.id)
     ]);
   const findings: ChampionshipSettlementPreviewResponse["findings"] = [];
 
@@ -498,23 +499,23 @@ export async function buildSettlementPreview(
       .map(({ round }) => round.roomProgramId)
       .filter((id): id is number => id !== null)
   );
-  const programMismatch =
-    !!expectedProgram &&
-    actualProgramIds.size > 0 &&
-    [...actualProgramIds].some((id) => id !== expectedProgram.id);
+  const programMismatch = !areProgramsCompatible(
+    actualProgramIds,
+    new Set(allowedPrograms.map((program) => program.id))
+  );
 
   if (programMismatch && !input.programMismatchReason) {
     findings.push({
       code: "program-mismatch",
       severity: "blocking",
       message:
-        "O programa real difere do esperado e exige justificativa explícita."
+        "A partida usa um programa não autorizado nesta edição e exige justificativa."
     });
   } else if (programMismatch) {
     findings.push({
       code: "program-mismatch-acknowledged",
       severity: "warning",
-      message: "A divergência de programa será registrada na auditoria."
+      message: "O uso do programa não autorizado será registrado na auditoria."
     });
   }
 
