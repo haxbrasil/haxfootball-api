@@ -54,6 +54,7 @@ import {
 } from "@/features/championships/people/db";
 import { refreshChampionshipRecords } from "@/features/championships/history/records";
 import { reconcileCalculatedChampionshipHonors } from "@/features/championships/history/honors";
+import { resolveChampionshipAppearanceSide } from "@/features/championships/matches-statistics/appearance-side";
 import { matches, matchPlayerStints } from "@/features/matches/db";
 import { players } from "@/features/players/db";
 import { badRequest, conflict } from "@/shared/http/errors";
@@ -751,6 +752,7 @@ async function buildAppearanceReviews(
       player: typeof players.$inferSelect;
       account: typeof accounts.$inferSelect | null;
       times: Record<Side, number>;
+      appearanceCounts: Record<Side, number>;
     }
   >();
 
@@ -767,9 +769,11 @@ async function buildAppearanceReviews(
     const item = grouped.get(row.player.id) ?? {
       player: row.player,
       account: row.account,
-      times: { a: 0, b: 0 }
+      times: { a: 0, b: 0 },
+      appearanceCounts: { a: 0, b: 0 }
     };
     item.times[side] += Math.max(0, end - start);
+    item.appearanceCounts[side] += 1;
     grouped.set(row.player.id, item);
   }
 
@@ -780,7 +784,10 @@ async function buildAppearanceReviews(
   return [...grouped.values()]
     .sort((left, right) => left.player.id - right.player.id)
     .map((item) => {
-      const observedSide: Side = item.times.a >= item.times.b ? "a" : "b";
+      const { observedSide, ambiguous } = resolveChampionshipAppearanceSide(
+        item.times,
+        item.appearanceCounts
+      );
       const participant = item.account
         ? (participantByAccountId.get(item.account.id) ?? null)
         : null;
@@ -803,7 +810,7 @@ async function buildAppearanceReviews(
             : "off-roster"
         );
       }
-      if (item.times.a > 0 && item.times.b > 0) {
+      if (ambiguous) {
         findings.push("ambiguous-side");
       }
 
