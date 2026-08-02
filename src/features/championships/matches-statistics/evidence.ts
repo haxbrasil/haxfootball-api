@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNull } from "drizzle-orm";
 import { db, type DatabaseExecutor } from "@/db/client";
 import { accounts } from "@/features/accounts/db";
 import {
@@ -30,9 +30,11 @@ import {
   classifyChampionshipRoomContext
 } from "@/features/championships/matches-statistics/room-context";
 import { areProgramsCompatible } from "@/features/championships/matches-statistics/program-compatibility";
+import { recommendEvidenceOrientation } from "@/features/championships/matches-statistics/evidence-orientation";
 import type { ChampionshipMatchOperationsResponse } from "@/features/championships/matches-statistics/responses";
 import {
   championshipParticipants,
+  championshipTeamMemberships,
   championshipTeamIdentities,
   championshipTeams
 } from "@/features/championships/people/db";
@@ -102,6 +104,10 @@ export async function listChampionshipEvidenceCandidates(
     )
   );
   const limit = query.limit ?? 20;
+  const rosterByAccountUuid = await resolveCurrentRosterByAccountUuid(
+    db,
+    context.championship.id
+  );
   const summaries = query.logicalMatchId
     ? { items: [{ id: query.logicalMatchId }], page: { nextCursor: null } }
     : await listMatches({ limit, cursor: query.cursor });
@@ -110,7 +116,7 @@ export async function listChampionshipEvidenceCandidates(
   for (const summary of summaries.items) {
     const evidence = await readLogicalMatchEvidence(summary.id, {
       eventLimit: 1,
-      participantLimit: query.playerSearch ? 500 : 20
+      participantLimit: 100
     });
     const actualPrograms = new Set(
       evidence.rounds
@@ -180,6 +186,11 @@ export async function listChampionshipEvidenceCandidates(
           ? { uuid: expectedProgram.uuid, name: expectedProgram.name }
           : null,
         programCompatible,
+        orientationRecommendation: recommendEvidenceOrientation(
+          evidence.rounds,
+          context.match,
+          rosterByAccountUuid
+        ),
         championshipContext,
         alreadyClaimed: evidence.claim !== null
       });
@@ -197,6 +208,31 @@ export async function listChampionshipEvidenceCandidates(
     nextCursor: query.logicalMatchId ? null : summaries.page.nextCursor,
     totalInspected: summaries.items.length
   };
+}
+
+async function resolveCurrentRosterByAccountUuid(
+  database: DatabaseExecutor,
+  championshipId: number
+) {
+  const rows = await database
+    .select({
+      accountUuid: accounts.uuid,
+      teamId: championshipTeamMemberships.teamId
+    })
+    .from(championshipTeamMemberships)
+    .innerJoin(
+      championshipParticipants,
+      eq(championshipTeamMemberships.participantId, championshipParticipants.id)
+    )
+    .innerJoin(accounts, eq(championshipParticipants.accountId, accounts.id))
+    .where(
+      and(
+        eq(championshipTeamMemberships.championshipId, championshipId),
+        isNull(championshipTeamMemberships.endedAt)
+      )
+    );
+
+  return new Map(rows.map((row) => [row.accountUuid, row.teamId]));
 }
 
 function normalizeLogicalMatchSearch(search?: string): string | null {

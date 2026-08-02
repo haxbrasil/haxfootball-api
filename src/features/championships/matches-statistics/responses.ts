@@ -30,6 +30,13 @@ export const championshipEvidenceCandidateResponseSchema = t.Object({
     })
   ),
   programCompatible: t.Boolean(),
+  orientationRecommendation: t.Nullable(
+    t.Object({
+      orientation: t.Union([t.Literal("aligned"), t.Literal("swapped")]),
+      matchedPlayers: t.Integer({ minimum: 0 }),
+      opposingPlayers: t.Integer({ minimum: 0 })
+    })
+  ),
   championshipContext: t.Union([
     t.Literal("matched"),
     t.Literal("other"),

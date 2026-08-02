@@ -2578,12 +2578,45 @@ components:
                     type: object
                   - type: "null"
                 nullable: true
+              orientationRecommendation:
+                anyOf:
+                  - properties:
+                      matchedPlayers:
+                        anyOf:
+                          - default: 0
+                            format: integer
+                            type: string
+                          - minimum: 0
+                            type: integer
+                        minimum: 0
+                      opposingPlayers:
+                        anyOf:
+                          - default: 0
+                            format: integer
+                            type: string
+                          - minimum: 0
+                            type: integer
+                        minimum: 0
+                      orientation:
+                        anyOf:
+                          - const: aligned
+                            type: string
+                          - const: swapped
+                            type: string
+                    required:
+                      - orientation
+                      - matchedPlayers
+                      - opposingPlayers
+                    type: object
+                  - type: "null"
+                nullable: true
               programCompatible:
                 type: boolean
             required:
               - evidence
               - expectedProgram
               - programCompatible
+              - orientationRecommendation
               - championshipContext
               - alreadyClaimed
             type: object
