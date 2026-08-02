@@ -140,9 +140,13 @@ export async function listChampionshipEvidenceCandidates(
     const totalScore = evidence.score
       ? evidence.score.red + evidence.score.blue
       : null;
-    const playerSearch = query.playerSearch?.toLocaleLowerCase();
+    const playerSearch = query.playerSearch?.trim().toLocaleLowerCase();
+    const logicalMatchSearch = normalizeLogicalMatchSearch(playerSearch);
+    const logicalMatchMatches =
+      !!logicalMatchSearch && evidence.id.includes(logicalMatchSearch);
     const playerMatches =
       !playerSearch ||
+      logicalMatchMatches ||
       evidence.rounds.some((round) =>
         round.participants.items.some(
           ({ player }) =>
@@ -176,7 +180,10 @@ export async function listChampionshipEvidenceCandidates(
       scoreMatches &&
       qualityMatches &&
       claimMatches &&
-      (query.includeAllPrograms || programCompatible || query.logicalMatchId)
+      (query.includeAllPrograms ||
+        programCompatible ||
+        query.logicalMatchId ||
+        logicalMatchMatches)
     ) {
       candidates.push({
         evidence,
@@ -201,6 +208,16 @@ export async function listChampionshipEvidenceCandidates(
     nextCursor: query.logicalMatchId ? null : summaries.page.nextCursor,
     totalInspected: summaries.items.length
   };
+}
+
+function normalizeLogicalMatchSearch(search?: string): string | null {
+  if (!search) {
+    return null;
+  }
+
+  const normalized = search.replace(/[\s_-]+/g, "");
+
+  return /^[a-z2-9]{3,9}$/.test(normalized) ? normalized : null;
 }
 
 export async function attachChampionshipMatchEvidence(

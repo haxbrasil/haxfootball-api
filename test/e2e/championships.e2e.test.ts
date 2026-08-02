@@ -3740,6 +3740,34 @@ describe("championship scheduling negotiations", () => {
 });
 
 describe("championship match evidence and settlement", () => {
+  it("finds evidence by formatted and partial logical match codes", async () => {
+    const physicalMatch = await createCompletedPhysicalMatch({
+      red: 3,
+      blue: 1
+    });
+    const fixture = await createSettlementFixture(2);
+    const formattedCode =
+      `${physicalMatch.id.slice(0, 4)}-${physicalMatch.id.slice(4)}`.toUpperCase();
+
+    for (const search of [
+      formattedCode,
+      physicalMatch.id.slice(0, 7).toUpperCase()
+    ]) {
+      const response = await successfulJson(
+        await request(
+          `/api/championships/${fixture.championship.uuid}/matches/${fixture.matches[0].uuid}/evidence-candidates` +
+            `?actorAccountUuid=${admin.uuid}&playerSearch=${encodeURIComponent(search)}`
+        )
+      );
+
+      expect(response.items).toContainEqual(
+        expect.objectContaining({
+          evidence: expect.objectContaining({ id: physicalMatch.id })
+        })
+      );
+    }
+  });
+
   it("composes and attaches independent room games in one championship command", async () => {
     const firstHalf = await createCompletedPhysicalMatch({ red: 3, blue: 1 });
     const secondHalf = await createCompletedPhysicalMatch({ red: 2, blue: 4 });
