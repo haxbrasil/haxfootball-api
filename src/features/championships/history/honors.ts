@@ -1,5 +1,20 @@
-import { and, asc, desc, eq, gt, inArray, isNull, ne, or, sql } from "drizzle-orm";
-import { db, type DatabaseExecutor, withDatabaseTransaction } from "@/db/client";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  gt,
+  inArray,
+  isNull,
+  ne,
+  or,
+  sql
+} from "drizzle-orm";
+import {
+  db,
+  type DatabaseExecutor,
+  withDatabaseTransaction
+} from "@/db/client";
 import { accounts } from "@/features/accounts/db";
 import { executeChampionshipCommand } from "@/features/championships/core/commands";
 import {
@@ -7,7 +22,10 @@ import {
   championshipActorHasPermission,
   findChampionshipActor
 } from "@/features/championships/core/authorization";
-import { championships } from "@/features/championships/core/db";
+import {
+  championshipCompetitionTypes,
+  championships
+} from "@/features/championships/core/db";
 import {
   championshipMatches,
   championshipSpots
@@ -54,10 +72,20 @@ import {
   pageLimit,
   type PaginatedResponse
 } from "@lib";
-import { badRequest, conflict, forbidden, notFound } from "@/shared/http/errors";
+import {
+  badRequest,
+  conflict,
+  forbidden,
+  notFound
+} from "@/shared/http/errors";
 
 type HonorTarget = {
-  type: "team" | "team-identity" | "participant" | "account" | "historical-player";
+  type:
+    | "team"
+    | "team-identity"
+    | "participant"
+    | "account"
+    | "historical-player";
   uuid: string;
 };
 
@@ -71,17 +99,32 @@ export async function listChampionshipHonorDefinitions(
     .where(
       and(
         cursor ? gt(championshipHonorDefinitions.id, cursor.id) : undefined,
-        query.kind ? eq(championshipHonorDefinitions.kind, query.kind) : undefined,
+        query.competitionTypeId
+          ? eq(championshipCompetitionTypes.uuid, query.competitionTypeId)
+          : undefined,
+        query.kind
+          ? eq(championshipHonorDefinitions.kind, query.kind)
+          : undefined,
         query.state && query.state !== "all"
           ? eq(championshipHonorDefinitions.state, query.state)
           : undefined
       )
     )
+    .innerJoin(
+      championshipCompetitionTypes,
+      eq(
+        championshipHonorDefinitions.competitionTypeId,
+        championshipCompetitionTypes.id
+      )
+    )
     .orderBy(asc(championshipHonorDefinitions.id))
     .limit(pageLimit(query));
-  const page = pageItems(rows, query, (row) => ({ id: row.id }));
+  const definitions = rows.map((row) => row.championship_honor_definitions);
+  const page = pageItems(definitions, query, (row) => ({ id: row.id }));
   return {
-    items: await Promise.all(page.items.map((row) => projectDefinition(db, row))),
+    items: await Promise.all(
+      page.items.map((row) => projectDefinition(db, row))
+    ),
     page: page.page
   };
 }
@@ -95,15 +138,30 @@ export async function createChampionshipHonorDefinition(
       actorAccountUuid: input.actorAccountUuid,
       permission: "honor-definition:admin"
     });
+    const [competitionType] = await tx
+      .select()
+      .from(championshipCompetitionTypes)
+      .where(eq(championshipCompetitionTypes.uuid, input.competitionTypeId));
+    if (!competitionType) throw notFound("Competition type not found");
     const existing = await tx
       .select({ id: championshipHonorDefinitions.id })
       .from(championshipHonorDefinitions)
-      .where(eq(championshipHonorDefinitions.slug, input.slug));
-    if (existing.length) throw conflict("Honor definition slug is already in use");
+      .where(
+        and(
+          eq(
+            championshipHonorDefinitions.competitionTypeId,
+            competitionType.id
+          ),
+          eq(championshipHonorDefinitions.slug, input.slug)
+        )
+      );
+    if (existing.length)
+      throw conflict("Honor definition slug is already in use");
     const [definition] = await tx
       .insert(championshipHonorDefinitions)
       .values({
         slug: input.slug,
+        competitionTypeId: competitionType.id,
         kind: input.kind,
         createdByAccountId: actor.account.id
       })
@@ -115,10 +173,17 @@ export async function createChampionshipHonorDefinition(
         ...definitionFields(input)
       })
       .returning();
-    await auditDefinition(tx, definition.id, actor.account.id, "honor-definition.created", null, {
-      definition,
-      draft
-    });
+    await auditDefinition(
+      tx,
+      definition.id,
+      actor.account.id,
+      "honor-definition.created",
+      null,
+      {
+        definition,
+        draft
+      }
+    );
     return projectDefinition(tx, definition);
   });
 }
@@ -196,7 +261,9 @@ export async function publishChampionshipHonorDefinition(
     const versions = await tx
       .select()
       .from(championshipHonorDefinitionVersions)
-      .where(eq(championshipHonorDefinitionVersions.definitionId, definition.id))
+      .where(
+        eq(championshipHonorDefinitionVersions.definitionId, definition.id)
+      )
       .orderBy(desc(championshipHonorDefinitionVersions.version));
     const latest = versions[0];
     if (latest && samePublishedDefinition(latest, draft)) {
@@ -251,7 +318,9 @@ export async function archiveChampionshipHonorDefinition(
       tx,
       definition.id,
       actor.account.id,
-      input.archived ? "honor-definition.archived" : "honor-definition.restored",
+      input.archived
+        ? "honor-definition.archived"
+        : "honor-definition.restored",
       definition,
       updated
     );
@@ -266,7 +335,12 @@ export async function listChampionshipHonors(
   const [championship] = await db
     .select()
     .from(championships)
-    .where(and(eq(championships.uuid, championshipUuid), isNull(championships.deletedAt)));
+    .where(
+      and(
+        eq(championships.uuid, championshipUuid),
+        isNull(championships.deletedAt)
+      )
+    );
   if (!championship) throw notFound("Championship not found");
   let maySeeDrafts = false;
   if (query.actorAccountUuid) {
@@ -316,17 +390,43 @@ export async function createChampionshipHonor(
     },
     async (tx, championship) => {
       const [version] = await tx
-        .select()
+        .select({
+          version: championshipHonorDefinitionVersions,
+          definition: championshipHonorDefinitions
+        })
         .from(championshipHonorDefinitionVersions)
-        .where(eq(championshipHonorDefinitionVersions.uuid, input.definitionVersionUuid));
-      if (!version) throw notFound("Published honor definition version not found");
-      validateDecisionPolicy(input.decisionPolicy, version.recipientTypes);
+        .innerJoin(
+          championshipHonorDefinitions,
+          eq(
+            championshipHonorDefinitionVersions.definitionId,
+            championshipHonorDefinitions.id
+          )
+        )
+        .where(
+          eq(
+            championshipHonorDefinitionVersions.uuid,
+            input.definitionVersionUuid
+          )
+        );
+      if (!version)
+        throw notFound("Published honor definition version not found");
+      if (
+        version.definition.competitionTypeId !== championship.competitionTypeId
+      ) {
+        throw badRequest(
+          "Honor definition belongs to another competition type"
+        );
+      }
+      validateDecisionPolicy(
+        input.decisionPolicy,
+        version.version.recipientTypes
+      );
       const now = new Date().toISOString();
       const [honor] = await tx
         .insert(championshipHonors)
         .values({
           championshipId: championship.id,
-          definitionVersionId: version.id,
+          definitionVersionId: version.version.id,
           state: input.state ?? "draft",
           nameOverride: input.nameOverride ?? null,
           descriptionOverride: input.descriptionOverride ?? null,
@@ -364,20 +464,28 @@ export async function updateChampionshipHonor(
     async (tx, championship) => {
       const honor = await requireHonor(tx, championship.id, honorUuid);
       if (honor.state === "awarded" && input.state) {
-        throw badRequest("An awarded honor can only change after its grants are revoked");
+        throw badRequest(
+          "An awarded honor can only change after its grants are revoked"
+        );
       }
       const [version] = await tx
         .select()
         .from(championshipHonorDefinitionVersions)
-        .where(eq(championshipHonorDefinitionVersions.id, honor.definitionVersionId));
-      if (input.decisionPolicy) validateDecisionPolicy(input.decisionPolicy, version!.recipientTypes);
+        .where(
+          eq(championshipHonorDefinitionVersions.id, honor.definitionVersionId)
+        );
+      if (input.decisionPolicy)
+        validateDecisionPolicy(input.decisionPolicy, version!.recipientTypes);
       const now = new Date().toISOString();
       const nextState = input.state ?? honor.state;
       const [updated] = await tx
         .update(championshipHonors)
         .set({
           state: nextState,
-          nameOverride: input.nameOverride === undefined ? honor.nameOverride : input.nameOverride,
+          nameOverride:
+            input.nameOverride === undefined
+              ? honor.nameOverride
+              : input.nameOverride,
           descriptionOverride:
             input.descriptionOverride === undefined
               ? honor.descriptionOverride
@@ -386,7 +494,9 @@ export async function updateChampionshipHonor(
           displayOrder: input.displayOrder ?? honor.displayOrder,
           revision: honor.revision + 1,
           announcedAt:
-            nextState === "announced" && !honor.announcedAt ? now : honor.announcedAt,
+            nextState === "announced" && !honor.announcedAt
+              ? now
+              : honor.announcedAt,
           voidedAt: nextState === "void" ? now : null,
           updatedAt: now
         })
@@ -413,10 +523,16 @@ export async function previewChampionshipHonorResolution(
   const [championship] = await db
     .select()
     .from(championships)
-    .where(and(eq(championships.uuid, championshipUuid), isNull(championships.deletedAt)));
+    .where(
+      and(
+        eq(championships.uuid, championshipUuid),
+        isNull(championships.deletedAt)
+      )
+    );
   if (!championship) throw notFound("Championship not found");
   if (championship.visibility !== "public" || actorAccountUuid) {
-    if (!actorAccountUuid) throw forbidden("Private honor previews require staff access");
+    if (!actorAccountUuid)
+      throw forbidden("Private honor previews require staff access");
     await requireChampionshipActor(db, {
       actorAccountUuid,
       championshipId: championship.id,
@@ -443,7 +559,8 @@ export async function resolveChampionshipHonor(
     },
     async (tx, championship, actor) => {
       const honor = await requireHonor(tx, championship.id, honorUuid);
-      if (honor.state === "void") throw badRequest("A void honor cannot be resolved");
+      if (honor.state === "void")
+        throw badRequest("A void honor cannot be resolved");
       const preview = await deriveHonorResolution(tx, championship.id, honor);
       if (!preview.ready) throw badRequest(preview.blockers.join("; "));
       const now = new Date().toISOString();
@@ -461,7 +578,11 @@ export async function resolveChampionshipHonor(
           )
         );
       for (const contender of preview.contenders) {
-        const target = await resolveHonorTarget(tx, championship.id, contender.target);
+        const target = await resolveHonorTarget(
+          tx,
+          championship.id,
+          contender.target
+        );
         await tx.insert(championshipHonorGrants).values({
           honorId: honor.id,
           targetType: contender.target.type,
@@ -513,11 +634,17 @@ export async function reconcileCalculatedChampionshipHonors(
       )
     );
   const affected = honors.filter((honor) =>
-    policyTypes.includes(honor.decisionPolicy.type as (typeof policyTypes)[number])
+    policyTypes.includes(
+      honor.decisionPolicy.type as (typeof policyTypes)[number]
+    )
   );
   const now = new Date().toISOString();
   for (const honor of affected) {
-    const preview = await deriveHonorResolution(database, championshipId, honor);
+    const preview = await deriveHonorResolution(
+      database,
+      championshipId,
+      honor
+    );
     await database
       .update(championshipHonorGrants)
       .set({
@@ -533,7 +660,11 @@ export async function reconcileCalculatedChampionshipHonors(
       );
     if (preview.ready) {
       for (const contender of preview.contenders) {
-        const target = await resolveHonorTarget(database, championshipId, contender.target);
+        const target = await resolveHonorTarget(
+          database,
+          championshipId,
+          contender.target
+        );
         await database.insert(championshipHonorGrants).values({
           honorId: honor.id,
           targetType: contender.target.type,
@@ -575,15 +706,22 @@ export async function createChampionshipHonorGrant(
     },
     async (tx, championship, actor) => {
       const honor = await requireHonor(tx, championship.id, honorUuid);
-      if (honor.state === "void") throw badRequest("A void honor cannot be awarded");
+      if (honor.state === "void")
+        throw badRequest("A void honor cannot be awarded");
       const [version] = await tx
         .select()
         .from(championshipHonorDefinitionVersions)
-        .where(eq(championshipHonorDefinitionVersions.id, honor.definitionVersionId));
+        .where(
+          eq(championshipHonorDefinitionVersions.id, honor.definitionVersionId)
+        );
       if (!version!.recipientTypes.includes(input.target.type)) {
         throw badRequest("Target type is not allowed by this honor definition");
       }
-      const target = await resolveHonorTarget(tx, championship.id, input.target);
+      const target = await resolveHonorTarget(
+        tx,
+        championship.id,
+        input.target
+      );
       const active = await tx
         .select()
         .from(championshipHonorGrants)
@@ -594,7 +732,9 @@ export async function createChampionshipHonorGrant(
           )
         );
       if (active.length >= version!.maximumRecipients) {
-        throw badRequest("This honor already has the maximum number of recipients");
+        throw badRequest(
+          "This honor already has the maximum number of recipients"
+        );
       }
       if (
         active.some(
@@ -616,7 +756,8 @@ export async function createChampionshipHonorGrant(
         awardedByAccountId: actor.account.id
       });
       const activeCount = active.length + 1;
-      const nextState = activeCount >= version!.minimumRecipients ? "awarded" : "deciding";
+      const nextState =
+        activeCount >= version!.minimumRecipients ? "awarded" : "deciding";
       const [updated] = await tx
         .update(championshipHonors)
         .set({
@@ -689,7 +830,9 @@ export async function revokeChampionshipHonorGrant(
       const [version] = await tx
         .select()
         .from(championshipHonorDefinitionVersions)
-        .where(eq(championshipHonorDefinitionVersions.id, honor.definitionVersionId));
+        .where(
+          eq(championshipHonorDefinitionVersions.id, honor.definitionVersionId)
+        );
       const nextState =
         remaining.length >= version!.minimumRecipients ? "awarded" : "deciding";
       const [updated] = await tx
@@ -746,7 +889,9 @@ function validateDefinitionFields(input: {
   }
   if (
     input.aggregateByIdentity &&
-    !input.recipientTypes.some((type) => type === "team" || type === "team-identity")
+    !input.recipientTypes.some(
+      (type) => type === "team" || type === "team-identity"
+    )
   ) {
     throw badRequest("Identity aggregation requires a team recipient type");
   }
@@ -756,15 +901,23 @@ function validateDecisionPolicy(
   policy: CreateChampionshipHonorInput["decisionPolicy"],
   recipientTypes: Array<HonorTarget["type"]>
 ) {
-  if (policy.type === "placement" && !recipientTypes.includes("team") && !recipientTypes.includes("team-identity")) {
+  if (
+    policy.type === "placement" &&
+    !recipientTypes.includes("team") &&
+    !recipientTypes.includes("team-identity")
+  ) {
     throw badRequest("Placement policies require a team recipient type");
   }
-  if (policy.type === "metric-ranking" && policy.metricKey.trim().length === 0) {
+  if (
+    policy.type === "metric-ranking" &&
+    policy.metricKey.trim().length === 0
+  ) {
     throw badRequest("Metric ranking requires a metric key");
   }
 }
 
-type ResolutionContender = ChampionshipHonorResolutionPreviewResponse["contenders"][number];
+type ResolutionContender =
+  ChampionshipHonorResolutionPreviewResponse["contenders"][number];
 
 async function deriveHonorResolution(
   database: DatabaseExecutor,
@@ -774,7 +927,9 @@ async function deriveHonorResolution(
   const [version] = await database
     .select()
     .from(championshipHonorDefinitionVersions)
-    .where(eq(championshipHonorDefinitionVersions.id, honor.definitionVersionId));
+    .where(
+      eq(championshipHonorDefinitionVersions.id, honor.definitionVersionId)
+    );
   if (!version) throw notFound("Honor definition version not found");
   const policy = honor.decisionPolicy;
   let contenders: ResolutionContender[] = [];
@@ -782,7 +937,9 @@ async function deriveHonorResolution(
   let explanation = "";
 
   if (policy.type === "staff-selection") {
-    blockers.push("Esta conquista exige a escolha de um vencedor pela organização");
+    blockers.push(
+      "Esta conquista exige a escolha de um vencedor pela organização"
+    );
     explanation = "Vencedor escolhido pela organização.";
   } else if (policy.type === "hybrid") {
     blockers.push("Esta conquista exige uma decisão da organização");
@@ -791,7 +948,10 @@ async function deriveHonorResolution(
     const rows = await database
       .select({ placement: championshipPlacements, team: championshipTeams })
       .from(championshipPlacements)
-      .innerJoin(championshipTeams, eq(championshipPlacements.teamId, championshipTeams.id))
+      .innerJoin(
+        championshipTeams,
+        eq(championshipPlacements.teamId, championshipTeams.id)
+      )
       .where(
         and(
           eq(championshipPlacements.championshipId, championshipId),
@@ -800,11 +960,27 @@ async function deriveHonorResolution(
       )
       .orderBy(asc(championshipPlacements.rank));
     for (const { placement, team } of rows) {
-      const target = await honorTeamTarget(database, team, version.recipientTypes);
-      if (target) contenders.push({ target, displayLabel: team.name, rank: placement.rank, value: null, tied: false });
+      const target = await honorTeamTarget(
+        database,
+        team,
+        version.recipientTypes
+      );
+      if (target)
+        contenders.push({
+          target,
+          displayLabel: team.name,
+          rank: placement.rank,
+          value: null,
+          tied: false
+        });
     }
-    const missing = policy.ranks.filter((rank) => !rows.some((row) => row.placement.rank === rank));
-    if (missing.length) blockers.push(`Colocação oficial ainda não definida: ${missing.join(", ")}`);
+    const missing = policy.ranks.filter(
+      (rank) => !rows.some((row) => row.placement.rank === rank)
+    );
+    if (missing.length)
+      blockers.push(
+        `Colocação oficial ainda não definida: ${missing.join(", ")}`
+      );
     explanation = `Resultado baseado na colocação oficial ${policy.ranks.join(", ")}.`;
   } else if (policy.type === "spot-result") {
     const spots = await database
@@ -846,30 +1022,56 @@ async function deriveHonorResolution(
           .from(championshipMatchResultRevisions)
           .where(
             and(
-              eq(championshipMatchResultRevisions.championshipMatchId, match.id),
+              eq(
+                championshipMatchResultRevisions.championshipMatchId,
+                match.id
+              ),
               eq(championshipMatchResultRevisions.state, "current")
             )
           );
         if (!result || result.sideAOutcome === "draw") {
-          blockers.push(`O resultado de ${match.label} ainda não está definido`);
+          blockers.push(
+            `O resultado de ${match.label} ainda não está definido`
+          );
           continue;
         }
-        const winnerId = result.sideAOutcome === "win" ? result.sideATeamId : result.sideBTeamId;
-        const loserId = result.sideAOutcome === "loss" ? result.sideATeamId : result.sideBTeamId;
+        const winnerId =
+          result.sideAOutcome === "win"
+            ? result.sideATeamId
+            : result.sideBTeamId;
+        const loserId =
+          result.sideAOutcome === "loss"
+            ? result.sideATeamId
+            : result.sideBTeamId;
         teamId = policy.outcome === "winner" ? winnerId : loserId;
       }
       if (!teamId) {
         blockers.push(`${spot.label} ainda não tem equipe`);
         continue;
       }
-      const [team] = await database.select().from(championshipTeams).where(eq(championshipTeams.id, teamId));
+      const [team] = await database
+        .select()
+        .from(championshipTeams)
+        .where(eq(championshipTeams.id, teamId));
       if (!team) continue;
-      const target = await honorTeamTarget(database, team, version.recipientTypes);
+      const target = await honorTeamTarget(
+        database,
+        team,
+        version.recipientTypes
+      );
       if (!target) {
-        blockers.push(`${team.name} não tem uma identidade compatível com este título`);
+        blockers.push(
+          `${team.name} não tem uma identidade compatível com este título`
+        );
         continue;
       }
-      contenders.push({ target, displayLabel: team.name, rank: contenders.length + 1, value: null, tied: false });
+      contenders.push({
+        target,
+        displayLabel: team.name,
+        rank: contenders.length + 1,
+        value: null,
+        tied: false
+      });
     }
     explanation = `Resultado baseado ${policy.outcome === "occupant" ? "no spot configurado" : "no resultado da partida configurada"}.`;
   } else {
@@ -882,7 +1084,8 @@ async function deriveHonorResolution(
           eq(championshipMatchResultRevisions.state, "current")
         )
       );
-    if (!currentResults.length) blockers.push("Ainda não há estatísticas oficiais disponíveis");
+    if (!currentResults.length)
+      blockers.push("Ainda não há estatísticas oficiais disponíveis");
     const mappings = await database
       .select({ sourceMetricKey: championshipMetricMappings.sourceMetricKey })
       .from(championshipMetricMappings)
@@ -892,8 +1095,16 @@ async function deriveHonorResolution(
           eq(championshipMetricMappings.canonicalMetricKey, policy.metricKey)
         )
       );
-    const metricKeys = [...new Set([policy.metricKey, ...mappings.map((row) => row.sourceMetricKey)])];
-    if (currentResults.length && version.recipientTypes.includes("participant")) {
+    const metricKeys = [
+      ...new Set([
+        policy.metricKey,
+        ...mappings.map((row) => row.sourceMetricKey)
+      ])
+    ];
+    if (
+      currentResults.length &&
+      version.recipientTypes.includes("participant")
+    ) {
       const rows = await database
         .select({
           participant: championshipParticipants,
@@ -902,12 +1113,18 @@ async function deriveHonorResolution(
         .from(championshipStatisticEntries)
         .innerJoin(
           championshipParticipants,
-          eq(championshipStatisticEntries.participantId, championshipParticipants.id)
+          eq(
+            championshipStatisticEntries.participantId,
+            championshipParticipants.id
+          )
         )
         .where(
           and(
             eq(championshipStatisticEntries.championshipId, championshipId),
-            inArray(championshipStatisticEntries.resultRevisionId, currentResults.map(({ id }) => id)),
+            inArray(
+              championshipStatisticEntries.resultRevisionId,
+              currentResults.map(({ id }) => id)
+            ),
             inArray(championshipStatisticEntries.metricKey, metricKeys)
           )
         )
@@ -926,18 +1143,28 @@ async function deriveHonorResolution(
           value: Number(value)
         }))
       );
-    } else if (currentResults.length && (version.recipientTypes.includes("team") || version.recipientTypes.includes("team-identity"))) {
+    } else if (
+      currentResults.length &&
+      (version.recipientTypes.includes("team") ||
+        version.recipientTypes.includes("team-identity"))
+    ) {
       const rows = await database
         .select({
           team: championshipTeams,
           value: sql<number>`sum(${championshipStatisticEntries.numericValue})`
         })
         .from(championshipStatisticEntries)
-        .innerJoin(championshipTeams, eq(championshipStatisticEntries.teamId, championshipTeams.id))
+        .innerJoin(
+          championshipTeams,
+          eq(championshipStatisticEntries.teamId, championshipTeams.id)
+        )
         .where(
           and(
             eq(championshipStatisticEntries.championshipId, championshipId),
-            inArray(championshipStatisticEntries.resultRevisionId, currentResults.map(({ id }) => id)),
+            inArray(
+              championshipStatisticEntries.resultRevisionId,
+              currentResults.map(({ id }) => id)
+            ),
             inArray(championshipStatisticEntries.metricKey, metricKeys)
           )
         )
@@ -949,14 +1176,30 @@ async function deriveHonorResolution(
           asc(championshipTeams.id)
         )
         .limit(Math.min(128, policy.limit));
-      const rankedTeams: Array<{ target: HonorTarget; displayLabel: string; value: number }> = [];
+      const rankedTeams: Array<{
+        target: HonorTarget;
+        displayLabel: string;
+        value: number;
+      }> = [];
       for (const { team, value } of rows) {
-        const target = await honorTeamTarget(database, team, version.recipientTypes);
-        if (target) rankedTeams.push({ target, displayLabel: team.name, value: Number(value) });
+        const target = await honorTeamTarget(
+          database,
+          team,
+          version.recipientTypes
+        );
+        if (target)
+          rankedTeams.push({
+            target,
+            displayLabel: team.name,
+            value: Number(value)
+          });
       }
       contenders = rankMetricRows(rankedTeams);
     }
-    if (!contenders.length && !blockers.length) blockers.push("A estatística configurada ainda não tem valores elegíveis");
+    if (!contenders.length && !blockers.length)
+      blockers.push(
+        "A estatística configurada ainda não tem valores elegíveis"
+      );
     explanation = `${policy.direction === "highest" ? "Maior" : "Menor"} valor de ${policy.metricKey} entre os participantes elegíveis.`;
   }
 
@@ -999,7 +1242,9 @@ function rankMetricRows(
     return {
       ...row,
       rank,
-      tied: rows.some((other, otherIndex) => otherIndex !== index && other.value === row.value)
+      tied: rows.some(
+        (other, otherIndex) => otherIndex !== index && other.value === row.value
+      )
     };
   });
 }
@@ -1013,12 +1258,19 @@ async function requireDefinition(database: DatabaseExecutor, uuid: string) {
   return definition;
 }
 
-async function requireHonor(database: DatabaseExecutor, championshipId: number, uuid: string) {
+async function requireHonor(
+  database: DatabaseExecutor,
+  championshipId: number,
+  uuid: string
+) {
   const [honor] = await database
     .select()
     .from(championshipHonors)
     .where(
-      and(eq(championshipHonors.uuid, uuid), eq(championshipHonors.championshipId, championshipId))
+      and(
+        eq(championshipHonors.uuid, uuid),
+        eq(championshipHonors.championshipId, championshipId)
+      )
     );
   if (!honor) throw notFound("Championship honor not found");
   return honor;
@@ -1038,9 +1290,19 @@ async function projectDefinition(
     .from(championshipHonorDefinitionVersions)
     .where(eq(championshipHonorDefinitionVersions.definitionId, definition.id))
     .orderBy(desc(championshipHonorDefinitionVersions.version));
+  const [competitionType] = await database
+    .select()
+    .from(championshipCompetitionTypes)
+    .where(eq(championshipCompetitionTypes.id, definition.competitionTypeId));
+  if (!competitionType) throw notFound("Competition type not found");
   return {
     uuid: definition.uuid,
     slug: definition.slug,
+    competitionType: {
+      uuid: competitionType.uuid,
+      slug: competitionType.slug,
+      name: competitionType.name
+    },
     kind: definition.kind,
     state: definition.state,
     revision: definition.revision,
@@ -1072,15 +1334,23 @@ async function projectHonor(
     .from(championshipHonorDefinitionVersions)
     .innerJoin(
       championshipHonorDefinitions,
-      eq(championshipHonorDefinitionVersions.definitionId, championshipHonorDefinitions.id)
+      eq(
+        championshipHonorDefinitionVersions.definitionId,
+        championshipHonorDefinitions.id
+      )
     )
-    .where(eq(championshipHonorDefinitionVersions.id, honor.definitionVersionId));
+    .where(
+      eq(championshipHonorDefinitionVersions.id, honor.definitionVersionId)
+    );
   if (!joined) throw notFound("Honor definition version not found");
   const grants = await database
     .select()
     .from(championshipHonorGrants)
     .where(eq(championshipHonorGrants.honorId, honor.id))
-    .orderBy(asc(championshipHonorGrants.rank), asc(championshipHonorGrants.id));
+    .orderBy(
+      asc(championshipHonorGrants.rank),
+      asc(championshipHonorGrants.id)
+    );
   return {
     uuid: honor.uuid,
     state: honor.state,
@@ -1101,7 +1371,9 @@ async function projectHonor(
       presentation: joined.version.presentation
     },
     decisionPolicy: honor.decisionPolicy,
-    grants: await Promise.all(grants.map((grant) => projectGrant(database, grant))),
+    grants: await Promise.all(
+      grants.map((grant) => projectGrant(database, grant))
+    ),
     announcedAt: honor.announcedAt,
     awardedAt: honor.awardedAt,
     voidedAt: honor.voidedAt,
@@ -1119,14 +1391,21 @@ async function projectGrant(
         await database
           .select()
           .from(championshipTeamIdentities)
-          .where(eq(championshipTeamIdentities.id, grant.teamIdentityIdSnapshot))
+          .where(
+            eq(championshipTeamIdentities.id, grant.teamIdentityIdSnapshot)
+          )
       )[0]
     : null;
   return {
     uuid: grant.uuid,
-    target: { type: grant.targetType, uuid: await grantTargetUuid(database, grant) },
+    target: {
+      type: grant.targetType,
+      uuid: await grantTargetUuid(database, grant)
+    },
     displayLabel: grant.displayLabelSnapshot,
-    identitySnapshot: identity ? { uuid: identity.uuid, name: identity.name } : null,
+    identitySnapshot: identity
+      ? { uuid: identity.uuid, name: identity.name }
+      : null,
     rank: grant.rank,
     note: grant.note,
     awardedAt: grant.awardedAt,
@@ -1150,9 +1429,19 @@ async function resolveHonorTarget(
     const [row] = await database
       .select()
       .from(championshipTeams)
-      .where(and(eq(championshipTeams.uuid, target.uuid), eq(championshipTeams.championshipId, championshipId)));
+      .where(
+        and(
+          eq(championshipTeams.uuid, target.uuid),
+          eq(championshipTeams.championshipId, championshipId)
+        )
+      );
     if (!row) throw notFound("Championship team not found");
-    return { columns: { ...empty, teamId: row.id }, identitySnapshotId: row.teamIdentityId, label: row.name, targetId: row.id };
+    return {
+      columns: { ...empty, teamId: row.id },
+      identitySnapshotId: row.teamIdentityId,
+      label: row.name,
+      targetId: row.id
+    };
   }
   if (target.type === "team-identity") {
     const [row] = await database
@@ -1160,27 +1449,55 @@ async function resolveHonorTarget(
       .from(championshipTeamIdentities)
       .where(eq(championshipTeamIdentities.uuid, target.uuid));
     if (!row) throw notFound("Team identity not found");
-    return { columns: empty, identitySnapshotId: row.id, label: row.name, targetId: row.id };
+    return {
+      columns: empty,
+      identitySnapshotId: row.id,
+      label: row.name,
+      targetId: row.id
+    };
   }
   if (target.type === "participant") {
     const [row] = await database
       .select()
       .from(championshipParticipants)
-      .where(and(eq(championshipParticipants.uuid, target.uuid), eq(championshipParticipants.championshipId, championshipId)));
+      .where(
+        and(
+          eq(championshipParticipants.uuid, target.uuid),
+          eq(championshipParticipants.championshipId, championshipId)
+        )
+      );
     if (!row) throw notFound("Championship participant not found");
-    return { columns: { ...empty, participantId: row.id }, identitySnapshotId: null, label: row.displayNameSnapshot, targetId: row.id };
+    return {
+      columns: { ...empty, participantId: row.id },
+      identitySnapshotId: null,
+      label: row.displayNameSnapshot,
+      targetId: row.id
+    };
   }
   if (target.type === "account") {
-    const [row] = await database.select().from(accounts).where(eq(accounts.uuid, target.uuid));
+    const [row] = await database
+      .select()
+      .from(accounts)
+      .where(eq(accounts.uuid, target.uuid));
     if (!row) throw notFound("Account not found");
-    return { columns: { ...empty, accountId: row.id }, identitySnapshotId: null, label: row.name, targetId: row.id };
+    return {
+      columns: { ...empty, accountId: row.id },
+      identitySnapshotId: null,
+      label: row.name,
+      targetId: row.id
+    };
   }
   const [row] = await database
     .select()
     .from(championshipHistoricalPlayerIdentities)
     .where(eq(championshipHistoricalPlayerIdentities.uuid, target.uuid));
   if (!row) throw notFound("Historical player identity not found");
-  return { columns: { ...empty, historicalPlayerIdentityId: row.id }, identitySnapshotId: null, label: row.displayName, targetId: row.id };
+  return {
+    columns: { ...empty, historicalPlayerIdentityId: row.id },
+    identitySnapshotId: null,
+    label: row.displayName,
+    targetId: row.id
+  };
 }
 
 function targetMatches(
@@ -1201,21 +1518,54 @@ async function grantTargetUuid(
   grant: typeof championshipHonorGrants.$inferSelect
 ) {
   if (grant.targetType === "team")
-    return (await database.select({ uuid: championshipTeams.uuid }).from(championshipTeams).where(eq(championshipTeams.id, grant.teamId!)))[0]!.uuid;
+    return (
+      await database
+        .select({ uuid: championshipTeams.uuid })
+        .from(championshipTeams)
+        .where(eq(championshipTeams.id, grant.teamId!))
+    )[0]!.uuid;
   if (grant.targetType === "team-identity")
-    return (await database.select({ uuid: championshipTeamIdentities.uuid }).from(championshipTeamIdentities).where(eq(championshipTeamIdentities.id, grant.teamIdentityIdSnapshot!)))[0]!.uuid;
+    return (
+      await database
+        .select({ uuid: championshipTeamIdentities.uuid })
+        .from(championshipTeamIdentities)
+        .where(eq(championshipTeamIdentities.id, grant.teamIdentityIdSnapshot!))
+    )[0]!.uuid;
   if (grant.targetType === "participant")
-    return (await database.select({ uuid: championshipParticipants.uuid }).from(championshipParticipants).where(eq(championshipParticipants.id, grant.participantId!)))[0]!.uuid;
+    return (
+      await database
+        .select({ uuid: championshipParticipants.uuid })
+        .from(championshipParticipants)
+        .where(eq(championshipParticipants.id, grant.participantId!))
+    )[0]!.uuid;
   if (grant.targetType === "account")
-    return (await database.select({ uuid: accounts.uuid }).from(accounts).where(eq(accounts.id, grant.accountId!)))[0]!.uuid;
-  return (await database.select({ uuid: championshipHistoricalPlayerIdentities.uuid }).from(championshipHistoricalPlayerIdentities).where(eq(championshipHistoricalPlayerIdentities.id, grant.historicalPlayerIdentityId!)))[0]!.uuid;
+    return (
+      await database
+        .select({ uuid: accounts.uuid })
+        .from(accounts)
+        .where(eq(accounts.id, grant.accountId!))
+    )[0]!.uuid;
+  return (
+    await database
+      .select({ uuid: championshipHistoricalPlayerIdentities.uuid })
+      .from(championshipHistoricalPlayerIdentities)
+      .where(
+        eq(
+          championshipHistoricalPlayerIdentities.id,
+          grant.historicalPlayerIdentityId!
+        )
+      )
+  )[0]!.uuid;
 }
 
 function samePublishedDefinition(
   version: typeof championshipHonorDefinitionVersions.$inferSelect,
   draft: typeof championshipHonorDefinitionDrafts.$inferSelect
 ) {
-  return JSON.stringify(definitionFields(version)) === JSON.stringify(definitionFields(draft));
+  return (
+    JSON.stringify(definitionFields(version)) ===
+    JSON.stringify(definitionFields(draft))
+  );
 }
 
 async function auditDefinition(

@@ -235,13 +235,14 @@ export async function settleChampionshipMatch(
       );
       await refreshChampionshipRecords(tx, championship.id);
       await applyProgression(tx, context, result);
-      const recalculatedHonorUuids = await reconcileCalculatedChampionshipHonors(
-        tx,
-        championship.id,
-        actor.account.id,
-        ["spot-result", "metric-ranking"],
-        input.note ?? "Resultado oficial da partida atualizado"
-      );
+      const recalculatedHonorUuids =
+        await reconcileCalculatedChampionshipHonors(
+          tx,
+          championship.id,
+          actor.account.id,
+          ["spot-result", "metric-ranking"],
+          input.note ?? "Resultado oficial da partida atualizado"
+        );
       const [updatedMatch] = await tx
         .update(championshipMatches)
         .set({

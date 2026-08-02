@@ -5589,6 +5589,7 @@ describe("championship honor catalog and edition honors", () => {
         method: "POST",
         body: {
           actorAccountUuid: admin.uuid,
+          competitionTypeId: competitionType.uuid,
           slug: uniqueSlug("most-valuable-player"),
           kind: "award",
           name: "Jogador mais valioso",
@@ -5605,6 +5606,7 @@ describe("championship honor catalog and edition honors", () => {
     const definition = await createResponse.json();
     expect(definition).toMatchObject({
       kind: "award",
+      competitionType: { uuid: competitionType.uuid },
       draft: { name: "Jogador mais valioso", revision: 0 },
       versions: []
     });
@@ -5647,6 +5649,7 @@ describe("championship honor catalog and edition honors", () => {
         method: "POST",
         body: {
           actorAccountUuid: admin.uuid,
+          competitionTypeId: competitionType.uuid,
           slug: uniqueSlug("cup-mvp"),
           kind: "award",
           name: "MVP da copa",
@@ -5730,47 +5733,60 @@ describe("championship honor catalog and edition honors", () => {
   });
 
   it("previews placement titles and recalculates them after a correction", async () => {
-    const definitionResponse = await request("/api/championships/honor-definitions", {
-      method: "POST",
-      body: {
-        actorAccountUuid: admin.uuid,
-        slug: uniqueSlug("cup-champion"),
-        kind: "title",
-        name: "Campeão da copa",
-        recipientTypes: ["team"],
-        minimumRecipients: 1,
-        maximumRecipients: 1,
-        aggregateByIdentity: false
+    const definitionResponse = await request(
+      "/api/championships/honor-definitions",
+      {
+        method: "POST",
+        body: {
+          actorAccountUuid: admin.uuid,
+          competitionTypeId: competitionType.uuid,
+          slug: uniqueSlug("cup-champion"),
+          kind: "title",
+          name: "Campeão da copa",
+          recipientTypes: ["team"],
+          minimumRecipients: 1,
+          maximumRecipients: 1,
+          aggregateByIdentity: false
+        }
       }
-    });
+    );
     const definition = await definitionResponse.json();
     const published = await (
-      await request(`/api/championships/honor-definitions/${definition.uuid}/publish`, {
-        method: "POST",
-        body: { actorAccountUuid: admin.uuid, expectedRevision: 0 }
-      })
+      await request(
+        `/api/championships/honor-definitions/${definition.uuid}/publish`,
+        {
+          method: "POST",
+          body: { actorAccountUuid: admin.uuid, expectedRevision: 0 }
+        }
+      )
     ).json();
     let championship = await createChampionship(admin, competitionType, {
       name: "Calculated Honors Cup"
     });
     const teams = [];
     for (const name of ["Aurora", "Carbono"]) {
-      const response = await request(`/api/championships/${championship.uuid}/teams`, {
-        method: "POST",
-        body: command(admin, championship.revision, { name })
-      });
+      const response = await request(
+        `/api/championships/${championship.uuid}/teams`,
+        {
+          method: "POST",
+          body: command(admin, championship.revision, { name })
+        }
+      );
       expect(response.status).toBe(201);
       teams.push(await response.json());
       championship = await getChampionship(championship.uuid);
     }
-    const offeringResponse = await request(`/api/championships/${championship.uuid}/honors`, {
-      method: "POST",
-      body: command(admin, championship.revision, {
-        definitionVersionUuid: published.versions[0].uuid,
-        state: "announced",
-        decisionPolicy: { type: "placement", ranks: [1] }
-      })
-    });
+    const offeringResponse = await request(
+      `/api/championships/${championship.uuid}/honors`,
+      {
+        method: "POST",
+        body: command(admin, championship.revision, {
+          definitionVersionUuid: published.versions[0].uuid,
+          state: "announced",
+          decisionPolicy: { type: "placement", ranks: [1] }
+        })
+      }
+    );
     const honor = await offeringResponse.json();
     championship = await getChampionship(championship.uuid);
     await request(`/api/championships/${championship.uuid}/placements`, {
@@ -5804,19 +5820,24 @@ describe("championship honor catalog and edition honors", () => {
     );
     expect(await resolvedResponse.json()).toMatchObject({
       state: "awarded",
-      grants: [expect.objectContaining({ displayLabel: "Aurora", revokedAt: null })]
+      grants: [
+        expect.objectContaining({ displayLabel: "Aurora", revokedAt: null })
+      ]
     });
     championship = await getChampionship(championship.uuid);
-    const correctionResponse = await request(`/api/championships/${championship.uuid}/placements`, {
-      method: "PUT",
-      body: command(admin, championship.revision, {
-        reason: "Classificação corrigida pela organização",
-        placements: [
-          { teamUuid: teams[1].uuid, rank: 1 },
-          { teamUuid: teams[0].uuid, rank: 2 }
-        ]
-      })
-    });
+    const correctionResponse = await request(
+      `/api/championships/${championship.uuid}/placements`,
+      {
+        method: "PUT",
+        body: command(admin, championship.revision, {
+          reason: "Classificação corrigida pela organização",
+          placements: [
+            { teamUuid: teams[1].uuid, rank: 1 },
+            { teamUuid: teams[0].uuid, rank: 2 }
+          ]
+        })
+      }
+    );
     expect(correctionResponse.status).toBe(200);
     const honors = await paginatedItems<any>(
       await request(
@@ -5826,6 +5847,66 @@ describe("championship honor catalog and edition honors", () => {
     expect(honors[0].grants.filter((grant: any) => !grant.revokedAt)).toEqual([
       expect.objectContaining({ displayLabel: "Carbono", rank: 1 })
     ]);
+  });
+
+  it("isolates reusable honors by competition type", async () => {
+    const otherType = await createCompetitionType(admin, { name: "Season" });
+    const sharedSlug = uniqueSlug("mvp");
+    const definitions = [];
+    for (const type of [competitionType, otherType]) {
+      const response = await request("/api/championships/honor-definitions", {
+        method: "POST",
+        body: {
+          actorAccountUuid: admin.uuid,
+          competitionTypeId: type.uuid,
+          slug: sharedSlug,
+          kind: "award",
+          name: "MVP",
+          recipientTypes: ["account"],
+          minimumRecipients: 1,
+          maximumRecipients: 1,
+          aggregateByIdentity: false
+        }
+      });
+      expect(response.status).toBe(201);
+      definitions.push(await response.json());
+    }
+
+    const filtered = await paginatedItems(
+      await request(
+        `/api/championships/honor-definitions?competitionTypeId=${otherType.uuid}&limit=20`
+      )
+    );
+    expect(filtered).toHaveLength(1);
+    expect(filtered[0]).toMatchObject({
+      uuid: definitions[1].uuid,
+      competitionType: { uuid: otherType.uuid }
+    });
+
+    const published = await (
+      await request(
+        `/api/championships/honor-definitions/${definitions[1].uuid}/publish`,
+        {
+          method: "POST",
+          body: { actorAccountUuid: admin.uuid, expectedRevision: 0 }
+        }
+      )
+    ).json();
+    const championship = await createChampionship(admin, competitionType, {
+      name: "Cup with foreign award"
+    });
+    const offeringResponse = await request(
+      `/api/championships/${championship.uuid}/honors`,
+      {
+        method: "POST",
+        body: command(admin, championship.revision, {
+          definitionVersionUuid: published.versions[0].uuid,
+          state: "announced",
+          decisionPolicy: { type: "staff-selection" }
+        })
+      }
+    );
+    expect(offeringResponse.status).toBe(400);
   });
 });
 

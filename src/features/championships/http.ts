@@ -601,7 +601,12 @@ export const championshipRoutes = new Elysia({
     {
       params: championshipHonorDefinitionIdParamsSchema,
       body: t.Ref("PublishChampionshipHonorDefinitionBody"),
-      response: { 200: t.Intersect([t.Ref("ChampionshipHonorDefinition"), t.Object({ published: t.Boolean() })]) },
+      response: {
+        200: t.Intersect([
+          t.Ref("ChampionshipHonorDefinition"),
+          t.Object({ published: t.Boolean() })
+        ])
+      },
       detail: {
         tags: ["Championships"],
         summary: "Publish an immutable championship honor definition version"
@@ -792,7 +797,8 @@ export const championshipRoutes = new Elysia({
   )
   .patch(
     "/:id/honors/:honorId",
-    ({ params, body }) => updateChampionshipHonor(params.id, params.honorId, body),
+    ({ params, body }) =>
+      updateChampionshipHonor(params.id, params.honorId, body),
     {
       params: championshipHonorIdParamsSchema,
       body: t.Ref("UpdateChampionshipHonorBody"),
@@ -825,7 +831,8 @@ export const championshipRoutes = new Elysia({
   )
   .post(
     "/:id/honors/:honorId/resolve",
-    ({ params, body }) => resolveChampionshipHonor(params.id, params.honorId, body),
+    ({ params, body }) =>
+      resolveChampionshipHonor(params.id, params.honorId, body),
     {
       params: championshipHonorIdParamsSchema,
       body: t.Ref("ResolveChampionshipHonorBody"),
@@ -838,7 +845,8 @@ export const championshipRoutes = new Elysia({
   )
   .post(
     "/:id/honors/:honorId/grants",
-    ({ params, body }) => createChampionshipHonorGrant(params.id, params.honorId, body),
+    ({ params, body }) =>
+      createChampionshipHonorGrant(params.id, params.honorId, body),
     {
       params: championshipHonorIdParamsSchema,
       body: t.Ref("CreateChampionshipHonorGrantBody"),
@@ -852,7 +860,12 @@ export const championshipRoutes = new Elysia({
   .post(
     "/:id/honors/:honorId/grants/:grantId/revoke",
     ({ params, body }) =>
-      revokeChampionshipHonorGrant(params.id, params.honorId, params.grantId, body),
+      revokeChampionshipHonorGrant(
+        params.id,
+        params.honorId,
+        params.grantId,
+        body
+      ),
     {
       params: championshipHonorGrantIdParamsSchema,
       body: t.Ref("RevokeChampionshipHonorGrantBody"),

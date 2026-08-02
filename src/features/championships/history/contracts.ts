@@ -92,6 +92,7 @@ export const createChampionshipHonorDefinitionBodySchema = t.Composite([
   championshipHonorDefinitionFieldsSchema,
   t.Object({
     actorAccountUuid: t.String({ format: "uuid" }),
+    competitionTypeId: t.String({ format: "uuid" }),
     slug: t.String({
       minLength: 1,
       maxLength: 80,
@@ -128,6 +129,7 @@ export const listChampionshipHonorDefinitionsQuerySchema = t.Composite([
   paginationQuerySchema,
   t.Object({
     kind: t.Optional(championshipHonorKindSchema),
+    competitionTypeId: t.Optional(t.String({ format: "uuid" })),
     state: t.Optional(
       t.Union([t.Literal("active"), t.Literal("archived"), t.Literal("all")])
     )
@@ -137,6 +139,11 @@ export const listChampionshipHonorDefinitionsQuerySchema = t.Composite([
 export const championshipHonorDefinitionResponseSchema = t.Object({
   uuid: t.String({ format: "uuid" }),
   slug: t.String(),
+  competitionType: t.Object({
+    uuid: t.String({ format: "uuid" }),
+    slug: t.String(),
+    name: t.String()
+  }),
   kind: championshipHonorKindSchema,
   state: t.Union([t.Literal("active"), t.Literal("archived")]),
   revision: t.Integer({ minimum: 0 }),

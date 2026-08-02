@@ -446,16 +446,28 @@ export async function getTeamIdentityHistory(
   const titleRows = await db
     .select({ grantId: championshipHonorGrants.id })
     .from(championshipHonorGrants)
-    .innerJoin(championshipHonors, eq(championshipHonorGrants.honorId, championshipHonors.id))
+    .innerJoin(
+      championshipHonors,
+      eq(championshipHonorGrants.honorId, championshipHonors.id)
+    )
     .innerJoin(
       championshipHonorDefinitionVersions,
-      eq(championshipHonors.definitionVersionId, championshipHonorDefinitionVersions.id)
+      eq(
+        championshipHonors.definitionVersionId,
+        championshipHonorDefinitionVersions.id
+      )
     )
     .innerJoin(
       championshipHonorDefinitions,
-      eq(championshipHonorDefinitionVersions.definitionId, championshipHonorDefinitions.id)
+      eq(
+        championshipHonorDefinitionVersions.definitionId,
+        championshipHonorDefinitions.id
+      )
     )
-    .innerJoin(championships, eq(championshipHonors.championshipId, championships.id))
+    .innerJoin(
+      championships,
+      eq(championshipHonors.championshipId, championships.id)
+    )
     .where(
       and(
         eq(championshipHonorGrants.teamIdentityIdSnapshot, identity.id),
@@ -573,10 +585,16 @@ export async function getAccountChampionshipHistory(
         definitionName: championshipHonorDefinitionVersions.name
       })
       .from(championshipHonorGrants)
-      .innerJoin(championshipHonors, eq(championshipHonorGrants.honorId, championshipHonors.id))
+      .innerJoin(
+        championshipHonors,
+        eq(championshipHonorGrants.honorId, championshipHonors.id)
+      )
       .innerJoin(
         championshipHonorDefinitionVersions,
-        eq(championshipHonors.definitionVersionId, championshipHonorDefinitionVersions.id)
+        eq(
+          championshipHonors.definitionVersionId,
+          championshipHonorDefinitionVersions.id
+        )
       )
       .where(
         and(
@@ -603,7 +621,9 @@ export async function getAccountChampionshipHistory(
       role: membership?.membership.role ?? null,
       awards: [
         ...new Set([
-          ...honors.map(({ nameOverride, definitionName }) => nameOverride ?? definitionName),
+          ...honors.map(
+            ({ nameOverride, definitionName }) => nameOverride ?? definitionName
+          ),
           ...awards.map(({ label }) => label)
         ])
       ],

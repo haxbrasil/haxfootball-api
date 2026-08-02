@@ -7,7 +7,10 @@ import {
   uniqueIndex
 } from "drizzle-orm/sqlite-core";
 import { accounts } from "@/features/accounts/db";
-import { championships } from "@/features/championships/core/db";
+import {
+  championshipCompetitionTypes,
+  championships
+} from "@/features/championships/core/db";
 import {
   championshipHistoricalPlayerIdentities,
   championshipParticipants,
@@ -134,6 +137,9 @@ export const championshipHonorDefinitions = sqliteTable(
       .unique()
       .$defaultFn(() => crypto.randomUUID()),
     slug: text("slug").notNull(),
+    competitionTypeId: integer("competition_type_id")
+      .notNull()
+      .references(() => championshipCompetitionTypes.id),
     kind: text("kind", { enum: ["title", "award"] }).notNull(),
     state: text("state", { enum: ["active", "archived"] })
       .notNull()
@@ -150,8 +156,12 @@ export const championshipHonorDefinitions = sqliteTable(
       .$defaultFn(() => new Date().toISOString())
   },
   (table) => [
-    uniqueIndex("championship_honor_definitions_slug_unique").on(table.slug),
+    uniqueIndex("championship_honor_definitions_type_slug_unique").on(
+      table.competitionTypeId,
+      table.slug
+    ),
     index("championship_honor_definitions_kind_state_idx").on(
+      table.competitionTypeId,
       table.kind,
       table.state,
       table.id
