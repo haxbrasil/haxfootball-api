@@ -532,7 +532,7 @@ export async function buildSettlementPreview(
     findings.push({
       code: "played-score-mismatch",
       severity: "blocking",
-      message: "O placar jogado não corresponde à evidência selecionada."
+      message: `O placar jogado (${result.sideAPlayedScore}–${result.sideBPlayedScore}) não corresponde ao placar da evidência (${evidenceScore.sideAScore}–${evidenceScore.sideBScore}).`
     });
   }
 
