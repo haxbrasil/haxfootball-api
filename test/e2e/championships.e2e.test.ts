@@ -5908,6 +5908,91 @@ describe("championship honor catalog and edition honors", () => {
     );
     expect(offeringResponse.status).toBe(400);
   });
+
+  it("reorders every active honor atomically", async () => {
+    const definitionResponse = await request(
+      "/api/championships/honor-definitions",
+      {
+        method: "POST",
+        body: {
+          actorAccountUuid: admin.uuid,
+          competitionTypeId: competitionType.uuid,
+          slug: uniqueSlug("ordered-award"),
+          kind: "award",
+          name: "Prêmio ordenável",
+          recipientTypes: ["account"],
+          minimumRecipients: 1,
+          maximumRecipients: 1,
+          aggregateByIdentity: false
+        }
+      }
+    );
+    const definition = await definitionResponse.json();
+    const published = await (
+      await request(
+        `/api/championships/honor-definitions/${definition.uuid}/publish`,
+        {
+          method: "POST",
+          body: { actorAccountUuid: admin.uuid, expectedRevision: 0 }
+        }
+      )
+    ).json();
+    let championship = await createChampionship(admin, competitionType, {
+      name: "Ordered Honors Cup"
+    });
+    const honors = [];
+    for (const nameOverride of ["Primeiro", "Segundo", "Terceiro"]) {
+      const response = await request(
+        `/api/championships/${championship.uuid}/honors`,
+        {
+          method: "POST",
+          body: command(admin, championship.revision, {
+            definitionVersionUuid: published.versions[0].uuid,
+            state: "announced",
+            nameOverride,
+            decisionPolicy: { type: "staff-selection" }
+          })
+        }
+      );
+      expect(response.status).toBe(201);
+      honors.push(await response.json());
+      championship = await getChampionship(championship.uuid);
+    }
+    const honorUuids = honors
+      .map((honor: { uuid: string }) => honor.uuid)
+      .reverse();
+    const reorderResponse = await request(
+      `/api/championships/${championship.uuid}/honors/order`,
+      {
+        method: "PUT",
+        body: command(admin, championship.revision, { honorUuids })
+      }
+    );
+    expect(reorderResponse.status).toBe(200);
+    expect(
+      (await reorderResponse.json()).map(
+        (honor: { uuid: string }) => honor.uuid
+      )
+    ).toEqual(honorUuids);
+    championship = await getChampionship(championship.uuid);
+    const invalidResponse = await request(
+      `/api/championships/${championship.uuid}/honors/order`,
+      {
+        method: "PUT",
+        body: command(admin, championship.revision, {
+          honorUuids: honorUuids.slice(1)
+        })
+      }
+    );
+    expect(invalidResponse.status).toBe(400);
+    expect(
+      await paginatedItems(
+        await request(
+          `/api/championships/${championship.uuid}/honors?actorAccountUuid=${admin.uuid}&includeDrafts=true&limit=20`
+        )
+      )
+    ).toEqual(honorUuids.map((uuid) => expect.objectContaining({ uuid })));
+  });
 });
 
 describe("championship placements, awards, and archives", () => {

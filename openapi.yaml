@@ -14373,6 +14373,36 @@ components:
       required:
         - deleted
       type: object
+    ReorderChampionshipHonorsBody:
+      properties:
+        actorAccountUuid:
+          format: uuid
+          type: string
+        commandUuid:
+          format: uuid
+          type: string
+        expectedRevision:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - minimum: 0
+              type: integer
+          minimum: 0
+        honorUuids:
+          items:
+            format: uuid
+            type: string
+          maxItems: 128
+          minItems: 1
+          type: array
+          uniqueItems: true
+      required:
+        - actorAccountUuid
+        - commandUuid
+        - expectedRevision
+        - honorUuids
+      type: object
     ReorderChampionshipRosterBody:
       properties:
         actorAccountUuid:
@@ -21474,6 +21504,64 @@ paths:
                 $ref: "#/components/schemas/InternalServerError"
           description: Response for status 500
       summary: Add a published honor to a championship
+      tags:
+        - Championships
+  /api/championships/{id}/honors/order:
+    put:
+      operationId: putApiChampionshipsByIdHonorsOrder
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReorderChampionshipHonorsBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/ChampionshipHonor"
+                type: array
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForbiddenError"
+          description: Response for status 403
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictError"
+          description: Response for status 409
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Reorder every active honor in a championship
       tags:
         - Championships
   /api/championships/{id}/honors/{honorId}:

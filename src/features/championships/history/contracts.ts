@@ -214,6 +214,17 @@ export const updateChampionshipHonorBodySchema = t.Composite([
   })
 ]);
 
+export const reorderChampionshipHonorsBodySchema = t.Composite([
+  championshipCommandSchema,
+  t.Object({
+    honorUuids: t.Array(t.String({ format: "uuid" }), {
+      minItems: 1,
+      maxItems: 128,
+      uniqueItems: true
+    })
+  })
+]);
+
 export const createChampionshipHonorGrantBodySchema = t.Composite([
   championshipCommandSchema,
   t.Object({
@@ -726,6 +737,9 @@ export type CreateChampionshipHonorInput = Static<
 >;
 export type UpdateChampionshipHonorInput = Static<
   typeof updateChampionshipHonorBodySchema
+>;
+export type ReorderChampionshipHonorsInput = Static<
+  typeof reorderChampionshipHonorsBodySchema
 >;
 export type CreateChampionshipHonorGrantInput = Static<
   typeof createChampionshipHonorGrantBodySchema

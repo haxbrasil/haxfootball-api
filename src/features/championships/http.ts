@@ -329,6 +329,7 @@ import {
   publishChampionshipHonorDefinitionBodySchema,
   previewChampionshipHistoricalImportBodySchema,
   replaceChampionshipPlacementsBodySchema,
+  reorderChampionshipHonorsBodySchema,
   rollbackChampionshipHistoricalImportBodySchema,
   teamIdentityHistoryResponseSchema,
   updateChampionshipHonorBodySchema,
@@ -356,6 +357,7 @@ import {
   publishChampionshipHonorDefinition,
   revokeChampionshipHonorGrant,
   resolveChampionshipHonor,
+  reorderChampionshipHonors,
   updateChampionshipHonor,
   updateChampionshipHonorDefinitionDraft
 } from "@/features/championships/history/honors";
@@ -531,6 +533,7 @@ export const championshipRoutes = new Elysia({
       archiveChampionshipHonorDefinitionBodySchema,
     CreateChampionshipHonorBody: createChampionshipHonorBodySchema,
     UpdateChampionshipHonorBody: updateChampionshipHonorBodySchema,
+    ReorderChampionshipHonorsBody: reorderChampionshipHonorsBodySchema,
     CreateChampionshipHonorGrantBody: createChampionshipHonorGrantBodySchema,
     RevokeChampionshipHonorGrantBody: revokeChampionshipHonorGrantBodySchema,
     ResolveChampionshipHonorBody: resolveChampionshipHonorBodySchema,
@@ -792,6 +795,19 @@ export const championshipRoutes = new Elysia({
       detail: {
         tags: ["Championships"],
         summary: "Add a published honor to a championship"
+      }
+    }
+  )
+  .put(
+    "/:id/honors/order",
+    ({ params, body }) => reorderChampionshipHonors(params.id, body),
+    {
+      params: championshipIdParamsSchema,
+      body: t.Ref("ReorderChampionshipHonorsBody"),
+      response: { 200: t.Array(t.Ref("ChampionshipHonor")) },
+      detail: {
+        tags: ["Championships"],
+        summary: "Reorder every active honor in a championship"
       }
     }
   )

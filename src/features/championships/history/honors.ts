@@ -61,6 +61,7 @@ import type {
   CreateChampionshipHonorInput,
   ListChampionshipHonorDefinitionsQuery,
   PublishChampionshipHonorDefinitionInput,
+  ReorderChampionshipHonorsInput,
   RevokeChampionshipHonorGrantInput,
   ResolveChampionshipHonorInput,
   UpdateChampionshipHonorDefinitionDraftInput,
@@ -510,6 +511,87 @@ export async function updateChampionshipHonor(
         before: await projectHonor(tx, honor),
         after: response,
         reason: input.reason
+      };
+    }
+  );
+}
+
+export async function reorderChampionshipHonors(
+  championshipUuid: string,
+  input: ReorderChampionshipHonorsInput
+): Promise<ChampionshipHonorResponse[]> {
+  return executeChampionshipCommand(
+    {
+      championshipUuid,
+      actorAccountUuid: input.actorAccountUuid,
+      commandUuid: input.commandUuid,
+      expectedRevision: input.expectedRevision,
+      permission: ["championship:admin", "championship:operate"],
+      action: "history.honors.reordered"
+    },
+    async (tx, championship) => {
+      const current = await tx
+        .select()
+        .from(championshipHonors)
+        .where(
+          and(
+            eq(championshipHonors.championshipId, championship.id),
+            ne(championshipHonors.state, "void")
+          )
+        )
+        .orderBy(
+          asc(championshipHonors.displayOrder),
+          asc(championshipHonors.id)
+        );
+      const currentUuids = new Set(current.map((honor) => honor.uuid));
+      if (
+        input.honorUuids.length !== current.length ||
+        input.honorUuids.some((uuid) => !currentUuids.has(uuid))
+      ) {
+        throw badRequest(
+          "Honor order must contain every active championship honor exactly once"
+        );
+      }
+      const before = await Promise.all(
+        current.map((honor) => projectHonor(tx, honor))
+      );
+      const now = new Date().toISOString();
+      for (const [displayOrder, honorUuid] of input.honorUuids.entries()) {
+        const honor = current.find(
+          (candidate) => candidate.uuid === honorUuid
+        )!;
+        if (honor.displayOrder === displayOrder) continue;
+        await tx
+          .update(championshipHonors)
+          .set({
+            displayOrder,
+            revision: honor.revision + 1,
+            updatedAt: now
+          })
+          .where(eq(championshipHonors.id, honor.id));
+      }
+      const reordered = await tx
+        .select()
+        .from(championshipHonors)
+        .where(
+          and(
+            eq(championshipHonors.championshipId, championship.id),
+            ne(championshipHonors.state, "void")
+          )
+        )
+        .orderBy(
+          asc(championshipHonors.displayOrder),
+          asc(championshipHonors.id)
+        );
+      const after = await Promise.all(
+        reordered.map((honor) => projectHonor(tx, honor))
+      );
+      return {
+        response: () => after,
+        targetType: "championship-honor-order",
+        targetUuid: championship.uuid,
+        before,
+        after
       };
     }
   );
