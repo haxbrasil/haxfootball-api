@@ -7,6 +7,7 @@ import { Elysia } from "elysia";
 import { normalizeOpenApiDocument } from "@lib/openapi";
 import { authRoutes } from "@/features/auth/http";
 import { championshipRoutes } from "@/features/championships/http";
+import { clipRoutes } from "@/features/clips/http";
 import { accountRoutes } from "@/features/accounts/http";
 import { gameModeRoutes } from "@/features/game-modes/http";
 import { jobRoutes } from "@/features/jobs/http";
@@ -71,6 +72,7 @@ app
       .use(withJwtGuard)
       .use(accountRoutes)
       .use(championshipRoutes)
+      .use(clipRoutes)
       .use(gameModeRoutes)
       .use(permissionRoutes)
       .use(roleRoutes)

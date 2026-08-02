@@ -8,6 +8,9 @@ export const recordingResponseSchema = t.Object({
   id: recordingPublicIdSchema,
   url: t.String(),
   sizeBytes: t.Number(),
+  format: t.Nullable(t.Union([t.Literal("hbr2"), t.Literal("hbrx")])),
+  extensionVersion: t.Nullable(t.Integer()),
+  totalFrames: t.Nullable(t.Integer({ minimum: 0 })),
   createdAt: t.String()
 });
 
@@ -22,6 +25,9 @@ export function toRecordingResponse(recording: Recording): RecordingResponse {
     id: recording.publicId,
     url: recordingUrl(recording.objectKey),
     sizeBytes: recording.sizeBytes,
+    format: recording.format ?? null,
+    extensionVersion: recording.extensionVersion ?? null,
+    totalFrames: recording.totalFrames ?? null,
     createdAt: recording.createdAt
   };
 }

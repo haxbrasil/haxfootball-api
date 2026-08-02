@@ -1,5 +1,6 @@
 export * from "@/features/accounts/db";
 export * from "@/features/championships/db";
+export * from "@/features/clips/db";
 export * from "@/features/game-modes/db";
 export * from "@/features/jobs/db";
 export * from "@/features/localization/db";

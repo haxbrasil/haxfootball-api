@@ -1,4 +1,8 @@
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import {
+  GetObjectCommand,
+  PutObjectCommand,
+  S3Client
+} from "@aws-sdk/client-s3";
 import { env } from "@/config/env";
 
 type PutR2ObjectInput = {
@@ -30,6 +34,21 @@ export async function putR2Object(input: PutR2ObjectInput): Promise<void> {
         : {})
     })
   );
+}
+
+export async function getR2ObjectBytes(key: string): Promise<Uint8Array> {
+  const response = await r2Client.send(
+    new GetObjectCommand({
+      Bucket: env.r2Bucket,
+      Key: key
+    })
+  );
+
+  if (!response.Body) {
+    throw new Error(`R2 object '${key}' has no body`);
+  }
+
+  return new Uint8Array(await response.Body.transformToByteArray());
 }
 
 export function r2PublicUrl(key: string): string {

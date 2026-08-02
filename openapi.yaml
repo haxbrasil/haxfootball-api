@@ -8459,6 +8459,62 @@ components:
         - acknowledgedProducerSequence
         - match
       type: object
+    Clip:
+      properties:
+        createdAt:
+          type: string
+        durationTicks:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - minimum: 1
+              type: integer
+          minimum: 1
+        endTick:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - minimum: 1
+              type: integer
+          minimum: 1
+        id:
+          format: uuid
+          type: string
+        recording:
+          $ref: "#/components/schemas/Recording"
+        sourceKind:
+          enum:
+            - web
+            - room_command
+          type: string
+        startTick:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - minimum: 0
+              type: integer
+          minimum: 0
+        title:
+          anyOf:
+            - type: string
+            - type: "null"
+          nullable: true
+        updatedAt:
+          type: string
+      required:
+        - id
+        - title
+        - startTick
+        - endTick
+        - durationTicks
+        - sourceKind
+        - recording
+        - createdAt
+        - updatedAt
+      type: object
     CloseRoomResponse:
       properties:
         closedAt:
@@ -10152,6 +10208,41 @@ components:
         - proposingParticipantIds
         - receivingParticipantIds
       type: object
+    CreateClipBody:
+      properties:
+        endTick:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - maximum: 2147483647
+              minimum: 1
+              type: integer
+          maximum: 2147483647
+          minimum: 1
+        recordingId:
+          maxLength: 64
+          minLength: 7
+          pattern: ^[a-f0-9]+$
+          type: string
+        startTick:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - maximum: 2147483647
+              minimum: 0
+              type: integer
+          maximum: 2147483647
+          minimum: 0
+        title:
+          maxLength: 120
+          type: string
+      required:
+        - recordingId
+        - startTick
+        - endTick
+      type: object
     CreateCompetitionTypeBody:
       properties:
         actorAccountUuid:
@@ -11837,6 +11928,18 @@ components:
         items:
           items:
             $ref: "#/components/schemas/Championship"
+          type: array
+        page:
+          $ref: "#/components/schemas/PageInfo"
+      required:
+        - items
+        - page
+      type: object
+    ListClips:
+      properties:
+        items:
+          items:
+            $ref: "#/components/schemas/Clip"
           type: array
         page:
           $ref: "#/components/schemas/PageInfo"
@@ -14292,6 +14395,24 @@ components:
       properties:
         createdAt:
           type: string
+        extensionVersion:
+          anyOf:
+            - anyOf:
+                - default: 0
+                  format: integer
+                  type: string
+                - type: integer
+            - type: "null"
+          nullable: true
+        format:
+          anyOf:
+            - anyOf:
+                - const: hbr2
+                  type: string
+                - const: hbrx
+                  type: string
+            - type: "null"
+          nullable: true
         id:
           maxLength: 64
           minLength: 7
@@ -14299,12 +14420,26 @@ components:
           type: string
         sizeBytes:
           type: number
+        totalFrames:
+          anyOf:
+            - anyOf:
+                - default: 0
+                  format: integer
+                  type: string
+                - minimum: 0
+                  type: integer
+              minimum: 0
+            - type: "null"
+          nullable: true
         url:
           type: string
       required:
         - id
         - url
         - sizeBytes
+        - format
+        - extensionVersion
+        - totalFrames
         - createdAt
       type: object
     RecordingInspection:
@@ -16950,6 +17085,35 @@ components:
         - commandUuid
         - expectedRevision
         - state
+      type: object
+    UpdateClipBody:
+      properties:
+        endTick:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - maximum: 2147483647
+              minimum: 1
+              type: integer
+          maximum: 2147483647
+          minimum: 1
+        startTick:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - maximum: 2147483647
+              minimum: 0
+              type: integer
+          maximum: 2147483647
+          minimum: 0
+        title:
+          anyOf:
+            - maxLength: 120
+              type: string
+            - type: "null"
+          nullable: true
       type: object
     UpdateCompetitionTypeBody:
       properties:
@@ -26302,6 +26466,300 @@ paths:
       summary: Transition a championship
       tags:
         - Championships
+  /api/clips:
+    get:
+      operationId: getApiClips
+      parameters:
+        - in: query
+          name: limit
+          required: false
+          schema:
+            anyOf:
+              - default: 0
+                format: integer
+                type: string
+              - maximum: 100
+                minimum: 1
+                type: integer
+            maximum: 100
+            minimum: 1
+        - in: query
+          name: cursor
+          required: false
+          schema:
+            minLength: 1
+            type: string
+        - in: query
+          name: recordingId
+          required: false
+          schema:
+            maxLength: 64
+            minLength: 7
+            pattern: ^[a-f0-9]+$
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListClips"
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForbiddenError"
+          description: Response for status 403
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictError"
+          description: Response for status 409
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: List clips
+      tags:
+        - Clips
+    post:
+      operationId: postApiClips
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateClipBody"
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Clip"
+          description: Response for status 201
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForbiddenError"
+          description: Response for status 403
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictError"
+          description: Response for status 409
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Create a clip
+      tags:
+        - Clips
+  /api/clips/{id}:
+    delete:
+      operationId: deleteApiClipsById
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+      responses:
+        "204":
+          content: {}
+          description: Response for status 204
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForbiddenError"
+          description: Response for status 403
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictError"
+          description: Response for status 409
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Archive a clip
+      tags:
+        - Clips
+    get:
+      operationId: getApiClipsById
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Clip"
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForbiddenError"
+          description: Response for status 403
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictError"
+          description: Response for status 409
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Get a clip
+      tags:
+        - Clips
+    patch:
+      operationId: patchApiClipsById
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateClipBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Clip"
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForbiddenError"
+          description: Response for status 403
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictError"
+          description: Response for status 409
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Update a clip
+      tags:
+        - Clips
   /api/event-schemas:
     get:
       operationId: getApiEvent-schemas
