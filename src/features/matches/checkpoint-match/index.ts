@@ -60,6 +60,13 @@ export async function checkpointMatch(id: string, input: CheckpointMatchInput) {
     current.match.status === "completed" ||
     current.match.status === "discarded"
   ) {
+    if (input.status === current.match.status) {
+      return {
+        acknowledgedProducerSequence: current.match.lastProducerSequence,
+        match: toMatchResponse(await getMatchDetail(id))
+      };
+    }
+
     throw badRequest("Terminal matches cannot be checkpointed");
   }
 
