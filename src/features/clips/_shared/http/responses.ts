@@ -1,4 +1,5 @@
 import { type Static, t } from "elysia";
+import { env } from "@/config/env";
 import type { Clip } from "@/features/clips/db";
 import { clipPublicIdSchema } from "@/features/clips/_shared/http/inputs";
 import {
@@ -73,12 +74,8 @@ export function toClipResponse({
   recording,
   renditions = []
 }: ClipWithRecording): ClipResponse {
-  const poster = renditions.find(
-    (rendition) => rendition.purpose === "clip_poster"
-  );
-  const video = renditions.find(
-    (rendition) => rendition.purpose === "clip_preview_video"
-  );
+  const poster = preferredRendition(renditions, "clip_poster");
+  const video = preferredRendition(renditions, "clip_preview_video");
   const posterStatus = toPreviewStatus(poster);
   const videoStatus = toPreviewStatus(video);
   const status =
@@ -115,6 +112,33 @@ export function toClipResponse({
     createdAt: clip.createdAt,
     updatedAt: clip.updatedAt
   };
+}
+
+function preferredRendition(
+  renditions: MediaRendition[],
+  purpose: MediaRendition["purpose"]
+): MediaRendition | undefined {
+  const candidates = renditions
+    .filter((rendition) => rendition.purpose === purpose)
+    .sort(compareRenditions);
+  const current = candidates.filter(
+    (rendition) => rendition.profileVersion === env.mediaRendererVersion
+  );
+  const currentReady = current.filter(isReadyRendition).at(-1);
+  const anyReady = candidates.filter(isReadyRendition).at(-1);
+
+  return currentReady ?? anyReady ?? current.at(-1) ?? candidates.at(-1);
+}
+
+function compareRenditions(
+  left: MediaRendition,
+  right: MediaRendition
+): number {
+  return left.createdAt.localeCompare(right.createdAt) || left.id - right.id;
+}
+
+function isReadyRendition(rendition: MediaRendition): boolean {
+  return rendition.status === "ready" && Boolean(rendition.objectKey);
 }
 
 function toPreviewStatus(

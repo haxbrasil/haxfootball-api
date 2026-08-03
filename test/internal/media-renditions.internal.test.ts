@@ -98,6 +98,79 @@ describe("media rendition responses", () => {
     expect(response).not.toHaveProperty("format");
   });
 
+  it("prefers the current renderer while retaining a ready legacy fallback", async () => {
+    const { env } = await import("@/config/env");
+    const { toClipResponse } =
+      await import("@/features/clips/_shared/http/responses");
+    const createdAt = "2026-08-03T00:00:00.000Z";
+    const base = {
+      id: 1,
+      uuid: "rendition",
+      sourceKind: "clip" as const,
+      clipId: 1,
+      sourceFingerprint: "source",
+      purpose: "clip_preview_video" as const,
+      cacheKey: "cache",
+      profileVersion: "legacy-renderer",
+      status: "ready" as const,
+      objectKey: "media/clips/legacy.mp4",
+      contentType: "video/mp4",
+      sizeBytes: 100,
+      checksumSha256: "checksum",
+      width: 1280,
+      height: 720,
+      durationTicks: 1_800,
+      rendererVersion: "legacy-renderer",
+      errorCode: null,
+      errorMessage: null,
+      createdAt,
+      updatedAt: createdAt
+    };
+    const response = toClipResponse({
+      clip: {
+        id: 1,
+        publicId: "clip-current-renderer",
+        recordingId: 1,
+        startTick: 0,
+        endTick: 1_800,
+        title: null,
+        sourceKind: "web",
+        archivedAt: null,
+        createdAt,
+        updatedAt: createdAt
+      },
+      recording: {
+        id: 1,
+        publicId: "recording-current-renderer",
+        sha256: "sha256",
+        objectKey: "recordings/recording.hbr2",
+        sizeBytes: 100,
+        format: "hbr2",
+        extensionVersion: 1,
+        totalFrames: 10_000,
+        createdAt
+      },
+      renditions: [
+        base,
+        {
+          ...base,
+          id: 2,
+          uuid: "current-rendition",
+          cacheKey: "current-cache",
+          profileVersion: env.mediaRendererVersion,
+          rendererVersion: env.mediaRendererVersion,
+          objectKey: "media/clips/current.mp4",
+          createdAt: "2026-08-03T00:01:00.000Z",
+          updatedAt: "2026-08-03T00:01:00.000Z"
+        }
+      ]
+    });
+
+    expect(response.preview.videoUrl).toBe(
+      "https://recs.haxbrasil.com/media/clips/current.mp4"
+    );
+  });
+
   it("claims a queued rendition only once", async () => {
     const { db } = await import("@/db/client");
     const { clips } = await import("@/features/clips/db");
@@ -153,5 +226,68 @@ describe("media rendition responses", () => {
 
     expect([first, second].filter(Boolean)).toHaveLength(1);
     expect([first, second].find(Boolean)?.status).toBe("running");
+  });
+
+  it("marks ready renditions from an older renderer as backfill candidates", async () => {
+    const { db } = await import("@/db/client");
+    const { clips } = await import("@/features/clips/db");
+    const { recordings } = await import("@/features/recordings/db");
+    const { mediaRenditions } = await import("@/features/media-renditions/db");
+    const { listClipRenditionBackfillCandidates } =
+      await import("@/features/media-renditions/backfill");
+    const createdAt = new Date().toISOString();
+    const [recording] = await db
+      .insert(recordings)
+      .values({
+        publicId: crypto.randomUUID(),
+        sha256: crypto.randomUUID(),
+        objectKey: `test/${crypto.randomUUID()}.hbr2`,
+        sizeBytes: 1,
+        format: "hbr2",
+        totalFrames: 60,
+        createdAt
+      })
+      .returning();
+    const [clip] = await db
+      .insert(clips)
+      .values({
+        publicId: crypto.randomUUID(),
+        recordingId: recording.id,
+        startTick: 0,
+        endTick: 30,
+        sourceKind: "web",
+        createdAt,
+        updatedAt: createdAt
+      })
+      .returning();
+
+    await db.insert(mediaRenditions).values(
+      (["clip_poster", "clip_preview_video"] as const).map((purpose) => ({
+        uuid: crypto.randomUUID(),
+        sourceKind: "clip" as const,
+        clipId: clip.id,
+        sourceFingerprint: "test-source",
+        purpose,
+        cacheKey: crypto.randomUUID(),
+        profileVersion: "older-renderer",
+        status: "ready" as const,
+        objectKey: `media/${crypto.randomUUID()}`,
+        contentType: purpose === "clip_poster" ? "image/png" : "video/mp4",
+        sizeBytes: 1,
+        checksumSha256: "checksum",
+        width: purpose === "clip_poster" ? 640 : 1280,
+        height: purpose === "clip_poster" ? 360 : 720,
+        durationTicks: 30,
+        rendererVersion: "older-renderer",
+        createdAt,
+        updatedAt: createdAt
+      }))
+    );
+
+    const candidates = await listClipRenditionBackfillCandidates();
+
+    expect(
+      candidates.some(({ clip: candidate }) => candidate.id === clip.id)
+    ).toBe(true);
   });
 });

@@ -1,4 +1,5 @@
 import { asc, eq, isNull } from "drizzle-orm";
+import { env } from "@/config/env";
 import { db } from "@/db/client";
 import { clips } from "@/features/clips/db";
 import { recordings } from "@/features/recordings/db";
@@ -55,6 +56,8 @@ function hasReadyRendition(
   return renditions.some(
     (rendition) =>
       rendition.purpose === purpose &&
+      rendition.profileVersion === env.mediaRendererVersion &&
+      rendition.rendererVersion === env.mediaRendererVersion &&
       rendition.status === "ready" &&
       Boolean(rendition.objectKey)
   );
