@@ -330,6 +330,58 @@ export const configureChampionshipDraftBodySchema = t.Composite([
   })
 ]);
 
+const championshipRecordedDraftSlotSchema = t.Object({
+  sequence: t.Integer({ minimum: 1, maximum: 6_400 }),
+  round: t.Integer({ minimum: 1, maximum: 100 }),
+  position: t.Integer({ minimum: 1, maximum: 64 }),
+  teamId: t.String({ format: "uuid" }),
+  participantId: t.Union([t.String({ format: "uuid" }), t.Null()]),
+  resolution: t.Union([
+    t.Literal("selected"),
+    t.Literal("unresolved"),
+    t.Literal("skipped")
+  ]),
+  occurredAt: t.Optional(
+    t.Union([t.String({ format: "date-time" }), t.String({ format: "date" })])
+  ),
+  recordedNote: t.Optional(t.String({ maxLength: 1_000 }))
+});
+
+const championshipRecordedDraftDefinitionSchema = t.Object({
+  teamIds: t.Array(t.String({ format: "uuid" }), {
+    minItems: 2,
+    maxItems: 64,
+    uniqueItems: true
+  }),
+  rounds: t.Integer({ minimum: 1, maximum: 100 }),
+  occurredAt: t.Optional(
+    t.Union([t.String({ format: "date-time" }), t.String({ format: "date" })])
+  ),
+  recordedNote: t.Optional(t.String({ maxLength: 4_000 })),
+  slots: t.Array(championshipRecordedDraftSlotSchema, {
+    minItems: 1,
+    maxItems: 6_400
+  })
+});
+
+export const previewChampionshipRecordedDraftBodySchema = t.Composite([
+  t.Object({
+    actorAccountUuid: t.String({ format: "uuid" }),
+    expectedRevision: t.Integer({ minimum: 0 })
+  }),
+  championshipRecordedDraftDefinitionSchema
+]);
+
+export const recordChampionshipDraftBodySchema = t.Composite([
+  championshipCommandSchema,
+  t.Object({
+    previewHash: t.String({ minLength: 64, maxLength: 64 }),
+    confirmCapException: t.Optional(t.Boolean()),
+    reason: t.Optional(t.String({ minLength: 1, maxLength: 4_000 })),
+    ...championshipRecordedDraftDefinitionSchema.properties
+  })
+]);
+
 export const startChampionshipDraftBodySchema = t.Composite([
   championshipCommandSchema,
   t.Object({
@@ -1267,6 +1319,12 @@ export type ChampionshipDraftQuery = Static<
 >;
 export type ConfigureChampionshipDraftInput = Static<
   typeof configureChampionshipDraftBodySchema
+>;
+export type PreviewChampionshipRecordedDraftInput = Static<
+  typeof previewChampionshipRecordedDraftBodySchema
+>;
+export type RecordChampionshipDraftInput = Static<
+  typeof recordChampionshipDraftBodySchema
 >;
 export type StartChampionshipDraftInput = Static<
   typeof startChampionshipDraftBodySchema

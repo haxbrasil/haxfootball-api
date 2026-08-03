@@ -2188,12 +2188,28 @@ components:
                     - type: integer
                 createdAt:
                   type: string
+                mode:
+                  anyOf:
+                    - const: live
+                      type: string
+                    - const: recorded
+                      type: string
                 nextTurnSequence:
                   anyOf:
                     - default: 0
                       format: integer
                       type: string
                     - type: integer
+                occurredAt:
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                  nullable: true
+                recordedAt:
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                  nullable: true
                 revision:
                   anyOf:
                     - default: 0
@@ -2335,6 +2351,11 @@ components:
                               - type: string
                               - type: "null"
                             nullable: true
+                          occurredAt:
+                            anyOf:
+                              - type: string
+                              - type: "null"
+                            nullable: true
                           openedAt:
                             anyOf:
                               - type: string
@@ -2358,6 +2379,17 @@ components:
                                     format: integer
                                     type: string
                                   - type: integer
+                              - type: "null"
+                            nullable: true
+                          recordedResolution:
+                            anyOf:
+                              - anyOf:
+                                  - const: selected
+                                    type: string
+                                  - const: unresolved
+                                    type: string
+                                  - const: skipped
+                                    type: string
                               - type: "null"
                             nullable: true
                           revision:
@@ -2431,6 +2463,8 @@ components:
                           - deadlineAt
                           - overdueAt
                           - filledAt
+                          - recordedResolution
+                          - occurredAt
                           - revision
                         type: object
                       type: array
@@ -2448,6 +2482,7 @@ components:
               required:
                 - uuid
                 - state
+                - mode
                 - rounds
                 - countdownSeconds
                 - nextTurnSequence
@@ -2457,6 +2492,8 @@ components:
                 - startedAt
                 - completedAt
                 - canceledAt
+                - occurredAt
+                - recordedAt
                 - createdAt
                 - updatedAt
                 - teams
@@ -5780,6 +5817,224 @@ components:
         - contextType
         - contextUuid
         - expiresAt
+      type: object
+    ChampionshipRecordedDraftPreview:
+      properties:
+        currentChampionshipRevision:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - type: integer
+        issues:
+          items:
+            properties:
+              code:
+                type: string
+              message:
+                type: string
+              participantUuid:
+                anyOf:
+                  - format: uuid
+                    type: string
+                  - type: "null"
+                nullable: true
+              sequence:
+                anyOf:
+                  - anyOf:
+                      - default: 0
+                        format: integer
+                        type: string
+                      - type: integer
+                  - type: "null"
+                nullable: true
+              severity:
+                enum:
+                  - error
+                  - warning
+                type: string
+            required:
+              - code
+              - severity
+              - message
+              - sequence
+              - participantUuid
+            type: object
+          type: array
+        previewHash:
+          type: string
+        requiresCapException:
+          type: boolean
+        rounds:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - type: integer
+        selectedCount:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - type: integer
+        skippedCount:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - type: integer
+        slots:
+          items:
+            properties:
+              existingTeam:
+                anyOf:
+                  - properties:
+                      name:
+                        type: string
+                      uuid:
+                        format: uuid
+                        type: string
+                    required:
+                      - uuid
+                      - name
+                    type: object
+                  - type: "null"
+                nullable: true
+              participant:
+                anyOf:
+                  - properties:
+                      displayName:
+                        type: string
+                      uuid:
+                        format: uuid
+                        type: string
+                    required:
+                      - uuid
+                      - displayName
+                    type: object
+                  - type: "null"
+                nullable: true
+              position:
+                anyOf:
+                  - default: 0
+                    format: integer
+                    type: string
+                  - type: integer
+              priceUnitsSnapshot:
+                anyOf:
+                  - anyOf:
+                      - default: 0
+                        format: integer
+                        type: string
+                      - type: integer
+                  - type: "null"
+                nullable: true
+              resolution:
+                enum:
+                  - selected
+                  - unresolved
+                  - skipped
+                type: string
+              round:
+                anyOf:
+                  - default: 0
+                    format: integer
+                    type: string
+                  - type: integer
+              sequence:
+                anyOf:
+                  - default: 0
+                    format: integer
+                    type: string
+                  - type: integer
+              team:
+                properties:
+                  name:
+                    type: string
+                  uuid:
+                    format: uuid
+                    type: string
+                required:
+                  - uuid
+                  - name
+                type: object
+            required:
+              - sequence
+              - round
+              - position
+              - team
+              - resolution
+              - participant
+              - priceUnitsSnapshot
+              - existingTeam
+            type: object
+          maxItems: 6400
+          type: array
+        teams:
+          items:
+            properties:
+              name:
+                type: string
+              overCapAfter:
+                type: boolean
+              remainingAfterUnits:
+                anyOf:
+                  - default: 0
+                    format: integer
+                    type: string
+                  - type: integer
+              selectedCount:
+                anyOf:
+                  - default: 0
+                    format: integer
+                    type: string
+                  - type: integer
+              usageAfterUnits:
+                anyOf:
+                  - default: 0
+                    format: integer
+                    type: string
+                  - type: integer
+              usageBeforeUnits:
+                anyOf:
+                  - default: 0
+                    format: integer
+                    type: string
+                  - type: integer
+              uuid:
+                format: uuid
+                type: string
+            required:
+              - uuid
+              - name
+              - selectedCount
+              - usageBeforeUnits
+              - usageAfterUnits
+              - remainingAfterUnits
+              - overCapAfter
+            type: object
+          maxItems: 64
+          type: array
+        unresolvedCount:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - type: integer
+        valid:
+          type: boolean
+      required:
+        - valid
+        - previewHash
+        - currentChampionshipRevision
+        - rounds
+        - requiresCapException
+        - selectedCount
+        - unresolvedCount
+        - skippedCount
+        - issues
+        - slots
+        - teams
       type: object
     ChampionshipRosterMembership:
       properties:
@@ -13616,6 +13871,120 @@ components:
         - source
         - mapping
       type: object
+    PreviewChampionshipRecordedDraftBody:
+      properties:
+        actorAccountUuid:
+          format: uuid
+          type: string
+        expectedRevision:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - minimum: 0
+              type: integer
+          minimum: 0
+        occurredAt:
+          anyOf:
+            - format: date-time
+              type: string
+            - format: date
+              type: string
+        recordedNote:
+          maxLength: 4000
+          type: string
+        rounds:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - maximum: 100
+              minimum: 1
+              type: integer
+          maximum: 100
+          minimum: 1
+        slots:
+          items:
+            properties:
+              occurredAt:
+                anyOf:
+                  - format: date-time
+                    type: string
+                  - format: date
+                    type: string
+              participantId:
+                anyOf:
+                  - format: uuid
+                    type: string
+                  - type: "null"
+              position:
+                anyOf:
+                  - default: 0
+                    format: integer
+                    type: string
+                  - maximum: 64
+                    minimum: 1
+                    type: integer
+                maximum: 64
+                minimum: 1
+              recordedNote:
+                maxLength: 1000
+                type: string
+              resolution:
+                enum:
+                  - selected
+                  - unresolved
+                  - skipped
+                type: string
+              round:
+                anyOf:
+                  - default: 0
+                    format: integer
+                    type: string
+                  - maximum: 100
+                    minimum: 1
+                    type: integer
+                maximum: 100
+                minimum: 1
+              sequence:
+                anyOf:
+                  - default: 0
+                    format: integer
+                    type: string
+                  - maximum: 6400
+                    minimum: 1
+                    type: integer
+                maximum: 6400
+                minimum: 1
+              teamId:
+                format: uuid
+                type: string
+            required:
+              - sequence
+              - round
+              - position
+              - teamId
+              - participantId
+              - resolution
+            type: object
+          maxItems: 6400
+          minItems: 1
+          type: array
+        teamIds:
+          items:
+            format: uuid
+            type: string
+          maxItems: 64
+          minItems: 2
+          type: array
+          uniqueItems: true
+      required:
+        - actorAccountUuid
+        - expectedRevision
+        - teamIds
+        - rounds
+        - slots
+      type: object
     PreviewChampionshipRosterMoveBody:
       properties:
         actorAccountUuid:
@@ -14390,6 +14759,135 @@ components:
           type: string
       required:
         - schema
+      type: object
+    RecordChampionshipDraftBody:
+      properties:
+        actorAccountUuid:
+          format: uuid
+          type: string
+        commandUuid:
+          format: uuid
+          type: string
+        confirmCapException:
+          type: boolean
+        expectedRevision:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - minimum: 0
+              type: integer
+          minimum: 0
+        occurredAt:
+          anyOf:
+            - format: date-time
+              type: string
+            - format: date
+              type: string
+        previewHash:
+          maxLength: 64
+          minLength: 64
+          type: string
+        reason:
+          maxLength: 4000
+          minLength: 1
+          type: string
+        recordedNote:
+          maxLength: 4000
+          type: string
+        rounds:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - maximum: 100
+              minimum: 1
+              type: integer
+          maximum: 100
+          minimum: 1
+        slots:
+          items:
+            properties:
+              occurredAt:
+                anyOf:
+                  - format: date-time
+                    type: string
+                  - format: date
+                    type: string
+              participantId:
+                anyOf:
+                  - format: uuid
+                    type: string
+                  - type: "null"
+              position:
+                anyOf:
+                  - default: 0
+                    format: integer
+                    type: string
+                  - maximum: 64
+                    minimum: 1
+                    type: integer
+                maximum: 64
+                minimum: 1
+              recordedNote:
+                maxLength: 1000
+                type: string
+              resolution:
+                enum:
+                  - selected
+                  - unresolved
+                  - skipped
+                type: string
+              round:
+                anyOf:
+                  - default: 0
+                    format: integer
+                    type: string
+                  - maximum: 100
+                    minimum: 1
+                    type: integer
+                maximum: 100
+                minimum: 1
+              sequence:
+                anyOf:
+                  - default: 0
+                    format: integer
+                    type: string
+                  - maximum: 6400
+                    minimum: 1
+                    type: integer
+                maximum: 6400
+                minimum: 1
+              teamId:
+                format: uuid
+                type: string
+            required:
+              - sequence
+              - round
+              - position
+              - teamId
+              - participantId
+              - resolution
+            type: object
+          maxItems: 6400
+          minItems: 1
+          type: array
+        teamIds:
+          items:
+            format: uuid
+            type: string
+          maxItems: 64
+          minItems: 2
+          type: array
+          uniqueItems: true
+      required:
+        - actorAccountUuid
+        - commandUuid
+        - expectedRevision
+        - previewHash
+        - teamIds
+        - rounds
+        - slots
       type: object
     Recording:
       properties:
@@ -20729,6 +21227,118 @@ paths:
                 $ref: "#/components/schemas/InternalServerError"
           description: Response for status 500
       summary: Make the oldest eligible championship draft pick
+      tags:
+        - Championships
+  /api/championships/{id}/draft/record:
+    post:
+      operationId: postApiChampionshipsByIdDraftRecord
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecordChampionshipDraftBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChampionshipDraft"
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForbiddenError"
+          description: Response for status 403
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictError"
+          description: Response for status 409
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Register a championship draft that happened outside the system
+      tags:
+        - Championships
+  /api/championships/{id}/draft/record/preview:
+    post:
+      operationId: postApiChampionshipsByIdDraftRecordPreview
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PreviewChampionshipRecordedDraftBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChampionshipRecordedDraftPreview"
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForbiddenError"
+          description: Response for status 403
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictError"
+          description: Response for status 409
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Preview a recorded championship draft
       tags:
         - Championships
   /api/championships/{id}/draft/start:

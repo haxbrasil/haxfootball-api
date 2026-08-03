@@ -30,6 +30,9 @@ export const championshipDrafts = sqliteTable(
     })
       .notNull()
       .default("setup"),
+    mode: text("mode", { enum: ["live", "recorded"] })
+      .notNull()
+      .default("live"),
     rounds: integer("rounds").notNull(),
     countdownSeconds: integer("countdown_seconds").notNull(),
     nextTurnSequence: integer("next_turn_sequence").notNull().default(1),
@@ -37,6 +40,12 @@ export const championshipDrafts = sqliteTable(
     startedAt: text("started_at"),
     completedAt: text("completed_at"),
     canceledAt: text("canceled_at"),
+    occurredAt: text("occurred_at"),
+    recordedAt: text("recorded_at"),
+    recordedByAccountId: integer("recorded_by_account_id").references(
+      () => accounts.id
+    ),
+    recordedNote: text("recorded_note"),
     createdAt: text("created_at")
       .notNull()
       .$defaultFn(() => new Date().toISOString()),
@@ -108,6 +117,11 @@ export const championshipDraftTurns = sqliteTable(
     deadlineAt: text("deadline_at"),
     overdueAt: text("overdue_at"),
     filledAt: text("filled_at"),
+    recordedResolution: text("recorded_resolution", {
+      enum: ["selected", "unresolved", "skipped"]
+    }),
+    occurredAt: text("occurred_at"),
+    recordedNote: text("recorded_note"),
     selectedByAccountId: integer("selected_by_account_id").references(
       () => accounts.id
     ),

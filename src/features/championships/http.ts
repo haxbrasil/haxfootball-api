@@ -7,6 +7,7 @@ import {
   championshipDetailResponseSchema,
   championshipDraftCorrectionPreviewResponseSchema,
   championshipDraftResponseSchema,
+  championshipRecordedDraftPreviewResponseSchema,
   championshipDoubleEliminationPreviewResponseSchema,
   championshipFormatResponseSchema,
   championshipSpotPlacementPreviewResponseSchema,
@@ -97,6 +98,8 @@ import {
   upsertChampionshipPricesBodySchema,
   previewChampionshipRosterMoveBodySchema,
   configureChampionshipDraftBodySchema,
+  previewChampionshipRecordedDraftBodySchema,
+  recordChampionshipDraftBodySchema,
   makeChampionshipDraftPickBodySchema,
   selfRegisterChampionshipBodySchema,
   startChampionshipDraftBodySchema,
@@ -217,6 +220,8 @@ import {
   getChampionshipDraft,
   getChampionshipDraftCorrectionPreview,
   makeChampionshipDraftPick,
+  previewChampionshipRecordedDraft,
+  recordChampionshipDraft,
   startChampionshipDraft,
   voidChampionshipDraftPick
 } from "@/features/championships/draft-trades/draft";
@@ -385,6 +390,8 @@ export const championshipRoutes = new Elysia({
     ChampionshipDraft: championshipDraftResponseSchema,
     ChampionshipDraftCorrectionPreview:
       championshipDraftCorrectionPreviewResponseSchema,
+    ChampionshipRecordedDraftPreview:
+      championshipRecordedDraftPreviewResponseSchema,
     ChampionshipFormat: championshipFormatResponseSchema,
     ChampionshipStandings: championshipStandingsResponseSchema,
     ChampionshipRoundRobinPreview: championshipRoundRobinPreviewResponseSchema,
@@ -490,6 +497,9 @@ export const championshipRoutes = new Elysia({
     UpsertChampionshipPricesBody: upsertChampionshipPricesBodySchema,
     PreviewChampionshipRosterMoveBody: previewChampionshipRosterMoveBodySchema,
     ConfigureChampionshipDraftBody: configureChampionshipDraftBodySchema,
+    PreviewChampionshipRecordedDraftBody:
+      previewChampionshipRecordedDraftBodySchema,
+    RecordChampionshipDraftBody: recordChampionshipDraftBodySchema,
     MakeChampionshipDraftPickBody: makeChampionshipDraftPickBodySchema,
     SelfRegisterChampionshipBody: selfRegisterChampionshipBodySchema,
     StartChampionshipDraftBody: startChampionshipDraftBodySchema,
@@ -1352,6 +1362,33 @@ export const championshipRoutes = new Elysia({
       detail: {
         tags: ["Championships"],
         summary: "Configure and materialize a championship draft"
+      }
+    }
+  )
+  .post(
+    "/:id/draft/record/preview",
+    ({ params, body }) => previewChampionshipRecordedDraft(params.id, body),
+    {
+      params: championshipIdParamsSchema,
+      body: t.Ref("PreviewChampionshipRecordedDraftBody"),
+      response: { 200: t.Ref("ChampionshipRecordedDraftPreview") },
+      detail: {
+        tags: ["Championships"],
+        summary: "Preview a recorded championship draft"
+      }
+    }
+  )
+  .post(
+    "/:id/draft/record",
+    ({ params, body }) => recordChampionshipDraft(params.id, body),
+    {
+      params: championshipIdParamsSchema,
+      body: t.Ref("RecordChampionshipDraftBody"),
+      response: { 200: t.Ref("ChampionshipDraft") },
+      detail: {
+        tags: ["Championships"],
+        summary:
+          "Register a championship draft that happened outside the system"
       }
     }
   )

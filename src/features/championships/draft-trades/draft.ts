@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { and, asc, eq, gt, inArray, isNull, sql } from "drizzle-orm";
 import {
   db,
@@ -11,12 +12,15 @@ import type {
   ConfigureChampionshipDraftInput,
   EndChampionshipDraftInput,
   MakeChampionshipDraftPickInput,
+  PreviewChampionshipRecordedDraftInput,
+  RecordChampionshipDraftInput,
   StartChampionshipDraftInput,
   VoidChampionshipDraftPickInput
 } from "@/features/championships/_shared/http/inputs";
 import type {
   ChampionshipDraftCorrectionPreviewResponse,
-  ChampionshipDraftResponse
+  ChampionshipDraftResponse,
+  ChampionshipRecordedDraftPreviewResponse
 } from "@/features/championships/_shared/http/responses";
 import {
   championshipActorHasPermission,
@@ -42,7 +46,11 @@ import {
   generateSerpentineTurns,
   reopenedDraftTurnState
 } from "@/features/championships/draft-trades/draft-engine";
-import { championshipParticipantPrices } from "@/features/championships/finance/db";
+import {
+  championshipCapExceptions,
+  championshipParticipantPrices,
+  championshipSalaryLedgerEntries
+} from "@/features/championships/finance/db";
 import {
   championshipParticipants,
   championshipTeamMemberships,
@@ -198,6 +206,240 @@ export async function configureChampionshipDraft(
           turnCount: turnValues.length
         },
         outboxTopic: "championship.draft.configured"
+      };
+    }
+  );
+}
+
+export async function previewChampionshipRecordedDraft(
+  championshipUuid: string,
+  input: PreviewChampionshipRecordedDraftInput
+): Promise<ChampionshipRecordedDraftPreviewResponse> {
+  const [championship] = await db
+    .select()
+    .from(championships)
+    .where(eq(championships.uuid, championshipUuid));
+
+  if (!championship) {
+    throw notFound("Championship not found");
+  }
+
+  await requireChampionshipActor(db, {
+    actorAccountUuid: input.actorAccountUuid,
+    permission: "championship:admin",
+    championshipId: championship.id
+  });
+
+  return buildRecordedDraftPreview(db, championship, input);
+}
+
+export async function recordChampionshipDraft(
+  championshipUuid: string,
+  input: RecordChampionshipDraftInput
+): Promise<ChampionshipDraftResponse> {
+  return executeChampionshipCommand(
+    {
+      championshipUuid,
+      actorAccountUuid: input.actorAccountUuid,
+      commandUuid: input.commandUuid,
+      expectedRevision: input.expectedRevision,
+      permission: "championship:admin",
+      action: "draft.recorded"
+    },
+    async (tx, championship, actor) => {
+      if (["canceled", "archived"].includes(championship.lifecycle)) {
+        throw conflict("This championship cannot receive a recorded draft");
+      }
+
+      const preview = await buildRecordedDraftPreview(tx, championship, input);
+
+      if (preview.previewHash !== input.previewHash) {
+        throw conflict("Recorded draft preview is out of date", {
+          expectedPreviewHash: input.previewHash,
+          currentPreviewHash: preview.previewHash
+        });
+      }
+
+      const errors = preview.issues.filter(
+        ({ severity }) => severity === "error"
+      );
+      if (errors.length > 0) {
+        throw conflict("Recorded draft has validation errors", { preview });
+      }
+
+      if (preview.requiresCapException && !input.confirmCapException) {
+        throw conflict("Recorded draft requires an approved cap exception", {
+          preview
+        });
+      }
+
+      if (preview.requiresCapException && !input.reason?.trim()) {
+        throw badRequest("A reason is required for a staff cap exception");
+      }
+
+      const [existingDraft] = await tx
+        .select()
+        .from(championshipDrafts)
+        .where(eq(championshipDrafts.championshipId, championship.id));
+
+      if (
+        existingDraft &&
+        existingDraft.state !== "setup" &&
+        existingDraft.state !== "canceled"
+      ) {
+        throw conflict(
+          "Only a setup draft can be replaced by a recorded draft",
+          {
+            draftState: existingDraft.state
+          }
+        );
+      }
+
+      const teams = await resolveOrderedTeams(
+        tx,
+        championship.id,
+        input.teamIds
+      );
+      const now = new Date().toISOString();
+      let draft: ChampionshipDraft;
+
+      if (existingDraft) {
+        await tx
+          .delete(championshipDraftTurns)
+          .where(eq(championshipDraftTurns.draftId, existingDraft.id));
+        await tx
+          .delete(championshipDraftOrder)
+          .where(eq(championshipDraftOrder.draftId, existingDraft.id));
+        [draft] = await tx
+          .update(championshipDrafts)
+          .set({
+            mode: "recorded",
+            state: "completed",
+            rounds: input.rounds,
+            countdownSeconds: 0,
+            nextTurnSequence:
+              Math.max(...input.slots.map(({ sequence }) => sequence), 0) + 1,
+            revision: existingDraft.revision + 1,
+            startedAt: null,
+            completedAt: now,
+            canceledAt: null,
+            occurredAt: input.occurredAt ?? null,
+            recordedAt: now,
+            recordedByAccountId: actor.account.id,
+            recordedNote: input.recordedNote ?? null,
+            updatedAt: now
+          })
+          .where(eq(championshipDrafts.id, existingDraft.id))
+          .returning();
+      } else {
+        [draft] = await tx
+          .insert(championshipDrafts)
+          .values({
+            championshipId: championship.id,
+            mode: "recorded",
+            state: "completed",
+            rounds: input.rounds,
+            countdownSeconds: 0,
+            nextTurnSequence:
+              Math.max(...input.slots.map(({ sequence }) => sequence), 0) + 1,
+            completedAt: now,
+            occurredAt: input.occurredAt ?? null,
+            recordedAt: now,
+            recordedByAccountId: actor.account.id,
+            recordedNote: input.recordedNote ?? null,
+            createdAt: now,
+            updatedAt: now
+          })
+          .returning();
+      }
+
+      await tx.insert(championshipDraftOrder).values(
+        teams.map((team, index) => ({
+          draftId: draft.id,
+          teamId: team.id,
+          position: index + 1
+        }))
+      );
+
+      const turns = await insertRecordedDraftTurns(
+        tx,
+        draft.id,
+        input.slots,
+        now
+      );
+      const turnBySequence = new Map(
+        turns.map((turn) => [turn.sequence, turn])
+      );
+
+      for (const slot of input.slots) {
+        if (slot.resolution !== "selected" || !slot.participantId) {
+          continue;
+        }
+
+        const turn = turnBySequence.get(slot.sequence);
+        if (!turn) {
+          throw conflict("Recorded draft turn could not be materialized", {
+            sequence: slot.sequence
+          });
+        }
+
+        const applied = await applyRecordedDraftPick(tx, championship, {
+          participantId: slot.participantId,
+          targetTeamId: slot.teamId,
+          acquisitionReferenceUuid: turn.uuid,
+          actorAccountId: actor.account.id,
+          allowCapException: input.confirmCapException,
+          reason: input.reason
+        });
+        await tx
+          .update(championshipDraftTurns)
+          .set({
+            state: "filled",
+            selectedParticipantId: await participantInternalId(
+              tx,
+              championship.id,
+              slot.participantId
+            ),
+            priceUnitsSnapshot: applied.priceUnitsSnapshot,
+            filledAt: now,
+            selectedByAccountId: actor.account.id,
+            recordedResolution: "selected",
+            occurredAt: slot.occurredAt ?? input.occurredAt ?? null,
+            recordedNote: slot.recordedNote ?? null,
+            revision: 1,
+            updatedAt: now
+          })
+          .where(eq(championshipDraftTurns.id, turn.id));
+      }
+
+      const response = await projectChampionshipDraft(
+        tx,
+        championship,
+        projectionQuery(input.actorAccountUuid)
+      );
+
+      return {
+        response: () => response,
+        targetType: "draft",
+        targetUuid: draft.uuid,
+        before: existingDraft
+          ? { state: existingDraft.state, mode: existingDraft.mode }
+          : null,
+        after: {
+          state: draft.state,
+          mode: draft.mode,
+          selectedCount: preview.selectedCount,
+          unresolvedCount: preview.unresolvedCount,
+          skippedCount: preview.skippedCount,
+          occurredAt: input.occurredAt ?? null
+        },
+        reason: input.reason ?? input.recordedNote ?? null,
+        metadata: {
+          previewHash: input.previewHash,
+          teamCount: teams.length,
+          turnCount: input.slots.length
+        },
+        outboxTopic: "championship.draft.recorded"
       };
     }
   );
@@ -1039,6 +1281,617 @@ export async function advanceChampionshipDraftJob(
   };
 }
 
+type RecordedDraftDefinition = Pick<
+  RecordChampionshipDraftInput,
+  "teamIds" | "rounds" | "occurredAt" | "recordedNote" | "slots"
+>;
+
+type RecordedDraftIssue = {
+  code: string;
+  severity: "error" | "warning";
+  message: string;
+  sequence: number | null;
+  participantUuid: string | null;
+};
+
+async function buildRecordedDraftPreview(
+  database: DatabaseExecutor,
+  championship: Championship,
+  input: RecordedDraftDefinition
+): Promise<ChampionshipRecordedDraftPreviewResponse> {
+  const definition = canonicalRecordedDraftDefinition(input);
+  const issues: RecordedDraftIssue[] = [];
+  const addIssue = (
+    issue: Omit<RecordedDraftIssue, "sequence" | "participantUuid"> & {
+      sequence?: number | null;
+      participantUuid?: string | null;
+    }
+  ) => {
+    issues.push({
+      ...issue,
+      sequence: issue.sequence ?? null,
+      participantUuid: issue.participantUuid ?? null
+    });
+  };
+
+  if (["canceled", "archived"].includes(championship.lifecycle)) {
+    addIssue({
+      code: "championship-state",
+      severity: "error",
+      message: "A edicao precisa estar disponivel para registrar o draft."
+    });
+  }
+
+  const [existingDraft] = await database
+    .select()
+    .from(championshipDrafts)
+    .where(eq(championshipDrafts.championshipId, championship.id));
+
+  if (
+    existingDraft &&
+    existingDraft.state !== "setup" &&
+    existingDraft.state !== "canceled"
+  ) {
+    addIssue({
+      code: "existing-draft",
+      severity: "error",
+      message: "O draft atual precisa ser corrigido antes de registrar outro."
+    });
+  }
+
+  const teams = await resolveOrderedTeams(
+    database,
+    championship.id,
+    definition.teamIds
+  );
+  const teamByUuid = new Map(teams.map((team) => [team.uuid, team]));
+  const teamIdSet = new Set(definition.teamIds);
+  const seenSequences = new Set<number>();
+  const seenRoundPositions = new Set<string>();
+  const selectedParticipantUuids = definition.slots
+    .filter((slot) => slot.resolution === "selected" && slot.participantId)
+    .map((slot) => slot.participantId!);
+  const selectedParticipantSet = new Set<string>();
+
+  const participantRows = selectedParticipantUuids.length
+    ? await database
+        .select({
+          participant: championshipParticipants,
+          price: championshipParticipantPrices,
+          membership: championshipTeamMemberships,
+          membershipTeam: championshipTeams
+        })
+        .from(championshipParticipants)
+        .leftJoin(
+          championshipParticipantPrices,
+          and(
+            eq(
+              championshipParticipantPrices.participantId,
+              championshipParticipants.id
+            ),
+            eq(championshipParticipantPrices.championshipId, championship.id)
+          )
+        )
+        .leftJoin(
+          championshipTeamMemberships,
+          and(
+            eq(
+              championshipTeamMemberships.participantId,
+              championshipParticipants.id
+            ),
+            isNull(championshipTeamMemberships.endedAt)
+          )
+        )
+        .leftJoin(
+          championshipTeams,
+          eq(championshipTeamMemberships.teamId, championshipTeams.id)
+        )
+        .where(
+          and(
+            eq(championshipParticipants.championshipId, championship.id),
+            inArray(championshipParticipants.uuid, selectedParticipantUuids)
+          )
+        )
+    : [];
+  const participantByUuid = new Map(
+    participantRows.map((row) => [row.participant.uuid, row])
+  );
+
+  const usageRows =
+    teams.length > 0
+      ? await database
+          .select({
+            teamId: championshipTeamMemberships.teamId,
+            usageUnits: sql<number>`coalesce(sum(coalesce(${championshipTeamMemberships.priceUnitsSnapshot}, 0)), 0)`
+          })
+          .from(championshipTeamMemberships)
+          .where(
+            and(
+              inArray(
+                championshipTeamMemberships.teamId,
+                teams.map((team) => team.id)
+              ),
+              isNull(championshipTeamMemberships.endedAt)
+            )
+          )
+          .groupBy(championshipTeamMemberships.teamId)
+      : [];
+  const usageBeforeByTeamId = new Map(
+    usageRows.map((row) => [row.teamId, Number(row.usageUnits)])
+  );
+  const selectedCountByTeamId = new Map<number, number>();
+  const usageAfterByTeamId = new Map(
+    teams.map((team) => [team.id, usageBeforeByTeamId.get(team.id) ?? 0])
+  );
+
+  for (const slot of definition.slots) {
+    if (seenSequences.has(slot.sequence)) {
+      addIssue({
+        code: "duplicate-sequence",
+        severity: "error",
+        message: "Cada escolha precisa ter uma sequencia propria.",
+        sequence: slot.sequence
+      });
+    }
+    seenSequences.add(slot.sequence);
+
+    const roundPositionKey = `${slot.round}:${slot.position}`;
+    if (seenRoundPositions.has(roundPositionKey)) {
+      addIssue({
+        code: "duplicate-position",
+        severity: "error",
+        message: "Cada posicao de rodada pode aparecer uma vez.",
+        sequence: slot.sequence
+      });
+    }
+    seenRoundPositions.add(roundPositionKey);
+
+    if (slot.round > definition.rounds) {
+      addIssue({
+        code: "round-out-of-range",
+        severity: "error",
+        message: "A rodada da escolha esta fora da estrutura configurada.",
+        sequence: slot.sequence
+      });
+    }
+    if (slot.position > definition.teamIds.length) {
+      addIssue({
+        code: "position-out-of-range",
+        severity: "error",
+        message: "A posicao da escolha esta fora da ordem das equipes.",
+        sequence: slot.sequence
+      });
+    }
+    if (!teamIdSet.has(slot.teamId)) {
+      addIssue({
+        code: "team-out-of-range",
+        severity: "error",
+        message: "A escolha aponta para uma equipe que nao esta no draft.",
+        sequence: slot.sequence
+      });
+    }
+
+    if (slot.resolution === "selected" && !slot.participantId) {
+      addIssue({
+        code: "selected-without-participant",
+        severity: "error",
+        message: "Uma escolha registrada precisa de um participante.",
+        sequence: slot.sequence
+      });
+    }
+    if (slot.resolution !== "selected" && slot.participantId) {
+      addIssue({
+        code: "unresolved-with-participant",
+        severity: "error",
+        message: "Slots sem escolha nao podem conter um participante.",
+        sequence: slot.sequence,
+        participantUuid: slot.participantId
+      });
+    }
+
+    if (!slot.participantId || slot.resolution !== "selected") {
+      continue;
+    }
+
+    if (selectedParticipantSet.has(slot.participantId)) {
+      addIssue({
+        code: "duplicate-participant",
+        severity: "error",
+        message: "Cada participante pode ser escolhido uma vez.",
+        sequence: slot.sequence,
+        participantUuid: slot.participantId
+      });
+    }
+    selectedParticipantSet.add(slot.participantId);
+
+    const participantRow = participantByUuid.get(slot.participantId);
+    if (!participantRow) {
+      addIssue({
+        code: "participant-unavailable",
+        severity: "error",
+        message: "O participante nao esta disponivel nesta edicao.",
+        sequence: slot.sequence,
+        participantUuid: slot.participantId
+      });
+      continue;
+    }
+
+    if (participantRow.membership?.role === "gm") {
+      addIssue({
+        code: "participant-is-gm",
+        severity: "error",
+        message:
+          "General Managers sao definidos no elenco, nao por escolha de jogador.",
+        sequence: slot.sequence,
+        participantUuid: slot.participantId
+      });
+    } else if (
+      participantRow.membership &&
+      participantRow.membershipTeam &&
+      participantRow.membershipTeam.uuid !== slot.teamId
+    ) {
+      addIssue({
+        code: "participant-on-other-team",
+        severity: "error",
+        message: "O participante ja esta em outra equipe.",
+        sequence: slot.sequence,
+        participantUuid: slot.participantId
+      });
+    } else if (participantRow.membership) {
+      addIssue({
+        code: "same-team-membership",
+        severity: "warning",
+        message: "A atribuicao atual sera registrada como escolha do draft.",
+        sequence: slot.sequence,
+        participantUuid: slot.participantId
+      });
+    }
+
+    if (championship.rules.salary.enabled) {
+      if (championship.priceState !== "locked") {
+        addIssue({
+          code: "prices-not-frozen",
+          severity: "error",
+          message:
+            "Os valores precisam estar congelados para registrar o draft.",
+          sequence: slot.sequence,
+          participantUuid: slot.participantId
+        });
+      }
+      if (!participantRow.price) {
+        addIssue({
+          code: "price-missing",
+          severity: "error",
+          message: "O participante precisa ter um valor definido.",
+          sequence: slot.sequence,
+          participantUuid: slot.participantId
+        });
+      }
+    }
+
+    const targetTeam = teamByUuid.get(slot.teamId);
+    if (targetTeam) {
+      selectedCountByTeamId.set(
+        targetTeam.id,
+        (selectedCountByTeamId.get(targetTeam.id) ?? 0) + 1
+      );
+      if (!participantRow.membership) {
+        usageAfterByTeamId.set(
+          targetTeam.id,
+          (usageAfterByTeamId.get(targetTeam.id) ?? 0) +
+            (participantRow.price?.priceUnits ?? 0)
+        );
+      }
+    }
+  }
+
+  const maxSequence = Math.max(
+    ...definition.slots.map(({ sequence }) => sequence),
+    0
+  );
+  for (let sequence = 1; sequence <= maxSequence; sequence += 1) {
+    if (!seenSequences.has(sequence)) {
+      addIssue({
+        code: "sequence-gap",
+        severity: "error",
+        message: "A sequencia do draft precisa ser continua.",
+        sequence
+      });
+    }
+  }
+
+  let requiresCapException = false;
+  const teamPreviews = teams.map((team) => {
+    const usageBeforeUnits = usageBeforeByTeamId.get(team.id) ?? 0;
+    const usageAfterUnits = usageAfterByTeamId.get(team.id) ?? usageBeforeUnits;
+    const overCapAfter =
+      championship.rules.salary.enabled &&
+      usageAfterUnits > championship.rules.salary.capUnits;
+    if (overCapAfter) {
+      requiresCapException = true;
+      addIssue({
+        code: "cap-exception",
+        severity: "warning",
+        message: "A equipe precisara de uma excecao administrativa de teto.",
+        participantUuid: null
+      });
+    }
+    return {
+      uuid: team.uuid,
+      name: team.name,
+      selectedCount: selectedCountByTeamId.get(team.id) ?? 0,
+      usageBeforeUnits,
+      usageAfterUnits,
+      remainingAfterUnits: championship.rules.salary.capUnits - usageAfterUnits,
+      overCapAfter
+    };
+  });
+
+  return {
+    valid: issues.every(({ severity }) => severity !== "error"),
+    previewHash: hashRecordedDraftDefinition(definition),
+    currentChampionshipRevision: championship.revision,
+    rounds: definition.rounds,
+    requiresCapException,
+    selectedCount: definition.slots.filter(
+      ({ resolution }) => resolution === "selected"
+    ).length,
+    unresolvedCount: definition.slots.filter(
+      ({ resolution }) => resolution === "unresolved"
+    ).length,
+    skippedCount: definition.slots.filter(
+      ({ resolution }) => resolution === "skipped"
+    ).length,
+    issues,
+    slots: definition.slots.map((slot) => {
+      const participantRow = slot.participantId
+        ? participantByUuid.get(slot.participantId)
+        : undefined;
+      const team = teamByUuid.get(slot.teamId);
+      return {
+        sequence: slot.sequence,
+        round: slot.round,
+        position: slot.position,
+        team: {
+          uuid: slot.teamId,
+          name: team?.name ?? "Equipe nao encontrada"
+        },
+        resolution: slot.resolution,
+        participant: participantRow
+          ? {
+              uuid: participantRow.participant.uuid,
+              displayName: participantRow.participant.displayNameSnapshot
+            }
+          : null,
+        priceUnitsSnapshot: championship.rules.salary.enabled
+          ? (participantRow?.price?.priceUnits ?? null)
+          : null,
+        existingTeam: participantRow?.membershipTeam
+          ? {
+              uuid: participantRow.membershipTeam.uuid,
+              name: participantRow.membershipTeam.name
+            }
+          : null
+      };
+    }),
+    teams: teamPreviews
+  };
+}
+
+async function insertRecordedDraftTurns(
+  database: DbTransaction,
+  draftId: number,
+  slots: RecordChampionshipDraftInput["slots"],
+  now: string
+) {
+  const teamRows = await database
+    .select({ id: championshipTeams.id, uuid: championshipTeams.uuid })
+    .from(championshipTeams)
+    .where(
+      inArray(
+        championshipTeams.uuid,
+        slots.map(({ teamId }) => teamId)
+      )
+    );
+  const teamIdByUuid = new Map(teamRows.map((team) => [team.uuid, team.id]));
+  const values = slots.map((slot) => {
+    const teamId = teamIdByUuid.get(slot.teamId);
+    if (!teamId) {
+      throw conflict("Recorded draft turn references an unknown team", {
+        teamId: slot.teamId,
+        sequence: slot.sequence
+      });
+    }
+
+    return {
+      draftId,
+      sequence: slot.sequence,
+      round: slot.round,
+      position: slot.position,
+      teamId,
+      state:
+        slot.resolution === "selected"
+          ? ("pending" as const)
+          : ("voided" as const),
+      recordedResolution: slot.resolution,
+      occurredAt: slot.occurredAt ?? null,
+      recordedNote: slot.recordedNote ?? null,
+      createdAt: now,
+      updatedAt: now
+    };
+  });
+  const result: Array<typeof championshipDraftTurns.$inferSelect> = [];
+
+  for (const batch of chunks(values, 100)) {
+    result.push(
+      ...(await database
+        .insert(championshipDraftTurns)
+        .values(batch)
+        .returning())
+    );
+  }
+
+  return result;
+}
+
+async function applyRecordedDraftPick(
+  database: DbTransaction,
+  championship: Championship,
+  input: {
+    participantId: string;
+    targetTeamId: string;
+    acquisitionReferenceUuid: string;
+    actorAccountId: number;
+    allowCapException?: boolean;
+    reason?: string | null;
+  }
+): Promise<{ priceUnitsSnapshot: number | null; adopted: boolean }> {
+  const participantId = await participantInternalId(
+    database,
+    championship.id,
+    input.participantId
+  );
+  const [current] = await database
+    .select({
+      membership: championshipTeamMemberships,
+      team: championshipTeams
+    })
+    .from(championshipTeamMemberships)
+    .innerJoin(
+      championshipTeams,
+      eq(championshipTeamMemberships.teamId, championshipTeams.id)
+    )
+    .where(
+      and(
+        eq(championshipTeamMemberships.participantId, participantId),
+        isNull(championshipTeamMemberships.endedAt)
+      )
+    );
+
+  if (!current || current.team.uuid !== input.targetTeamId) {
+    const applied = await applyChampionshipRosterMove(database, championship, {
+      participantId: input.participantId,
+      targetTeamId: input.targetTeamId,
+      role: "player",
+      acquisitionSource: "draft",
+      acquisitionReferenceUuid: input.acquisitionReferenceUuid,
+      actorAccountId: input.actorAccountId,
+      allowCapException: input.allowCapException,
+      reason: input.reason
+    });
+    return {
+      priceUnitsSnapshot: applied.membership.priceUnitsSnapshot,
+      adopted: false
+    };
+  }
+
+  if (current.membership.role !== "player") {
+    throw conflict(
+      "A General Manager cannot also be recorded as a draft pick",
+      {
+        participantId: input.participantId
+      }
+    );
+  }
+
+  const [price] = await database
+    .select()
+    .from(championshipParticipantPrices)
+    .where(
+      and(
+        eq(championshipParticipantPrices.championshipId, championship.id),
+        eq(championshipParticipantPrices.participantId, participantId)
+      )
+    );
+  const priceUnitsSnapshot = championship.rules.salary.enabled
+    ? (price?.priceUnits ?? null)
+    : null;
+  const now = new Date().toISOString();
+  const nextRosterRevision = current.team.rosterRevision + 1;
+
+  await database
+    .update(championshipCapExceptions)
+    .set({ state: "expired", expiredAt: now })
+    .where(
+      and(
+        eq(championshipCapExceptions.teamId, current.team.id),
+        eq(championshipCapExceptions.state, "active")
+      )
+    );
+  await database
+    .update(championshipTeamMemberships)
+    .set({ effectiveToRevision: nextRosterRevision, endedAt: now })
+    .where(eq(championshipTeamMemberships.id, current.membership.id));
+  await database.insert(championshipSalaryLedgerEntries).values({
+    championshipId: championship.id,
+    teamId: current.team.id,
+    participantId,
+    membershipUuid: current.membership.uuid,
+    amountUnits: -(current.membership.priceUnitsSnapshot ?? 0),
+    kind: "membership-ended",
+    rosterRevision: nextRosterRevision,
+    actorAccountId: input.actorAccountId,
+    reason: input.reason ?? null
+  });
+  const [membership] = await database
+    .insert(championshipTeamMemberships)
+    .values({
+      championshipId: championship.id,
+      teamId: current.team.id,
+      participantId,
+      role: "player",
+      acquisitionSource: "draft",
+      acquisitionReferenceUuid: input.acquisitionReferenceUuid,
+      priceUnitsSnapshot,
+      displayOrder: current.membership.displayOrder,
+      effectiveFromRevision: nextRosterRevision,
+      startedAt: now,
+      createdAt: now
+    })
+    .returning();
+  await database.insert(championshipSalaryLedgerEntries).values({
+    championshipId: championship.id,
+    teamId: current.team.id,
+    participantId,
+    membershipUuid: membership.uuid,
+    amountUnits: priceUnitsSnapshot ?? 0,
+    kind: "membership-added",
+    rosterRevision: nextRosterRevision,
+    actorAccountId: input.actorAccountId,
+    reason: input.reason ?? null
+  });
+  await database
+    .update(championshipTeams)
+    .set({
+      rosterRevision: nextRosterRevision,
+      revision: current.team.revision + 1,
+      updatedAt: now
+    })
+    .where(eq(championshipTeams.id, current.team.id));
+
+  return { priceUnitsSnapshot, adopted: true };
+}
+
+function canonicalRecordedDraftDefinition(
+  input: RecordedDraftDefinition
+): RecordedDraftDefinition {
+  return {
+    teamIds: [...input.teamIds],
+    rounds: input.rounds,
+    occurredAt: input.occurredAt,
+    recordedNote: input.recordedNote,
+    slots: [...input.slots].sort(
+      (left, right) => left.sequence - right.sequence
+    )
+  };
+}
+
+function hashRecordedDraftDefinition(input: RecordedDraftDefinition): string {
+  return createHash("sha256")
+    .update(JSON.stringify(canonicalRecordedDraftDefinition(input)))
+    .digest("hex");
+}
+
 async function projectChampionshipDraft(
   database: DatabaseExecutor,
   championship: Championship,
@@ -1186,6 +2039,7 @@ async function projectChampionshipDraft(
     draft: {
       uuid: draft.uuid,
       state: draft.state,
+      mode: draft.mode,
       rounds: draft.rounds,
       countdownSeconds: draft.countdownSeconds,
       nextTurnSequence: draft.nextTurnSequence,
@@ -1195,6 +2049,8 @@ async function projectChampionshipDraft(
       startedAt: draft.startedAt,
       completedAt: draft.completedAt,
       canceledAt: draft.canceledAt,
+      occurredAt: draft.occurredAt,
+      recordedAt: draft.recordedAt,
       createdAt: draft.createdAt,
       updatedAt: draft.updatedAt,
       teams: orderRows.map(({ order, team }) => {
@@ -1254,6 +2110,8 @@ async function projectChampionshipDraft(
           deadlineAt: turn.deadlineAt,
           overdueAt: turn.overdueAt,
           filledAt: turn.filledAt,
+          recordedResolution: turn.recordedResolution,
+          occurredAt: turn.occurredAt,
           revision: turn.revision
         })),
         page: {
