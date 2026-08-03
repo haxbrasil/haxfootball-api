@@ -8770,6 +8770,28 @@ components:
         - createdAt
         - updatedAt
       type: object
+    ClipConfiguration:
+      properties:
+        maxDurationFrames:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - minimum: 1
+              type: integer
+          minimum: 1
+        maxDurationSeconds:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - minimum: 1
+              type: integer
+          minimum: 1
+      required:
+        - maxDurationSeconds
+        - maxDurationFrames
+      type: object
     CloseRoomResponse:
       properties:
         closedAt:
@@ -27199,6 +27221,49 @@ paths:
                 $ref: "#/components/schemas/InternalServerError"
           description: Response for status 500
       summary: Create a clip
+      tags:
+        - Clips
+  /api/clips/config:
+    get:
+      operationId: getApiClipsConfig
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClipConfiguration"
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForbiddenError"
+          description: Response for status 403
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictError"
+          description: Response for status 409
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Get clip configuration
       tags:
         - Clips
   /api/clips/{id}:

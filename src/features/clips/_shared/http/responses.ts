@@ -25,10 +25,18 @@ export const clipResponseSchema = t.Object({
   updatedAt: t.String()
 });
 
+export const clipConfigurationResponseSchema = t.Object({
+  maxDurationSeconds: t.Integer({ minimum: 1 }),
+  maxDurationFrames: t.Integer({ minimum: 1 })
+});
+
 export const listClipsResponseSchema =
   paginatedResponseSchema(clipResponseSchema);
 
 export type ClipResponse = Static<typeof clipResponseSchema>;
+export type ClipConfigurationResponse = Static<
+  typeof clipConfigurationResponseSchema
+>;
 
 export type ClipWithRecording = {
   clip: Clip;

@@ -20,6 +20,16 @@ type ClipResponse = {
 };
 
 describe("clips", () => {
+  it("returns the clip editing configuration", async () => {
+    const response = await request("/api/clips/config");
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      maxDurationSeconds: 30,
+      maxDurationFrames: 1_800
+    });
+  });
+
   it("creates, reads, lists, updates, and archives a clip", async () => {
     const recordingResponse = await uploadRecording();
     const recording = await recordingResponse.json();

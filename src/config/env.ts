@@ -20,6 +20,11 @@ const envSchema = Type.Object({
     default: 25 * 1024 * 1024,
     minimum: 1
   }),
+  clipMaxDurationSeconds: Type.Integer({
+    default: 30,
+    minimum: 1,
+    maximum: 3600
+  }),
   roomIncidentMaxBytes: Type.Integer({
     default: 50 * 1024 * 1024,
     minimum: 1
@@ -95,6 +100,7 @@ const envInput = {
   r2AccessKeyId: Bun.env.R2_ACCESS_KEY_ID,
   r2SecretAccessKey: Bun.env.R2_SECRET_ACCESS_KEY,
   recordingMaxBytes: Bun.env.RECORDING_MAX_BYTES,
+  clipMaxDurationSeconds: Bun.env.CLIP_MAX_DURATION_SECONDS,
   roomIncidentMaxBytes: Bun.env.ROOM_INCIDENT_MAX_BYTES,
   roomGithubApiBaseUrl: Bun.env.ROOM_GITHUB_API_BASE_URL,
   publicBaseUrl: Bun.env.PUBLIC_BASE_URL,
