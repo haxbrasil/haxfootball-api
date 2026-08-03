@@ -2,6 +2,7 @@ import { Elysia, t } from "elysia";
 import { archiveClip } from "@/features/clips/archive-clip";
 import { createClip } from "@/features/clips/create-clip";
 import { getClip } from "@/features/clips/get-clip";
+import { getClipConfiguration } from "@/features/clips/_shared/domain/config";
 import {
   listClips,
   listClipsResponseSchema
@@ -12,7 +13,10 @@ import {
   listClipsQuerySchema,
   updateClipBodySchema
 } from "@/features/clips/_shared/http/inputs";
-import { clipResponseSchema } from "@/features/clips/_shared/http/responses";
+import {
+  clipConfigurationResponseSchema,
+  clipResponseSchema
+} from "@/features/clips/_shared/http/responses";
 import { updateClip } from "@/features/clips/update-clip";
 import {
   badRequestErrorResponseSchema,
@@ -22,10 +26,14 @@ import {
 export { clipPublicIdParamsSchema } from "@/features/clips/_shared/http/inputs";
 export {
   clipResponseSchema,
+  clipConfigurationResponseSchema,
   listClipsResponseSchema,
   toClipResponse
 } from "@/features/clips/_shared/http/responses";
-export type { ClipResponse } from "@/features/clips/_shared/http/responses";
+export type {
+  ClipConfigurationResponse,
+  ClipResponse
+} from "@/features/clips/_shared/http/responses";
 
 export const clipRoutes = new Elysia({
   name: "clip-routes",
@@ -34,6 +42,7 @@ export const clipRoutes = new Elysia({
   .model({
     BadRequestError: badRequestErrorResponseSchema,
     Clip: clipResponseSchema,
+    ClipConfiguration: clipConfigurationResponseSchema,
     CreateClipBody: createClipBodySchema,
     ListClips: listClipsResponseSchema,
     NotFoundError: notFoundErrorResponseSchema,
@@ -47,6 +56,15 @@ export const clipRoutes = new Elysia({
     detail: {
       tags: ["Clips"],
       summary: "List clips"
+    }
+  })
+  .get("/config", () => getClipConfiguration(), {
+    response: {
+      200: t.Ref("ClipConfiguration")
+    },
+    detail: {
+      tags: ["Clips"],
+      summary: "Get clip configuration"
     }
   })
   .get("/:id", ({ params }) => getClip(params.id), {

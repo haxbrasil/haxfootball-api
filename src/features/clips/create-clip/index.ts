@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { clips } from "@/features/clips/db";
+import { getClipConfiguration } from "@/features/clips/_shared/domain/config";
 import { getClipRow } from "@/features/clips/_shared/db/queries";
 import type { CreateClipInput } from "@/features/clips/_shared/http/inputs";
 import type { ClipResponse } from "@/features/clips/_shared/http/responses";
@@ -26,10 +27,12 @@ export async function createClip(
   }
 
   const timeline = await ensureRecordingTimeline(recording);
+  const clipConfiguration = getClipConfiguration();
   validateClipRange({
     startTick: input.startTick,
     endTick: input.endTick,
-    totalFrames: timeline.totalFrames
+    totalFrames: timeline.totalFrames,
+    ...clipConfiguration
   });
 
   const [clip] = await db

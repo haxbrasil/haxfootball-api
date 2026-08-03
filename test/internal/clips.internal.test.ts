@@ -7,22 +7,58 @@ import { detectRecordingFormat } from "@/features/recordings/format";
 import { extendedRecordingBytes } from "@/test/e2e/fixtures/recording";
 
 describe("clip validation", () => {
+  const clipLimit = {
+    maxDurationFrames: 30 * 60,
+    maxDurationSeconds: 30
+  };
+
   it("accepts a half-open range ending at the final frame", () => {
     expect(() =>
-      validateClipRange({ startTick: 10, endTick: 824, totalFrames: 824 })
+      validateClipRange({
+        startTick: 10,
+        endTick: 824,
+        totalFrames: 824,
+        ...clipLimit
+      })
     ).not.toThrow();
   });
 
   it("rejects empty, reversed, and out-of-bounds ranges", () => {
     expect(() =>
-      validateClipRange({ startTick: 20, endTick: 20, totalFrames: 824 })
+      validateClipRange({
+        startTick: 20,
+        endTick: 20,
+        totalFrames: 824,
+        ...clipLimit
+      })
     ).toThrow("O fim do clipe precisa estar depois do início");
     expect(() =>
-      validateClipRange({ startTick: 30, endTick: 20, totalFrames: 824 })
+      validateClipRange({
+        startTick: 30,
+        endTick: 20,
+        totalFrames: 824,
+        ...clipLimit
+      })
     ).toThrow("O fim do clipe precisa estar depois do início");
     expect(() =>
-      validateClipRange({ startTick: 20, endTick: 825, totalFrames: 824 })
+      validateClipRange({
+        startTick: 20,
+        endTick: 825,
+        totalFrames: 824,
+        ...clipLimit
+      })
     ).toThrow("O fim do clipe ultrapassa a duração da gravação");
+  });
+
+  it("enforces the configured maximum duration", () => {
+    expect(() =>
+      validateClipRange({
+        startTick: 0,
+        endTick: 1_801,
+        totalFrames: 2_000,
+        ...clipLimit
+      })
+    ).toThrow("O tamanho máximo deste clipe é de 30 segundos");
   });
 
   it("normalizes optional titles without storing whitespace", () => {
