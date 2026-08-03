@@ -323,6 +323,20 @@
       "when": 1785725876087,
       "tag": "0045_acoustic_darkstar",
       "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "6",
+      "when": 1785776742800,
+      "tag": "0046_smooth_gateway",
+      "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "6",
+      "when": 1785778633965,
+      "tag": "0047_loud_captain_stacy",
+      "breakpoints": true
     }
   ]
 }

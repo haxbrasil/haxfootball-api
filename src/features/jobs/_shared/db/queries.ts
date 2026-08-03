@@ -4,6 +4,7 @@ import {
   jobs,
   jobSchedules,
   type Job,
+  type JobQueue,
   type JobSchedule
 } from "@/features/jobs/db";
 import { badRequest, notFound } from "@/shared/http/errors";
@@ -15,6 +16,7 @@ export type EnqueueJobInput = {
   payload?: JsonValue;
   maxAttempts: number;
   runAfter?: Date;
+  queue?: JobQueue;
 };
 
 export async function insertJob(input: EnqueueJobInput): Promise<Job> {
@@ -24,6 +26,7 @@ export async function insertJob(input: EnqueueJobInput): Promise<Job> {
     .values({
       uuid: crypto.randomUUID(),
       type: input.type,
+      queue: input.queue ?? "default",
       status: "queued",
       payload: input.payload,
       attempts: 0,
@@ -59,13 +62,18 @@ export async function getJobByUuid(uuid: string): Promise<Job> {
 export async function claimNextDueJob(input: {
   runnerId: string;
   now?: Date;
+  queue?: JobQueue;
 }): Promise<Job | null> {
   const now = input.now ?? new Date();
   const [candidate] = await db
     .select()
     .from(jobs)
     .where(
-      and(eq(jobs.status, "queued"), lte(jobs.runAfter, now.toISOString()))
+      and(
+        eq(jobs.status, "queued"),
+        lte(jobs.runAfter, now.toISOString()),
+        eq(jobs.queue, input.queue ?? "default")
+      )
     )
     .orderBy(asc(jobs.runAfter), asc(jobs.createdAt), asc(jobs.id))
     .limit(1);
@@ -96,6 +104,7 @@ export async function claimQueuedJobByUuid(input: {
   uuid: string;
   runnerId: string;
   now?: Date;
+  queue?: JobQueue;
 }): Promise<Job | null> {
   const now = input.now ?? new Date();
   const startedAt = now.toISOString();
@@ -110,7 +119,13 @@ export async function claimQueuedJobByUuid(input: {
       finishedAt: null,
       updatedAt: startedAt
     })
-    .where(and(eq(jobs.uuid, input.uuid), eq(jobs.status, "queued")))
+    .where(
+      and(
+        eq(jobs.uuid, input.uuid),
+        eq(jobs.status, "queued"),
+        eq(jobs.queue, input.queue ?? "default")
+      )
+    )
     .returning();
 
   return claimed ?? null;
@@ -216,6 +231,7 @@ export async function retryFailedJob(uuid: string): Promise<Job> {
 
 export async function recoverAbandonedJobs(input: {
   lockTimeoutSeconds: number;
+  queue?: JobQueue;
   now?: Date;
 }): Promise<{ requeued: number; failed: number }> {
   const now = input.now ?? new Date();
@@ -225,7 +241,13 @@ export async function recoverAbandonedJobs(input: {
   const abandonedJobs = await db
     .select()
     .from(jobs)
-    .where(and(eq(jobs.status, "running"), lte(jobs.lockedAt, cutoff)));
+    .where(
+      and(
+        eq(jobs.status, "running"),
+        lte(jobs.lockedAt, cutoff),
+        eq(jobs.queue, input.queue ?? "default")
+      )
+    );
 
   const recoveredJobs = await Promise.all(
     abandonedJobs.map(async (job) => {

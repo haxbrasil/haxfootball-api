@@ -13,10 +13,16 @@ export type JobStatus =
   | "failed"
   | "canceled";
 
+export type JobQueue = "default" | "media";
+
 export const jobs = sqliteTable("jobs", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   uuid: text("uuid").notNull().unique(),
   type: text("type").notNull(),
+  queue: text("queue", { enum: ["default", "media"] })
+    .notNull()
+    .$type<JobQueue>()
+    .$default(() => "default"),
   status: text("status", {
     enum: ["queued", "running", "succeeded", "failed", "canceled"]
   }).notNull(),

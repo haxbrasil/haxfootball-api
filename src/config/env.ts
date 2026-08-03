@@ -83,6 +83,27 @@ const envSchema = Type.Object({
   roomReconcileIntervalSeconds: Type.Integer({
     default: 30,
     minimum: 0
+  }),
+  mediaWorkerEnabled: Type.Boolean({ default: true }),
+  mediaWorkerId: Type.Optional(Type.String({ minLength: 1 })),
+  mediaRendererBinary: Type.String({ default: "hbr2vid", minLength: 1 }),
+  mediaRendererVersion: Type.String({ default: "hbr2vid-v1", minLength: 1 }),
+  mediaRenderTempDir: Type.String({
+    default: "/tmp/haxfootball-api-media",
+    minLength: 1
+  }),
+  mediaRenderMaxBytes: Type.Integer({
+    default: 24 * 1024 * 1024,
+    minimum: 1
+  }),
+  mediaRenderTimeoutSeconds: Type.Integer({
+    default: 180,
+    minimum: 1
+  }),
+  mediaRendererProbeBinary: Type.String({ default: "ffprobe", minLength: 1 }),
+  mediaWorkerPollIntervalSeconds: Type.Integer({
+    default: 5,
+    minimum: 1
   })
 });
 
@@ -116,7 +137,16 @@ const envInput = {
   jobRunnerId: Bun.env.JOB_RUNNER_ID,
   jobPollIntervalSeconds: Bun.env.JOB_POLL_INTERVAL_SECONDS,
   jobLockTimeoutSeconds: Bun.env.JOB_LOCK_TIMEOUT_SECONDS,
-  roomReconcileIntervalSeconds: Bun.env.ROOM_RECONCILE_INTERVAL_SECONDS
+  roomReconcileIntervalSeconds: Bun.env.ROOM_RECONCILE_INTERVAL_SECONDS,
+  mediaWorkerEnabled: Bun.env.MEDIA_WORKER_ENABLED,
+  mediaWorkerId: Bun.env.MEDIA_WORKER_ID,
+  mediaRendererBinary: Bun.env.MEDIA_RENDERER_BINARY,
+  mediaRendererVersion: Bun.env.MEDIA_RENDERER_VERSION,
+  mediaRenderTempDir: Bun.env.MEDIA_RENDER_TEMP_DIR,
+  mediaRenderMaxBytes: Bun.env.MEDIA_RENDER_MAX_BYTES,
+  mediaRenderTimeoutSeconds: Bun.env.MEDIA_RENDER_TIMEOUT_SECONDS,
+  mediaRendererProbeBinary: Bun.env.MEDIA_RENDERER_PROBE_BINARY,
+  mediaWorkerPollIntervalSeconds: Bun.env.MEDIA_WORKER_POLL_INTERVAL_SECONDS
 };
 
 const envValidator = TypeCompiler.Compile(envSchema);

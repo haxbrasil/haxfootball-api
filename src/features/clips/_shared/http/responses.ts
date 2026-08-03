@@ -6,6 +6,8 @@ import {
   toRecordingResponse
 } from "@/features/recordings/_shared/http/responses";
 import type { Recording } from "@/features/recordings/db";
+import type { MediaRendition } from "@/features/media-renditions/db";
+import { r2PublicUrl } from "@/shared/storage/r2";
 import { paginatedResponseSchema } from "@lib";
 
 export const clipSourceKindSchema = t.Union([
@@ -21,6 +23,28 @@ export const clipResponseSchema = t.Object({
   durationTicks: t.Integer({ minimum: 1 }),
   sourceKind: clipSourceKindSchema,
   recording: recordingResponseSchema,
+  preview: t.Object({
+    status: t.Union([
+      t.Literal("pending"),
+      t.Literal("ready"),
+      t.Literal("failed")
+    ]),
+    posterStatus: t.Union([
+      t.Literal("pending"),
+      t.Literal("ready"),
+      t.Literal("failed")
+    ]),
+    videoStatus: t.Union([
+      t.Literal("pending"),
+      t.Literal("ready"),
+      t.Literal("failed")
+    ]),
+    posterUrl: t.Nullable(t.String()),
+    videoUrl: t.Nullable(t.String()),
+    width: t.Nullable(t.Integer({ minimum: 1 })),
+    height: t.Nullable(t.Integer({ minimum: 1 })),
+    durationTicks: t.Nullable(t.Integer({ minimum: 1 }))
+  }),
   createdAt: t.String(),
   updatedAt: t.String()
 });
@@ -41,12 +65,29 @@ export type ClipConfigurationResponse = Static<
 export type ClipWithRecording = {
   clip: Clip;
   recording: Recording;
+  renditions?: MediaRendition[];
 };
 
 export function toClipResponse({
   clip,
-  recording
+  recording,
+  renditions = []
 }: ClipWithRecording): ClipResponse {
+  const poster = renditions.find(
+    (rendition) => rendition.purpose === "clip_poster"
+  );
+  const video = renditions.find(
+    (rendition) => rendition.purpose === "clip_preview_video"
+  );
+  const posterStatus = toPreviewStatus(poster);
+  const videoStatus = toPreviewStatus(video);
+  const status =
+    posterStatus === "ready" && videoStatus === "ready"
+      ? "ready"
+      : posterStatus === "failed" && videoStatus === "failed"
+        ? "failed"
+        : "pending";
+
   return {
     id: clip.publicId,
     title: clip.title,
@@ -55,7 +96,35 @@ export function toClipResponse({
     durationTicks: clip.endTick - clip.startTick,
     sourceKind: clip.sourceKind,
     recording: toRecordingResponse(recording),
+    preview: {
+      status,
+      posterStatus,
+      videoStatus,
+      posterUrl:
+        poster?.status === "ready" && poster.objectKey
+          ? r2PublicUrl(poster.objectKey)
+          : null,
+      videoUrl:
+        video?.status === "ready" && video.objectKey
+          ? r2PublicUrl(video.objectKey)
+          : null,
+      width: video?.width ?? poster?.width ?? null,
+      height: video?.height ?? poster?.height ?? null,
+      durationTicks: video?.durationTicks ?? poster?.durationTicks ?? null
+    },
     createdAt: clip.createdAt,
     updatedAt: clip.updatedAt
   };
+}
+
+function toPreviewStatus(
+  rendition: MediaRendition | undefined
+): "pending" | "ready" | "failed" {
+  if (rendition?.status === "ready" && rendition.objectKey) {
+    return "ready";
+  }
+  if (rendition?.status === "failed") {
+    return "failed";
+  }
+  return "pending";
 }

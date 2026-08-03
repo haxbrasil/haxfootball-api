@@ -8775,6 +8775,79 @@ components:
         id:
           format: uuid
           type: string
+        preview:
+          properties:
+            durationTicks:
+              anyOf:
+                - anyOf:
+                    - default: 0
+                      format: integer
+                      type: string
+                    - minimum: 1
+                      type: integer
+                  minimum: 1
+                - type: "null"
+              nullable: true
+            height:
+              anyOf:
+                - anyOf:
+                    - default: 0
+                      format: integer
+                      type: string
+                    - minimum: 1
+                      type: integer
+                  minimum: 1
+                - type: "null"
+              nullable: true
+            posterStatus:
+              enum:
+                - pending
+                - ready
+                - failed
+              type: string
+            posterUrl:
+              anyOf:
+                - type: string
+                - type: "null"
+              nullable: true
+            status:
+              enum:
+                - pending
+                - ready
+                - failed
+              type: string
+            videoStatus:
+              enum:
+                - pending
+                - ready
+                - failed
+              type: string
+            videoUrl:
+              anyOf:
+                - type: string
+                - type: "null"
+              nullable: true
+            width:
+              anyOf:
+                - anyOf:
+                    - default: 0
+                      format: integer
+                      type: string
+                    - minimum: 1
+                      type: integer
+                  minimum: 1
+                - type: "null"
+              nullable: true
+          required:
+            - status
+            - posterStatus
+            - videoStatus
+            - posterUrl
+            - videoUrl
+            - width
+            - height
+            - durationTicks
+          type: object
         recording:
           $ref: "#/components/schemas/Recording"
         sourceKind:
@@ -8805,6 +8878,7 @@ components:
         - durationTicks
         - sourceKind
         - recording
+        - preview
         - createdAt
         - updatedAt
       type: object

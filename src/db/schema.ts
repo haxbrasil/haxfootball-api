@@ -7,6 +7,7 @@ export * from "@/features/localization/db";
 export * from "@/features/matches/db";
 export * from "@/features/matches/evidence-db";
 export * from "@/features/match-events/db";
+export * from "@/features/media-renditions/db";
 export * from "@/features/permissions/db";
 export * from "@/features/players/db";
 export * from "@/features/recordings/db";

@@ -12,6 +12,7 @@ import {
 } from "@/features/clips/_shared/domain/validation";
 import { ensureRecordingTimeline } from "@/features/recordings/read-recording-timeline";
 import { notFound } from "@/shared/http/errors";
+import { enqueueClipRenditions } from "@/features/media-renditions/_shared/domain/jobs";
 
 export async function updateClip(
   publicId: string,
@@ -53,5 +54,11 @@ export async function updateClip(
     throw new Error("Clip could not be updated");
   }
 
-  return toClipResponse({ clip, recording: timeline });
+  const row = await getClipRow(publicId);
+  if (!row) {
+    throw new Error("Clip was updated but could not be read");
+  }
+
+  await enqueueClipRenditions(row.clip, row.recording);
+  return toClipResponse((await getClipRow(publicId)) ?? row);
 }

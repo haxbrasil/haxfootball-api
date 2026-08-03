@@ -7,6 +7,35 @@ beforeAll(async () => {
 });
 
 describe("job internals", () => {
+  it("keeps media jobs isolated from the default worker queue", async () => {
+    const { enqueueKnownJob, runNextDueJob } =
+      await import("@/features/jobs/_shared/domain/execution");
+    const type = `test.queue-${crypto.randomUUID()}`;
+    const handlers = {
+      [type]: async () => ({ ok: true })
+    };
+
+    const defaultJob = await enqueueKnownJob({ type, handlers });
+    const mediaJob = await enqueueKnownJob({
+      type,
+      queue: "media",
+      handlers
+    });
+
+    const defaultResult = await runNextDueJob({
+      runnerId: "default-runner",
+      handlers
+    });
+    const mediaResult = await runNextDueJob({
+      runnerId: "media-runner",
+      queue: "media",
+      handlers
+    });
+
+    expect(defaultResult?.uuid).toBe(defaultJob.uuid);
+    expect(mediaResult?.uuid).toBe(mediaJob.uuid);
+  });
+
   it("enqueues and claims only due queued jobs", async () => {
     const { getJobByUuid } = await import("@/features/jobs/_shared/db/queries");
     const { enqueueKnownJob, runNextDueJob } =
@@ -170,6 +199,68 @@ describe("job internals", () => {
       lockedAt: null,
       lockedBy: null
     });
+  });
+
+  it("recovers abandoned jobs within the requested queue", async () => {
+    const { db } = await import("@/db/client");
+    const { jobs } = await import("@/features/jobs/db");
+    const { recoverAbandonedJobs } =
+      await import("@/features/jobs/_shared/db/queries");
+
+    const now = new Date(Date.now() + 3_600_000);
+    const oldLock = new Date(now.getTime() - 600_000).toISOString();
+    const [defaultJob] = await db
+      .insert(jobs)
+      .values({
+        uuid: crypto.randomUUID(),
+        type: "test.abandoned-default",
+        queue: "default",
+        status: "running",
+        attempts: 1,
+        maxAttempts: 2,
+        runAfter: oldLock,
+        lockedAt: oldLock,
+        lockedBy: "gone",
+        startedAt: oldLock,
+        createdAt: oldLock,
+        updatedAt: oldLock
+      })
+      .returning();
+    const [mediaJob] = await db
+      .insert(jobs)
+      .values({
+        uuid: crypto.randomUUID(),
+        type: "test.abandoned-media",
+        queue: "media",
+        status: "running",
+        attempts: 1,
+        maxAttempts: 2,
+        runAfter: oldLock,
+        lockedAt: oldLock,
+        lockedBy: "gone",
+        startedAt: oldLock,
+        createdAt: oldLock,
+        updatedAt: oldLock
+      })
+      .returning();
+
+    const result = await recoverAbandonedJobs({
+      lockTimeoutSeconds: 60,
+      queue: "media",
+      now
+    });
+    const [defaultAfter] = await db
+      .select()
+      .from(jobs)
+      .where(eq(jobs.id, defaultJob.id));
+    const [mediaAfter] = await db
+      .select()
+      .from(jobs)
+      .where(eq(jobs.id, mediaJob.id));
+
+    expect(result).toEqual({ requeued: 1, failed: 0 });
+    expect(defaultAfter?.status).toBe("running");
+    expect(mediaAfter?.status).toBe("queued");
   });
 
   it("enqueues each due schedule window once", async () => {

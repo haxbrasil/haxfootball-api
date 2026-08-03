@@ -6,6 +6,7 @@ import { listJobs } from "@/features/jobs/list-jobs";
 import { retryJob } from "@/features/jobs/retry-job";
 import { runJob } from "@/features/jobs/run-job";
 import { workJobs } from "@/features/jobs/work-jobs";
+import { workMediaJobs } from "@/features/media-renditions/work-media-jobs";
 import { HttpError } from "@/shared/http/errors";
 
 const program = new Command()
@@ -18,6 +19,13 @@ program
   .description("Run the long-lived job runner")
   .action(async () => {
     await workJobs();
+  });
+
+program
+  .command("media-work")
+  .description("Run the media rendition worker")
+  .action(async () => {
+    await workMediaJobs();
   });
 
 program

@@ -7,6 +7,7 @@ import { env } from "@/config/env";
 
 type PutR2ObjectInput = {
   body: Uint8Array;
+  cacheControl?: string;
   contentEncoding?: string;
   contentType: string;
   key: string;
@@ -29,6 +30,7 @@ export async function putR2Object(input: PutR2ObjectInput): Promise<void> {
       Key: input.key,
       Body: input.body,
       ContentType: input.contentType,
+      ...(input.cacheControl ? { CacheControl: input.cacheControl } : {}),
       ...(input.contentEncoding
         ? { ContentEncoding: input.contentEncoding }
         : {})

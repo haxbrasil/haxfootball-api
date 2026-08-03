@@ -13,6 +13,7 @@ import {
 import { recordings } from "@/features/recordings/db";
 import { ensureRecordingTimeline } from "@/features/recordings/read-recording-timeline";
 import { notFound } from "@/shared/http/errors";
+import { enqueueClipRenditions } from "@/features/media-renditions/_shared/domain/jobs";
 
 export async function createClip(
   input: CreateClipInput
@@ -53,5 +54,8 @@ export async function createClip(
     throw new Error("Clip was created but could not be read");
   }
 
-  return toClipResponse(row);
+  await enqueueClipRenditions(row.clip, row.recording);
+  const refreshed = await getClipRow(row.clip.publicId);
+
+  return toClipResponse(refreshed ?? row);
 }

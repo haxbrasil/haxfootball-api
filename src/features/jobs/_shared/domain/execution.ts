@@ -1,5 +1,5 @@
 import { env } from "@/config/env";
-import type { Job } from "@/features/jobs/db";
+import type { Job, JobQueue } from "@/features/jobs/db";
 import {
   claimNextDueJob,
   claimQueuedJobByUuid,
@@ -47,12 +47,14 @@ export async function enqueueKnownJob(input: {
   payload?: JsonValue;
   maxAttempts?: number;
   runAfter?: Date;
+  queue?: JobQueue;
   handlers?: JobHandlerRegistry;
 }): Promise<Job> {
   assertKnownJobType(input.type, input.handlers);
 
   return insertJob({
     ...input,
+    queue: input.queue ?? "default",
     maxAttempts: input.maxAttempts ?? defaultMaxAttempts
   });
 }
@@ -60,6 +62,7 @@ export async function enqueueKnownJob(input: {
 export async function runNextDueJob(input: {
   runnerId: string;
   now?: Date;
+  queue?: JobQueue;
   handlers?: JobHandlerRegistry;
 }): Promise<Job | null> {
   const claimed = await claimNextDueJob(input);
@@ -79,6 +82,7 @@ export async function runQueuedJob(input: {
   uuid: string;
   runnerId: string;
   now?: Date;
+  queue?: JobQueue;
   handlers?: JobHandlerRegistry;
 }): Promise<Job | null> {
   const claimed = await claimQueuedJobByUuid(input);
@@ -200,12 +204,16 @@ export async function enqueueDueJobSchedules(
   return enqueuedJobs.filter((job): job is Job => job !== null);
 }
 
-export async function recoverAbandonedJobLocks(now = new Date()): Promise<{
+export async function recoverAbandonedJobLocks(
+  now = new Date(),
+  queue: JobQueue = "default"
+): Promise<{
   requeued: number;
   failed: number;
 }> {
   const result = await recoverAbandonedJobs({
     lockTimeoutSeconds: env.jobLockTimeoutSeconds,
+    queue,
     now
   });
 
