@@ -307,6 +307,14 @@ const championshipDraftTurnResponseSchema = t.Object({
   deadlineAt: t.Nullable(t.String()),
   overdueAt: t.Nullable(t.String()),
   filledAt: t.Nullable(t.String()),
+  recordedResolution: t.Nullable(
+    t.Union([
+      t.Literal("selected"),
+      t.Literal("unresolved"),
+      t.Literal("skipped")
+    ])
+  ),
+  occurredAt: t.Nullable(t.String()),
   revision: t.Integer()
 });
 
@@ -326,6 +334,7 @@ export const championshipDraftResponseSchema = t.Object({
         t.Literal("completed"),
         t.Literal("canceled")
       ]),
+      mode: t.Union([t.Literal("live"), t.Literal("recorded")]),
       rounds: t.Integer(),
       countdownSeconds: t.Integer(),
       nextTurnSequence: t.Integer(),
@@ -335,6 +344,8 @@ export const championshipDraftResponseSchema = t.Object({
       startedAt: t.Nullable(t.String()),
       completedAt: t.Nullable(t.String()),
       canceledAt: t.Nullable(t.String()),
+      occurredAt: t.Nullable(t.String()),
+      recordedAt: t.Nullable(t.String()),
       createdAt: t.String(),
       updatedAt: t.String(),
       teams: t.Array(championshipDraftTeamResponseSchema, { maxItems: 64 }),
@@ -349,6 +360,70 @@ export const championshipDraftResponseSchema = t.Object({
       })
     })
   )
+});
+
+const championshipRecordedDraftIssueResponseSchema = t.Object({
+  code: t.String(),
+  severity: t.Union([t.Literal("error"), t.Literal("warning")]),
+  message: t.String(),
+  sequence: t.Nullable(t.Integer()),
+  participantUuid: t.Nullable(t.String({ format: "uuid" }))
+});
+
+const championshipRecordedDraftPreviewSlotResponseSchema = t.Object({
+  sequence: t.Integer(),
+  round: t.Integer(),
+  position: t.Integer(),
+  team: t.Object({
+    uuid: t.String({ format: "uuid" }),
+    name: t.String()
+  }),
+  resolution: t.Union([
+    t.Literal("selected"),
+    t.Literal("unresolved"),
+    t.Literal("skipped")
+  ]),
+  participant: t.Nullable(
+    t.Object({
+      uuid: t.String({ format: "uuid" }),
+      displayName: t.String()
+    })
+  ),
+  priceUnitsSnapshot: t.Nullable(t.Integer()),
+  existingTeam: t.Nullable(
+    t.Object({
+      uuid: t.String({ format: "uuid" }),
+      name: t.String()
+    })
+  )
+});
+
+const championshipRecordedDraftTeamPreviewResponseSchema = t.Object({
+  uuid: t.String({ format: "uuid" }),
+  name: t.String(),
+  selectedCount: t.Integer(),
+  usageBeforeUnits: t.Integer(),
+  usageAfterUnits: t.Integer(),
+  remainingAfterUnits: t.Integer(),
+  overCapAfter: t.Boolean()
+});
+
+export const championshipRecordedDraftPreviewResponseSchema = t.Object({
+  valid: t.Boolean(),
+  previewHash: t.String(),
+  currentChampionshipRevision: t.Integer(),
+  rounds: t.Integer(),
+  requiresCapException: t.Boolean(),
+  selectedCount: t.Integer(),
+  unresolvedCount: t.Integer(),
+  skippedCount: t.Integer(),
+  issues: t.Array(championshipRecordedDraftIssueResponseSchema),
+  slots: t.Array(championshipRecordedDraftPreviewSlotResponseSchema, {
+    maxItems: 6_400
+  }),
+  teams: t.Array(championshipRecordedDraftTeamPreviewResponseSchema, {
+    maxItems: 64
+  })
 });
 
 export const championshipDraftCorrectionPreviewResponseSchema = t.Object({
@@ -1205,6 +1280,9 @@ export type ChampionshipDraftResponse = Static<
 >;
 export type ChampionshipDraftCorrectionPreviewResponse = Static<
   typeof championshipDraftCorrectionPreviewResponseSchema
+>;
+export type ChampionshipRecordedDraftPreviewResponse = Static<
+  typeof championshipRecordedDraftPreviewResponseSchema
 >;
 export type ChampionshipTradeResponse = Static<
   typeof championshipTradeResponseSchema

@@ -1798,6 +1798,150 @@ describe("championship draft and trades", () => {
     ]);
   });
 
+  it("previews and atomically records a draft that happened outside the platform", async () => {
+    const fixture = await createDraftFixture({
+      teamCount: 2,
+      playerCount: 4,
+      rounds: 2,
+      capUnits: 100,
+      playerPrices: [20, 25, 30, 35]
+    });
+    const championship = await getChampionship(fixture.championship.uuid);
+    const occurredAt = "2026-07-15T21:30:00.000Z";
+    const slots = [
+      {
+        sequence: 1,
+        round: 1,
+        position: 1,
+        teamId: fixture.teams[0]!.uuid,
+        participantId: fixture.playerParticipants[0]!.uuid,
+        resolution: "selected" as const
+      },
+      {
+        sequence: 2,
+        round: 1,
+        position: 2,
+        teamId: fixture.teams[1]!.uuid,
+        participantId: fixture.playerParticipants[1]!.uuid,
+        resolution: "selected" as const
+      },
+      {
+        sequence: 3,
+        round: 2,
+        position: 1,
+        teamId: fixture.teams[1]!.uuid,
+        participantId: fixture.playerParticipants[2]!.uuid,
+        resolution: "selected" as const
+      },
+      {
+        sequence: 4,
+        round: 2,
+        position: 2,
+        teamId: fixture.teams[0]!.uuid,
+        participantId: fixture.playerParticipants[3]!.uuid,
+        resolution: "selected" as const
+      }
+    ];
+    const definition = {
+      teamIds: fixture.teams.map(({ uuid }) => uuid),
+      rounds: 2,
+      occurredAt,
+      recordedNote: "Registrado a partir da planilha da organização.",
+      slots
+    };
+    const previewResponse = await request(
+      `/api/championships/${championship.uuid}/draft/record/preview`,
+      {
+        method: "POST",
+        body: {
+          actorAccountUuid: admin.uuid,
+          expectedRevision: championship.revision,
+          ...definition
+        }
+      }
+    );
+
+    expect(previewResponse.status).toBe(200);
+    const preview = await previewResponse.json();
+    expect(preview).toMatchObject({
+      valid: true,
+      selectedCount: 4,
+      unresolvedCount: 0,
+      skippedCount: 0,
+      requiresCapException: false,
+      teams: expect.arrayContaining([
+        expect.objectContaining({
+          uuid: fixture.teams[0]!.uuid,
+          selectedCount: 2,
+          overCapAfter: false
+        })
+      ])
+    });
+
+    const recordCommand = crypto.randomUUID();
+    const recordResponse = await request(
+      `/api/championships/${championship.uuid}/draft/record`,
+      {
+        method: "POST",
+        body: {
+          actorAccountUuid: admin.uuid,
+          commandUuid: recordCommand,
+          expectedRevision: championship.revision,
+          previewHash: preview.previewHash,
+          ...definition
+        }
+      }
+    );
+
+    expect(recordResponse.status).toBe(200);
+    const recorded = await recordResponse.json();
+    expect(recorded.draft).toMatchObject({
+      mode: "recorded",
+      state: "completed",
+      occurredAt
+    });
+    expect(
+      recorded.draft.turns.items.some(
+        (turn: {
+          state: string;
+          recordedResolution: string;
+          selectedParticipant: { uuid: string } | null;
+        }) =>
+          turn.state === "filled" &&
+          turn.recordedResolution === "selected" &&
+          turn.selectedParticipant?.uuid === fixture.playerParticipants[0]!.uuid
+      )
+    ).toBe(true);
+
+    const retryResponse = await request(
+      `/api/championships/${championship.uuid}/draft/record`,
+      {
+        method: "POST",
+        body: {
+          actorAccountUuid: admin.uuid,
+          commandUuid: recordCommand,
+          expectedRevision: championship.revision,
+          previewHash: preview.previewHash,
+          ...definition
+        }
+      }
+    );
+
+    expect(retryResponse.status).toBe(200);
+    expect(await retryResponse.json()).toEqual(recorded);
+    const roster = await paginatedItems<{
+      participant: { uuid: string };
+      acquisitionSource: string;
+    }>(
+      await request(
+        `/api/championships/${championship.uuid}/roster-history?limit=100`
+      )
+    );
+    expect(
+      roster.filter(({ acquisitionSource }) => acquisitionSource === "draft")
+    ).toHaveLength(4);
+  });
+
   it("keeps timed-out picks eligible while a later GM can win the same-player race", async () => {
     const fixture = await createDraftFixture({
       teamCount: 2,
