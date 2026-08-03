@@ -12,7 +12,7 @@ const teams = Array.from({ length: 4 }, (_, index) => ({
   name: `Team ${index + 1}`,
   displayOrder: index
 }));
-const scoring = { win: 3, draw: 1, loss: 0 };
+const scoring = { mode: "points" as const, win: 3, draw: 1, loss: 0 };
 
 describe("championship standings engine", () => {
   it.each(
@@ -43,10 +43,10 @@ describe("championship standings engine", () => {
   });
 
   it.each([
-    { win: 2, draw: 1, loss: 0 },
-    { win: 3, draw: 1, loss: 0 },
-    { win: 5, draw: 2, loss: 0 },
-    { win: 3, draw: 0, loss: -1 }
+    { mode: "points" as const, win: 2, draw: 1, loss: 0 },
+    { mode: "points" as const, win: 3, draw: 1, loss: 0 },
+    { mode: "points" as const, win: 5, draw: 2, loss: 0 },
+    { mode: "points" as const, win: 3, draw: 0, loss: -1 }
   ])("uses configurable outcome points: %j", (points) => {
     const result = calculateStandings({
       teams: teams.slice(0, 3),
@@ -99,6 +99,36 @@ describe("championship standings engine", () => {
         unresolvedTie: true
       })
     ]);
+  });
+
+  it("supports a results-based stage without creating classification points", () => {
+    const result = calculateStandings({
+      teams: teams.slice(0, 2),
+      matches: [match("results", 1, 2, 3, 1)],
+      rules: rules("wins", "score-difference"),
+      scoring: { mode: "results", win: null, draw: null, loss: null },
+      headToHeadRestart: "continue"
+    });
+
+    expect(result.rows.map((row) => row.team.id)).toEqual([1, 2]);
+    expect(result.rows.map((row) => row.points)).toEqual([null, null]);
+    expect(result.rows[0]).toMatchObject({
+      wins: 1,
+      scoreDifference: 2
+    });
+  });
+
+  it("uses result-based defaults when a results stage has no criteria", () => {
+    const result = calculateStandings({
+      teams: teams.slice(0, 2),
+      matches: [match("results-defaults", 1, 2, 3, 1)],
+      rules: [],
+      scoring: { mode: "results", win: null, draw: null, loss: null },
+      headToHeadRestart: "continue"
+    });
+
+    expect(result.rows.map((row) => row.team.id)).toEqual([1, 2]);
+    expect(result.rows.map((row) => row.points)).toEqual([null, null]);
   });
 
   it("uses only the tied cohort for head-to-head mini-table values", () => {

@@ -526,6 +526,34 @@ const championshipStandingsCriterionSchema = t.Union([
   t.Literal("manual")
 ]);
 
+const championshipStandingsVisibleMetricSchema = t.Union([
+  t.Literal("played"),
+  t.Literal("wins"),
+  t.Literal("draws"),
+  t.Literal("losses"),
+  t.Literal("score-for"),
+  t.Literal("score-against"),
+  t.Literal("score-difference"),
+  t.Literal("points")
+]);
+
+const championshipStandingsPointsScoringSchema = t.Object({
+  mode: t.Literal("points"),
+  win: t.Integer({ minimum: -100, maximum: 100 }),
+  draw: t.Integer({ minimum: -100, maximum: 100 }),
+  loss: t.Integer({ minimum: -100, maximum: 100 })
+});
+
+const championshipStandingsResultsScoringSchema = t.Object({
+  mode: t.Literal("results")
+});
+
+const championshipStandingsLegacyScoringSchema = t.Object({
+  win: t.Integer({ minimum: -100, maximum: 100 }),
+  draw: t.Integer({ minimum: -100, maximum: 100 }),
+  loss: t.Integer({ minimum: -100, maximum: 100 })
+});
+
 export const createChampionshipGroupBodySchema = t.Composite([
   championshipCommandSchema,
   t.Object({
@@ -545,11 +573,18 @@ export const configureChampionshipStandingsBodySchema = t.Composite([
   championshipCommandSchema,
   t.Object({
     expectedStageRevision: t.Integer({ minimum: 0 }),
-    scoring: t.Object({
-      win: t.Integer({ minimum: -100, maximum: 100 }),
-      draw: t.Integer({ minimum: -100, maximum: 100 }),
-      loss: t.Integer({ minimum: -100, maximum: 100 })
-    }),
+    scoring: t.Union([
+      championshipStandingsPointsScoringSchema,
+      championshipStandingsResultsScoringSchema,
+      championshipStandingsLegacyScoringSchema
+    ]),
+    visibleMetrics: t.Optional(
+      t.Array(championshipStandingsVisibleMetricSchema, {
+        minItems: 1,
+        maxItems: 8,
+        uniqueItems: true
+      })
+    ),
     headToHeadRestart: t.Union([
       t.Literal("continue"),
       t.Literal("restart-for-subgroup")

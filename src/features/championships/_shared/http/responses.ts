@@ -1007,6 +1007,17 @@ const championshipStandingsCriterionSchema = t.Union([
   t.Literal("manual")
 ]);
 
+const championshipStandingsVisibleMetricSchema = t.Union([
+  t.Literal("played"),
+  t.Literal("wins"),
+  t.Literal("draws"),
+  t.Literal("losses"),
+  t.Literal("score-for"),
+  t.Literal("score-against"),
+  t.Literal("score-difference"),
+  t.Literal("points")
+]);
+
 export const championshipStandingsResponseSchema = t.Object({
   championshipUuid: t.String({ format: "uuid" }),
   championshipRevision: t.Integer({ minimum: 0 }),
@@ -1016,11 +1027,21 @@ export const championshipStandingsResponseSchema = t.Object({
     revision: t.Integer({ minimum: 0 })
   }),
   group: championshipGroupResponseSchema,
-  scoring: t.Object({
-    win: t.Integer(),
-    draw: t.Integer(),
-    loss: t.Integer()
-  }),
+  scoring: t.Union([
+    t.Object({
+      mode: t.Literal("points"),
+      win: t.Integer(),
+      draw: t.Integer(),
+      loss: t.Integer()
+    }),
+    t.Object({
+      mode: t.Literal("results"),
+      win: t.Null(),
+      draw: t.Null(),
+      loss: t.Null()
+    })
+  ]),
+  visibleMetrics: t.Array(championshipStandingsVisibleMetricSchema),
   headToHeadRestart: t.Union([
     t.Literal("continue"),
     t.Literal("restart-for-subgroup")
@@ -1042,7 +1063,7 @@ export const championshipStandingsResponseSchema = t.Object({
       wins: t.Integer({ minimum: 0 }),
       draws: t.Integer({ minimum: 0 }),
       losses: t.Integer({ minimum: 0 }),
-      points: t.Integer(),
+      points: t.Nullable(t.Integer()),
       scoreFor: t.Integer({ minimum: 0 }),
       scoreAgainst: t.Integer({ minimum: 0 }),
       scoreDifference: t.Integer(),

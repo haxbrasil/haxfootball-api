@@ -7716,10 +7716,13 @@ components:
                 minimum: 0
               points:
                 anyOf:
-                  - default: 0
-                    format: integer
-                    type: string
-                  - type: integer
+                  - anyOf:
+                      - default: 0
+                        format: integer
+                        type: string
+                      - type: integer
+                  - type: "null"
+                nullable: true
               rank:
                 anyOf:
                   - default: 0
@@ -7856,30 +7859,51 @@ components:
             type: object
           type: array
         scoring:
-          properties:
-            draw:
-              anyOf:
-                - default: 0
-                  format: integer
+          anyOf:
+            - properties:
+                draw:
+                  anyOf:
+                    - default: 0
+                      format: integer
+                      type: string
+                    - type: integer
+                loss:
+                  anyOf:
+                    - default: 0
+                      format: integer
+                      type: string
+                    - type: integer
+                mode:
+                  const: points
                   type: string
-                - type: integer
-            loss:
-              anyOf:
-                - default: 0
-                  format: integer
+                win:
+                  anyOf:
+                    - default: 0
+                      format: integer
+                      type: string
+                    - type: integer
+              required:
+                - mode
+                - win
+                - draw
+                - loss
+              type: object
+            - properties:
+                draw:
+                  type: "null"
+                loss:
+                  type: "null"
+                mode:
+                  const: results
                   type: string
-                - type: integer
-            win:
-              anyOf:
-                - default: 0
-                  format: integer
-                  type: string
-                - type: integer
-          required:
-            - win
-            - draw
-            - loss
-          type: object
+                win:
+                  type: "null"
+              required:
+                - mode
+                - win
+                - draw
+                - loss
+              type: object
         stage:
           properties:
             name:
@@ -7933,12 +7957,26 @@ components:
               - teamUuids
             type: object
           type: array
+        visibleMetrics:
+          items:
+            enum:
+              - played
+              - wins
+              - draws
+              - losses
+              - score-for
+              - score-against
+              - score-difference
+              - points
+            type: string
+          type: array
       required:
         - championshipUuid
         - championshipRevision
         - stage
         - group
         - scoring
+        - visibleMetrics
         - headToHeadRestart
         - rules
         - rows
@@ -9200,42 +9238,106 @@ components:
           minItems: 1
           type: array
         scoring:
-          properties:
-            draw:
-              anyOf:
-                - default: 0
-                  format: integer
-                  type: string
-                - maximum: 100
+          anyOf:
+            - properties:
+                draw:
+                  anyOf:
+                    - default: 0
+                      format: integer
+                      type: string
+                    - maximum: 100
+                      minimum: -100
+                      type: integer
+                  maximum: 100
                   minimum: -100
-                  type: integer
-              maximum: 100
-              minimum: -100
-            loss:
-              anyOf:
-                - default: 0
-                  format: integer
-                  type: string
-                - maximum: 100
+                loss:
+                  anyOf:
+                    - default: 0
+                      format: integer
+                      type: string
+                    - maximum: 100
+                      minimum: -100
+                      type: integer
+                  maximum: 100
                   minimum: -100
-                  type: integer
-              maximum: 100
-              minimum: -100
-            win:
-              anyOf:
-                - default: 0
-                  format: integer
+                mode:
+                  const: points
                   type: string
-                - maximum: 100
+                win:
+                  anyOf:
+                    - default: 0
+                      format: integer
+                      type: string
+                    - maximum: 100
+                      minimum: -100
+                      type: integer
+                  maximum: 100
                   minimum: -100
-                  type: integer
-              maximum: 100
-              minimum: -100
-          required:
-            - win
-            - draw
-            - loss
-          type: object
+              required:
+                - mode
+                - win
+                - draw
+                - loss
+              type: object
+            - properties:
+                mode:
+                  const: results
+                  type: string
+              required:
+                - mode
+              type: object
+            - properties:
+                draw:
+                  anyOf:
+                    - default: 0
+                      format: integer
+                      type: string
+                    - maximum: 100
+                      minimum: -100
+                      type: integer
+                  maximum: 100
+                  minimum: -100
+                loss:
+                  anyOf:
+                    - default: 0
+                      format: integer
+                      type: string
+                    - maximum: 100
+                      minimum: -100
+                      type: integer
+                  maximum: 100
+                  minimum: -100
+                win:
+                  anyOf:
+                    - default: 0
+                      format: integer
+                      type: string
+                    - maximum: 100
+                      minimum: -100
+                      type: integer
+                  maximum: 100
+                  minimum: -100
+              required:
+                - win
+                - draw
+                - loss
+              type: object
+        visibleMetrics:
+          items:
+            enum:
+              - played
+              - wins
+              - draws
+              - losses
+              - score-for
+              - score-against
+              - score-difference
+              - points
+            type: string
+          maxItems: 8
+          minItems: 1
+          type: array
+          uniqueItems: true
       required:
         - actorAccountUuid
         - commandUuid

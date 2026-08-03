@@ -9,6 +9,16 @@ export type StandingsCriterion =
   | "head-to-head-score-difference"
   | "manual";
 
+export type StandingsVisibleMetric =
+  | "played"
+  | "wins"
+  | "draws"
+  | "losses"
+  | "score-for"
+  | "score-against"
+  | "score-difference"
+  | "points";
+
 export type StandingsRule = {
   criterion: StandingsCriterion;
   direction: "asc" | "desc";
@@ -32,18 +42,26 @@ export type StandingsMatch = {
   sideBOutcome: "win" | "loss" | "draw";
 };
 
-export type StandingsScoring = {
-  win: number;
-  draw: number;
-  loss: number;
-};
+export type StandingsScoring =
+  | {
+      mode: "points";
+      win: number;
+      draw: number;
+      loss: number;
+    }
+  | {
+      mode: "results";
+      win: null;
+      draw: null;
+      loss: null;
+    };
 
 export type StandingsRecord = {
   played: number;
   wins: number;
   draws: number;
   losses: number;
-  points: number;
+  points: number | null;
   scoreFor: number;
   scoreAgainst: number;
   scoreDifference: number;
@@ -71,6 +89,22 @@ export type StandingsResult = {
   }>;
 };
 
+const defaultPointsRules: StandingsRule[] = [
+  { criterion: "points", direction: "desc" },
+  { criterion: "wins", direction: "desc" },
+  { criterion: "score-difference", direction: "desc" },
+  { criterion: "score-for", direction: "desc" },
+  { criterion: "head-to-head-points", direction: "desc" },
+  { criterion: "head-to-head-score-difference", direction: "desc" }
+];
+
+const defaultResultsRules: StandingsRule[] = [
+  { criterion: "wins", direction: "desc" },
+  { criterion: "score-difference", direction: "desc" },
+  { criterion: "score-for", direction: "desc" },
+  { criterion: "head-to-head-score-difference", direction: "desc" }
+];
+
 type RankedCohort = {
   teams: StandingsTeam[];
   unresolved: boolean;
@@ -92,7 +126,9 @@ export function calculateStandings(input: {
   const criteria: StandingsRule[] =
     input.rules.length > 0
       ? input.rules
-      : [{ criterion: "points", direction: "desc" }];
+      : input.scoring.mode === "results"
+        ? defaultResultsRules
+        : defaultPointsRules;
   const firstHeadToHeadIndex = criteria.findIndex((rule) =>
     isHeadToHead(rule.criterion)
   );
@@ -269,7 +305,7 @@ function criterionValue(
     case "points":
     case "head-to-head":
     case "head-to-head-points":
-      return record.points;
+      return record.points ?? 0;
     case "wins":
       return record.wins;
     case "score-difference":
@@ -321,13 +357,19 @@ function addMatch(
   record.scoreDifference = record.scoreFor - record.scoreAgainst;
   if (outcome === "win") {
     record.wins += 1;
-    record.points += scoring.win;
+    if (scoring.mode === "points") {
+      record.points = (record.points ?? 0) + (scoring.win ?? 0);
+    }
   } else if (outcome === "draw") {
     record.draws += 1;
-    record.points += scoring.draw;
+    if (scoring.mode === "points") {
+      record.points = (record.points ?? 0) + (scoring.draw ?? 0);
+    }
   } else {
     record.losses += 1;
-    record.points += scoring.loss;
+    if (scoring.mode === "points") {
+      record.points = (record.points ?? 0) + (scoring.loss ?? 0);
+    }
   }
 }
 
@@ -337,7 +379,7 @@ function emptyRecord(): StandingsRecord {
     wins: 0,
     draws: 0,
     losses: 0,
-    points: 0,
+    points: null,
     scoreFor: 0,
     scoreAgainst: 0,
     scoreDifference: 0

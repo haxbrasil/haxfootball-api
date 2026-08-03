@@ -43,7 +43,8 @@ import {
 import {
   calculateStandings,
   type StandingsRule,
-  type StandingsScoring
+  type StandingsScoring,
+  type StandingsVisibleMetric
 } from "@/features/championships/format-scheduling/standings-engine";
 import { calculateCorrectionCascade } from "@/features/championships/matches-statistics/cascade";
 import { championshipMatchResultRevisions } from "@/features/championships/matches-statistics/db";
@@ -66,10 +67,29 @@ type StandingsProjection = {
 };
 
 const defaultScoring: StandingsScoring = {
+  mode: "points",
   win: 3,
   draw: 1,
   loss: 0
 };
+
+const resultsScoring: StandingsScoring = {
+  mode: "results",
+  win: null,
+  draw: null,
+  loss: null
+};
+
+const defaultVisibleMetrics: StandingsVisibleMetric[] = [
+  "played",
+  "wins",
+  "draws",
+  "losses",
+  "score-for",
+  "score-against",
+  "score-difference",
+  "points"
+];
 
 const defaultRules: StandingsRule[] = [
   { criterion: "points", direction: "desc" },
@@ -77,6 +97,13 @@ const defaultRules: StandingsRule[] = [
   { criterion: "score-difference", direction: "desc" },
   { criterion: "score-for", direction: "desc" },
   { criterion: "head-to-head-points", direction: "desc" },
+  { criterion: "head-to-head-score-difference", direction: "desc" }
+];
+
+const resultsDefaultRules: StandingsRule[] = [
+  { criterion: "wins", direction: "desc" },
+  { criterion: "score-difference", direction: "desc" },
+  { criterion: "score-for", direction: "desc" },
   { criterion: "head-to-head-score-difference", direction: "desc" }
 ];
 
@@ -173,7 +200,13 @@ export async function configureChampionshipStandings(
     async (tx, championship) => {
       const stage = await requireStandingsStage(tx, championship.id, stageUuid);
       requireRevision("stage", stage.revision, input.expectedStageRevision);
-      validateClassificationRules(input.rules);
+      const scoring = normalizeScoring(input.scoring);
+      validateClassificationRules(input.rules, scoring.mode);
+      validateVisibleMetrics(input.visibleMetrics, scoring.mode);
+      const visibleMetrics = normalizeVisibleMetrics(
+        input.visibleMetrics,
+        scoring.mode
+      );
       const beforeRules = await tx
         .select()
         .from(championshipClassificationRules)
@@ -197,7 +230,8 @@ export async function configureChampionshipStandings(
         .set({
           config: {
             ...stage.config,
-            standingsScoring: input.scoring,
+            standingsScoring: scoring,
+            standingsVisibleMetrics: visibleMetrics,
             headToHeadRestart: input.headToHeadRestart
           },
           revision: stage.revision + 1,
@@ -212,11 +246,16 @@ export async function configureChampionshipStandings(
         targetUuid: stage.uuid,
         before: {
           scoring: standingsScoring(stage.config),
+          visibleMetrics: standingsVisibleMetrics(
+            stage.config,
+            standingsScoring(stage.config).mode
+          ),
           headToHeadRestart: standingsRestart(stage.config),
           rules: beforeRules
         },
         after: {
-          scoring: input.scoring,
+          scoring,
+          visibleMetrics,
           headToHeadRestart: input.headToHeadRestart,
           rules: input.rules
         }
@@ -661,6 +700,8 @@ async function buildStandingsProjection(
         ]
       : [];
   });
+  const scoring = standingsScoring(stage.config);
+  const visibleMetrics = standingsVisibleMetrics(stage.config, scoring.mode);
   const rules: StandingsRule[] =
     ruleRows.length > 0
       ? ruleRows.map((rule) => ({
@@ -668,8 +709,9 @@ async function buildStandingsProjection(
           direction: rule.direction,
           config: rule.config
         }))
-      : defaultRules;
-  const scoring = standingsScoring(stage.config);
+      : scoring.mode === "results"
+        ? resultsDefaultRules
+        : defaultRules;
   const headToHeadRestart = standingsRestart(stage.config);
   const standings = calculateStandings({
     teams: standingsTeams,
@@ -763,6 +805,7 @@ async function buildStandingsProjection(
       updatedAt: group.updatedAt
     },
     scoring,
+    visibleMetrics,
     headToHeadRestart,
     rules:
       ruleRows.length > 0
@@ -1185,6 +1228,15 @@ function standingsScoring(config: Record<string, unknown>): StandingsScoring {
   if (
     scoring &&
     typeof scoring === "object" &&
+    "mode" in scoring &&
+    scoring.mode === "results"
+  ) {
+    return resultsScoring;
+  }
+
+  if (
+    scoring &&
+    typeof scoring === "object" &&
     "win" in scoring &&
     "draw" in scoring &&
     "loss" in scoring &&
@@ -1192,10 +1244,104 @@ function standingsScoring(config: Record<string, unknown>): StandingsScoring {
     typeof scoring.draw === "number" &&
     typeof scoring.loss === "number"
   ) {
-    return { win: scoring.win, draw: scoring.draw, loss: scoring.loss };
+    return {
+      mode: "points",
+      win: scoring.win,
+      draw: scoring.draw,
+      loss: scoring.loss
+    };
   }
 
   return defaultScoring;
+}
+
+function standingsVisibleMetrics(
+  config: Record<string, unknown>,
+  mode: StandingsScoring["mode"]
+): StandingsVisibleMetric[] {
+  const configured = config.standingsVisibleMetrics;
+  const metrics = Array.isArray(configured)
+    ? configured.filter((value): value is StandingsVisibleMetric =>
+        isStandingsVisibleMetric(value)
+      )
+    : [...defaultVisibleMetrics];
+  const unique = [...new Set(metrics)];
+
+  if (mode === "results") {
+    const resultMetrics = unique.filter((metric) => metric !== "points");
+    return resultMetrics.length > 0
+      ? resultMetrics
+      : defaultVisibleMetrics.filter((metric) => metric !== "points");
+  }
+
+  return unique.length > 0 ? unique : [...defaultVisibleMetrics];
+}
+
+function normalizeScoring(
+  input: ConfigureChampionshipStandingsInput["scoring"]
+): StandingsScoring {
+  const scoring = input as {
+    mode?: unknown;
+    win?: unknown;
+    draw?: unknown;
+    loss?: unknown;
+  };
+
+  if (scoring.mode === "results") {
+    return resultsScoring;
+  }
+
+  return {
+    mode: "points",
+    win: typeof scoring.win === "number" ? scoring.win : 3,
+    draw: typeof scoring.draw === "number" ? scoring.draw : 1,
+    loss: typeof scoring.loss === "number" ? scoring.loss : 0
+  };
+}
+
+function normalizeVisibleMetrics(
+  metrics: ConfigureChampionshipStandingsInput["visibleMetrics"] | undefined,
+  mode: StandingsScoring["mode"]
+): StandingsVisibleMetric[] {
+  const normalized = Array.isArray(metrics)
+    ? [
+        ...new Set(
+          metrics.filter((value): value is StandingsVisibleMetric =>
+            isStandingsVisibleMetric(value)
+          )
+        )
+      ]
+    : standingsVisibleMetrics({}, mode);
+
+  return normalized.length > 0
+    ? normalized
+    : mode === "results"
+      ? defaultVisibleMetrics.filter((metric) => metric !== "points")
+      : [...defaultVisibleMetrics];
+}
+
+function isStandingsVisibleMetric(
+  value: unknown
+): value is StandingsVisibleMetric {
+  return (
+    value === "played" ||
+    value === "wins" ||
+    value === "draws" ||
+    value === "losses" ||
+    value === "score-for" ||
+    value === "score-against" ||
+    value === "score-difference" ||
+    value === "points"
+  );
+}
+
+function validateVisibleMetrics(
+  metrics: ConfigureChampionshipStandingsInput["visibleMetrics"] | undefined,
+  mode: StandingsScoring["mode"]
+) {
+  if (mode === "results" && metrics?.includes("points")) {
+    throw badRequest("Point visibility requires point scoring");
+  }
 }
 
 function standingsRestart(
@@ -1207,8 +1353,17 @@ function standingsRestart(
 }
 
 function validateClassificationRules(
-  rules: ConfigureChampionshipStandingsInput["rules"]
+  rules: ConfigureChampionshipStandingsInput["rules"],
+  mode: StandingsScoring["mode"]
 ) {
+  if (
+    mode === "results" &&
+    rules.some((rule) => isPointCriterion(rule.criterion))
+  ) {
+    throw badRequest(
+      "Point-based classification criteria require point scoring"
+    );
+  }
   const manualRules = rules.filter((rule) => rule.criterion === "manual");
 
   if (manualRules.length > 1) {
@@ -1224,6 +1379,14 @@ function validateClassificationRules(
       );
     }
   }
+}
+
+function isPointCriterion(criterion: StandingsRule["criterion"]) {
+  return (
+    criterion === "points" ||
+    criterion === "head-to-head" ||
+    criterion === "head-to-head-points"
+  );
 }
 
 function assertConfirmedImpact(confirmed: string[], actual: string[]) {
