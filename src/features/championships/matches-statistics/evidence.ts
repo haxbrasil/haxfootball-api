@@ -30,6 +30,7 @@ import {
   classifyChampionshipRoomContext
 } from "@/features/championships/matches-statistics/room-context";
 import { areProgramsCompatible } from "@/features/championships/matches-statistics/program-compatibility";
+import { normalizePersistedAppearanceFindings } from "@/features/championships/matches-statistics/appearance-findings";
 import { recommendEvidenceOrientation } from "@/features/championships/matches-statistics/evidence-orientation";
 import type { ChampionshipMatchOperationsResponse } from "@/features/championships/matches-statistics/responses";
 import {
@@ -626,7 +627,11 @@ export async function projectChampionshipMatchOperations(
   const teamById = new Map(teamRows.map((row) => [row.team.id, row]));
   const appearances =
     currentResult && canExposeEvidence
-      ? await readAppearances(database, currentResult.id)
+      ? await readAppearances(
+          database,
+          currentResult.id,
+          context.championship.id
+        )
       : { items: [], totalCount: 0 };
 
   return {
@@ -668,9 +673,10 @@ export async function projectChampionshipMatchOperations(
 
 async function readAppearances(
   database: DatabaseExecutor,
-  resultRevisionId: number
+  resultRevisionId: number,
+  championshipId: number
 ) {
-  const [rows, countRows] = await Promise.all([
+  const [rows, countRows, participantRows] = await Promise.all([
     database
       .select({
         appearance: championshipMatchAppearances,
@@ -718,8 +724,17 @@ async function readAppearances(
       .from(championshipMatchAppearances)
       .where(
         eq(championshipMatchAppearances.resultRevisionId, resultRevisionId)
-      )
+      ),
+    database
+      .select()
+      .from(championshipParticipants)
+      .where(eq(championshipParticipants.championshipId, championshipId))
   ]);
+  const participantByAccountId = new Map(
+    participantRows
+      .filter((participant) => participant.accountId !== null)
+      .map((participant) => [participant.accountId!, participant])
+  );
 
   return {
     items: rows.map((row) => ({
@@ -730,9 +745,16 @@ async function readAppearances(
       playingTimeSeconds: row.appearance.playingTimeSeconds,
       registered: row.appearance.registered,
       onRoster: row.appearance.onRoster,
-      findings: Object.keys(row.appearance.findings).filter(
-        (key) => row.appearance.findings[key]
-      ),
+      findings: normalizePersistedAppearanceFindings(row.appearance.findings, {
+        hasSourceAccount: row.sourceAccount !== null,
+        participantStatus:
+          row.sourceAccount && participantByAccountId.has(row.sourceAccount.id)
+            ? participantByAccountId.get(row.sourceAccount.id)!.status ===
+              "active"
+              ? "active"
+              : "inactive"
+            : "missing"
+      }),
       attribution: {
         mode: row.attribution?.mode ?? ("default" as const),
         targetParticipantUuid: row.targetParticipant?.uuid ?? null,

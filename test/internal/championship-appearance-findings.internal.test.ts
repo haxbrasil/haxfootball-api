@@ -46,4 +46,13 @@ describe("championship appearance findings", () => {
       )
     ).toEqual(["edition-unregistered"]);
   });
+
+  it("preserves a stored finding for an active participant", () => {
+    expect(
+      normalizePersistedAppearanceFindings(
+        { "off-roster": true },
+        { hasSourceAccount: true, participantStatus: "active" }
+      )
+    ).toEqual(["off-roster"]);
+  });
 });
