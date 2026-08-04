@@ -55,6 +55,10 @@ import {
 import { refreshChampionshipRecords } from "@/features/championships/history/records";
 import { reconcileCalculatedChampionshipHonors } from "@/features/championships/history/honors";
 import { resolveChampionshipAppearanceSide } from "@/features/championships/matches-statistics/appearance-side";
+import {
+  buildAppearanceFindings,
+  normalizePersistedAppearanceFindings
+} from "@/features/championships/matches-statistics/appearance-findings";
 import { matches, matchPlayerStints } from "@/features/matches/db";
 import { players } from "@/features/players/db";
 import { badRequest, conflict } from "@/shared/http/errors";
@@ -798,21 +802,21 @@ async function buildAppearanceReviews(
         observedSide === "a"
           ? context.match.sideATeamId
           : context.match.sideBTeamId;
-      const findings: string[] = [];
-
-      if (!participant || participant.status !== "active") {
-        findings.push("unregistered");
-      }
-      if (!membership || membership.teamId !== observedTeamId) {
-        findings.push(
-          membership && membership.teamId !== observedTeamId
-            ? "wrong-side"
-            : "off-roster"
-        );
-      }
-      if (ambiguous) {
-        findings.push("ambiguous-side");
-      }
+      const findings = buildAppearanceFindings({
+        hasSourceAccount: item.account !== null,
+        participantStatus:
+          participant?.status === "active"
+            ? "active"
+            : participant
+              ? "inactive"
+              : "missing",
+        membership: !membership
+          ? "missing"
+          : membership.teamId === observedTeamId
+            ? "same-team"
+            : "other-team",
+        ambiguousSide: ambiguous
+      });
 
       const requested = attributionBySourceId.get(item.player.externalId);
       let targetParticipant:
@@ -920,6 +924,9 @@ async function buildAppearanceReviewsFromCurrentResult(
       requested?.mode === "redirect" && requested.targetParticipantUuid
         ? (participantByUuid.get(requested.targetParticipantUuid) ?? null)
         : null;
+    const participant = account
+      ? (participantByAccountId.get(account.id) ?? null)
+      : null;
 
     if (
       requested?.mode === "redirect" &&
@@ -937,14 +944,16 @@ async function buildAppearanceReviewsFromCurrentResult(
       sourceAccount: account,
       observedSide: appearance.observedSide,
       playingTimeSeconds: appearance.playingTimeSeconds,
-      participant: account
-        ? (participantByAccountId.get(account.id) ?? null)
-        : null,
-      findings: Array.isArray(appearance.findings)
-        ? appearance.findings.filter(
-            (finding): finding is string => typeof finding === "string"
-          )
-        : [],
+      participant,
+      findings: normalizePersistedAppearanceFindings(appearance.findings, {
+        hasSourceAccount: account !== null,
+        participantStatus:
+          participant?.status === "active"
+            ? "active"
+            : participant
+              ? "inactive"
+              : "missing"
+      }),
       registered: appearance.registered,
       onRoster: appearance.onRoster,
       attribution: {
@@ -1508,7 +1517,9 @@ function requireRevision(target: string, current: number, expected: number) {
 function appearanceFindingLabel(finding: string) {
   switch (finding) {
     case "unregistered":
-      return "jogador não registrado";
+      return "perfil histórico";
+    case "edition-unregistered":
+      return "inscrição da edição pendente";
     case "off-roster":
       return "jogador fora do elenco";
     case "wrong-side":
