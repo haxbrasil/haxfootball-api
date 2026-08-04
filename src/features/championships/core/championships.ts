@@ -138,6 +138,7 @@ export async function createChampionship(
         lifecycle: input.createCompleted ? "completed" : "setup",
         registrationState: "not-open",
         priceState: rules.salary.enabled ? "editable" : "disabled",
+        tradeWindowState: input.createCompleted ? "closed" : "open",
         rulesSchemaVersion: championshipRulesVersion,
         rules,
         historical: input.historical ?? false,
@@ -465,7 +466,11 @@ function resolveTransition(
         );
       }
 
-      return { lifecycle: "completed", completedAt: now };
+      return {
+        lifecycle: "completed",
+        completedAt: now,
+        tradeWindowState: "closed"
+      };
     case "archive":
       if (
         championship.lifecycle !== "completed" &&
@@ -476,7 +481,11 @@ function resolveTransition(
         );
       }
 
-      return { lifecycle: "archived", archivedAt: now };
+      return {
+        lifecycle: "archived",
+        archivedAt: now,
+        tradeWindowState: "closed"
+      };
     case "cancel":
       if (
         championship.lifecycle !== "setup" &&
@@ -485,7 +494,11 @@ function resolveTransition(
         throw badRequest("Only setup or active championships can be canceled");
       }
 
-      return { lifecycle: "canceled", canceledAt: now };
+      return {
+        lifecycle: "canceled",
+        canceledAt: now,
+        tradeWindowState: "closed"
+      };
     case "delete":
       return {
         visibility: "private",

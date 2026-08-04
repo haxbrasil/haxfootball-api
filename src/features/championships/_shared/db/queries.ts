@@ -103,6 +103,7 @@ export function toChampionshipSummaryResponse(
     visibility: championship.visibility,
     registrationState: championship.registrationState,
     priceState: championship.priceState,
+    tradeWindowState: championship.tradeWindowState,
     historical: championship.historical,
     revision: championship.revision,
     changeSequence: championship.changeSequence,

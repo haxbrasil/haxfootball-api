@@ -546,6 +546,7 @@ export const championshipSummaryResponseSchema = t.Object({
     t.Literal("editable"),
     t.Literal("locked")
   ]),
+  tradeWindowState: t.Union([t.Literal("open"), t.Literal("closed")]),
   historical: t.Boolean(),
   revision: t.Integer(),
   changeSequence: t.Integer(),

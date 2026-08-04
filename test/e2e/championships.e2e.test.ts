@@ -30,6 +30,7 @@ type Championship = {
   visibility: string;
   registrationState: "not-open" | "open" | "closed";
   priceState: "disabled" | "editable" | "locked";
+  tradeWindowState: "open" | "closed";
   rules: ChampionshipRules;
   teams: Array<{
     uuid: string;
@@ -2306,6 +2307,136 @@ describe("championship draft and trades", () => {
       acquisitionSource: "trade",
       endedAt: null
     });
+  });
+
+  it("lets staff close and reopen the trade window without ending the championship", async () => {
+    const fixture = await createTradeFixture();
+    let championship = fixture.championship;
+
+    expect(championship.tradeWindowState).toBe("open");
+
+    const closeResponse = await request(
+      `/api/championships/${championship.uuid}/trade-window`,
+      {
+        method: "POST",
+        body: command(admin, championship.revision, {
+          state: "closed",
+          reason: "Janela encerrada antes da fase eliminatória"
+        })
+      }
+    );
+
+    expect(closeResponse.status).toBe(200);
+    championship = await closeResponse.json();
+    expect(championship).toMatchObject({
+      lifecycle: "setup",
+      tradeWindowState: "closed"
+    });
+
+    const closedProposal = await request(
+      `/api/championships/${championship.uuid}/trades`,
+      {
+        method: "POST",
+        body: command(fixture.gms[0]!, championship.revision, {
+          proposingTeamId: fixture.teams[0]!.uuid,
+          receivingTeamId: fixture.teams[1]!.uuid,
+          proposingParticipantIds: [fixture.playerParticipants[0]!.uuid],
+          receivingParticipantIds: [fixture.playerParticipants[2]!.uuid]
+        })
+      }
+    );
+
+    expect(closedProposal.status).toBe(409);
+
+    const reopenResponse = await request(
+      `/api/championships/${championship.uuid}/trade-window`,
+      {
+        method: "POST",
+        body: command(admin, championship.revision, {
+          state: "open",
+          reason: "Janela reaberta para concluir negociações"
+        })
+      }
+    );
+
+    expect(reopenResponse.status).toBe(200);
+    championship = await reopenResponse.json();
+    expect(championship.tradeWindowState).toBe("open");
+
+    const proposalResponse = await request(
+      `/api/championships/${championship.uuid}/trades`,
+      {
+        method: "POST",
+        body: command(fixture.gms[0]!, championship.revision, {
+          proposingTeamId: fixture.teams[0]!.uuid,
+          receivingTeamId: fixture.teams[1]!.uuid,
+          proposingParticipantIds: [fixture.playerParticipants[0]!.uuid],
+          receivingParticipantIds: [fixture.playerParticipants[2]!.uuid]
+        })
+      }
+    );
+
+    expect(proposalResponse.status).toBe(201);
+    const trade = await proposalResponse.json();
+    championship = await getChampionship(championship.uuid);
+
+    const closeAgainResponse = await request(
+      `/api/championships/${championship.uuid}/trade-window`,
+      {
+        method: "POST",
+        body: command(admin, championship.revision, {
+          state: "closed",
+          reason: "Janela encerrada definitivamente"
+        })
+      }
+    );
+
+    expect(closeAgainResponse.status).toBe(200);
+    championship = await closeAgainResponse.json();
+
+    const closedAcceptance = await request(
+      `/api/championships/${championship.uuid}/trades/${trade.uuid}/accept`,
+      {
+        method: "POST",
+        body: command(fixture.gms[1]!, championship.revision, {
+          expectedTradeRevision: trade.revision
+        })
+      }
+    );
+
+    expect(closedAcceptance.status).toBe(409);
+
+    const involved = await paginatedItems<{
+      uuid: string;
+      actorActions: { canAccept: boolean; canReject: boolean };
+    }>(
+      await request(
+        `/api/championships/${championship.uuid}/trades?visibility=involved&actorAccountUuid=${fixture.gms[1]!.uuid}`
+      )
+    );
+    expect(involved).toContainEqual(
+      expect.objectContaining({
+        uuid: trade.uuid,
+        actorActions: expect.objectContaining({
+          canAccept: false,
+          canReject: true
+        })
+      })
+    );
+
+    const rejection = await request(
+      `/api/championships/${championship.uuid}/trades/${trade.uuid}/reject`,
+      {
+        method: "POST",
+        body: command(fixture.gms[1]!, championship.revision, {
+          expectedTradeRevision: trade.revision,
+          reason: "Negociação encerrada junto com a janela"
+        })
+      }
+    );
+
+    expect(rejection.status).toBe(200);
+    expect((await rejection.json()).state).toBe("rejected");
   });
 
   it("rejects excessive value differences and stale trade ownership", async () => {

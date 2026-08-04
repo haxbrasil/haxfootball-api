@@ -472,6 +472,14 @@ export const decideChampionshipTradeBodySchema = t.Composite([
   })
 ]);
 
+export const updateChampionshipTradeWindowBodySchema = t.Composite([
+  championshipCommandSchema,
+  t.Object({
+    state: t.Union([t.Literal("open"), t.Literal("closed")]),
+    reason: t.Optional(t.String({ minLength: 1, maxLength: 1_000 }))
+  })
+]);
+
 export const championshipFormatQuerySchema = t.Object({
   actorAccountUuid: t.Optional(t.String({ format: "uuid" })),
   limit: t.Optional(t.Integer({ minimum: 1, maximum: 500 }))
@@ -1384,6 +1392,9 @@ export type CreateChampionshipTradeInput = Static<
 >;
 export type DecideChampionshipTradeInput = Static<
   typeof decideChampionshipTradeBodySchema
+>;
+export type UpdateChampionshipTradeWindowInput = Static<
+  typeof updateChampionshipTradeWindowBodySchema
 >;
 export type ChampionshipFormatQuery = Static<
   typeof championshipFormatQuerySchema

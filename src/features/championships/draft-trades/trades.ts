@@ -8,9 +8,14 @@ import { accounts } from "@/features/accounts/db";
 import type {
   CreateChampionshipTradeInput,
   DecideChampionshipTradeInput,
-  ListChampionshipTradesQuery
+  ListChampionshipTradesQuery,
+  UpdateChampionshipTradeWindowInput
 } from "@/features/championships/_shared/http/inputs";
-import type { ChampionshipTradeResponse } from "@/features/championships/_shared/http/responses";
+import type {
+  ChampionshipDetailResponse,
+  ChampionshipTradeResponse
+} from "@/features/championships/_shared/http/responses";
+import { getChampionshipDetailFrom } from "@/features/championships/_shared/db/queries";
 import {
   championshipActorHasPermission,
   findChampionshipActor,
@@ -129,10 +134,74 @@ export async function listChampionshipTrades(
       db,
       page.items,
       actorContext,
-      visibility === "public"
+      visibility === "public",
+      isTradeWindowOpen(championship)
     ),
     page: page.page
   };
+}
+
+export async function updateChampionshipTradeWindow(
+  championshipUuid: string,
+  input: UpdateChampionshipTradeWindowInput
+): Promise<ChampionshipDetailResponse> {
+  return executeChampionshipCommand(
+    {
+      championshipUuid,
+      actorAccountUuid: input.actorAccountUuid,
+      commandUuid: input.commandUuid,
+      expectedRevision: input.expectedRevision,
+      permission: ["championship:admin", "championship:operate"],
+      action:
+        input.state === "open" ? "trade-window.opened" : "trade-window.closed"
+    },
+    async (tx, championship) => {
+      if (championship.tradeWindowState === input.state) {
+        throw badRequest(
+          input.state === "open"
+            ? "The trade window is already open"
+            : "The trade window is already closed"
+        );
+      }
+
+      if (
+        input.state === "open" &&
+        !["setup", "active"].includes(championship.lifecycle)
+      ) {
+        throw conflict(
+          "The trade window can only be opened while the championship is in setup or active competition"
+        );
+      }
+
+      const [updated] = await tx
+        .update(championships)
+        .set({
+          tradeWindowState: input.state,
+          updatedAt: new Date().toISOString()
+        })
+        .where(eq(championships.id, championship.id))
+        .returning();
+
+      const detail = await getChampionshipDetailFrom(
+        tx,
+        championship.uuid,
+        true
+      );
+
+      return {
+        response: () => detail,
+        targetType: "championship-trade-window",
+        targetUuid: championship.uuid,
+        before: { state: championship.tradeWindowState },
+        after: { state: updated.tradeWindowState },
+        reason: input.reason ?? null,
+        metadata: {
+          pendingTradesRemainActionable: true
+        },
+        outboxTopic: "championship.trade-window.changed"
+      };
+    }
+  );
 }
 
 export async function createChampionshipTrade(
@@ -149,11 +218,7 @@ export async function createChampionshipTrade(
       action: "trade.proposed"
     },
     async (tx, championship, actor) => {
-      if (!["setup", "active"].includes(championship.lifecycle)) {
-        throw conflict(
-          "Trades are available only during setup or active competition"
-        );
-      }
+      requireTradeWindowOpen(championship);
 
       if (input.proposingTeamId === input.receivingTeamId) {
         throw badRequest("Trade teams must be different");
@@ -240,7 +305,13 @@ export async function createChampionshipTrade(
           frozenPriceUnits: item.frozenPriceUnits
         }))
       );
-      const [response] = await projectTrades(tx, [trade], actorContext, false);
+      const [response] = await projectTrades(
+        tx,
+        [trade],
+        actorContext,
+        false,
+        true
+      );
 
       return {
         response: () => response!,
@@ -278,6 +349,7 @@ export async function acceptChampionshipTrade(
       action: "trade.accepted"
     },
     async (tx, championship, actor) => {
+      requireTradeWindowOpen(championship);
       const trade = await requireTrade(tx, championship.id, tradeUuid);
       requireTradeRevision(trade, input.expectedTradeRevision);
       requireProposedTrade(trade);
@@ -365,7 +437,8 @@ export async function acceptChampionshipTrade(
         tx,
         [accepted],
         actorContext,
-        false
+        false,
+        true
       );
 
       return {
@@ -481,7 +554,8 @@ async function decideChampionshipTrade(
         tx,
         [updated],
         actorContext,
-        false
+        false,
+        isTradeWindowOpen(championship)
       );
 
       return {
@@ -703,7 +777,8 @@ async function projectTrades(
   database: DatabaseExecutor,
   trades: ChampionshipTrade[],
   actorContext: TradeProjectionActor,
-  publicProjection: boolean
+  publicProjection: boolean,
+  tradeWindowOpen: boolean
 ): Promise<ChampionshipTradeResponse[]> {
   if (trades.length === 0) {
     return [];
@@ -763,6 +838,7 @@ async function projectTrades(
       : null;
     const canAccept =
       !publicProjection &&
+      tradeWindowOpen &&
       trade.state === "proposed" &&
       (actorContext.canManage ||
         actorContext.gmTeamIds.includes(trade.receivingTeamId));
@@ -771,6 +847,11 @@ async function projectTrades(
       trade.state === "proposed" &&
       (actorContext.canManage ||
         actorContext.gmTeamIds.includes(trade.proposingTeamId));
+    const canReject =
+      !publicProjection &&
+      trade.state === "proposed" &&
+      (actorContext.canManage ||
+        actorContext.gmTeamIds.includes(trade.receivingTeamId));
 
     return {
       uuid: trade.uuid,
@@ -818,11 +899,27 @@ async function projectTrades(
       updatedAt: trade.updatedAt,
       actorActions: {
         canAccept,
-        canReject: canAccept,
+        canReject,
         canCancel
       }
     };
   });
+}
+
+function isTradeWindowOpen(championship: Championship): boolean {
+  return (
+    championship.tradeWindowState === "open" &&
+    ["setup", "active"].includes(championship.lifecycle)
+  );
+}
+
+function requireTradeWindowOpen(championship: Championship): void {
+  if (!isTradeWindowOpen(championship)) {
+    throw conflict("The championship trade window is closed", {
+      tradeWindowState: championship.tradeWindowState,
+      lifecycle: championship.lifecycle
+    });
+  }
 }
 
 async function resolveTradeProjectionActor(

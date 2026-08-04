@@ -106,6 +106,7 @@ import {
   withdrawChampionshipRegistrationBodySchema,
   voidChampionshipDraftPickBodySchema,
   decideChampionshipTradeBodySchema,
+  updateChampionshipTradeWindowBodySchema,
   championshipFormatQuerySchema,
   championshipMatchIdParamsSchema,
   championshipLateAuthorizationIdParamsSchema,
@@ -230,7 +231,8 @@ import {
   cancelChampionshipTrade,
   createChampionshipTrade,
   listChampionshipTrades,
-  rejectChampionshipTrade
+  rejectChampionshipTrade,
+  updateChampionshipTradeWindow
 } from "@/features/championships/draft-trades/trades";
 import {
   createChampionshipCompetitionRound,
@@ -507,6 +509,7 @@ export const championshipRoutes = new Elysia({
       withdrawChampionshipRegistrationBodySchema,
     VoidChampionshipDraftPickBody: voidChampionshipDraftPickBodySchema,
     DecideChampionshipTradeBody: decideChampionshipTradeBodySchema,
+    UpdateChampionshipTradeWindowBody: updateChampionshipTradeWindowBodySchema,
     GenerateSingleEliminationBody: generateSingleEliminationBodySchema,
     GenerateDoubleEliminationBody: generateDoubleEliminationBodySchema,
     PreviewDoubleEliminationBody: previewDoubleEliminationBodySchema,
@@ -1486,6 +1489,19 @@ export const championshipRoutes = new Elysia({
       detail: {
         tags: ["Championships"],
         summary: "List bounded public, involved, or staff championship trades"
+      }
+    }
+  )
+  .post(
+    "/:id/trade-window",
+    ({ params, body }) => updateChampionshipTradeWindow(params.id, body),
+    {
+      params: championshipIdParamsSchema,
+      body: t.Ref("UpdateChampionshipTradeWindowBody"),
+      response: { 200: t.Ref("ChampionshipDetail") },
+      detail: {
+        tags: ["Championships"],
+        summary: "Open or close the championship trade window"
       }
     }
   )

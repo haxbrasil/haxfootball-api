@@ -115,6 +115,11 @@ export const championships = sqliteTable(
     })
       .notNull()
       .default("disabled"),
+    tradeWindowState: text("trade_window_state", {
+      enum: ["open", "closed"]
+    })
+      .notNull()
+      .default("open"),
     rulesSchemaVersion: integer("rules_schema_version").notNull().default(1),
     rules: text("rules", { mode: "json" })
       .$type<ChampionshipRulesV1>()

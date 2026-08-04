@@ -770,6 +770,11 @@ components:
             - type: string
             - type: "null"
           nullable: true
+        tradeWindowState:
+          enum:
+            - open
+            - closed
+          type: string
         updatedAt:
           type: string
         uuid:
@@ -791,6 +796,7 @@ components:
         - visibility
         - registrationState
         - priceState
+        - tradeWindowState
         - historical
         - revision
         - changeSequence
@@ -1881,6 +1887,11 @@ components:
           items:
             $ref: "#/components/schemas/ChampionshipTeam"
           type: array
+        tradeWindowState:
+          enum:
+            - open
+            - closed
+          type: string
         updatedAt:
           type: string
         uuid:
@@ -1902,6 +1913,7 @@ components:
         - visibility
         - registrationState
         - priceState
+        - tradeWindowState
         - historical
         - revision
         - changeSequence
@@ -17785,6 +17797,37 @@ components:
         - expectedRevision
         - state
       type: object
+    UpdateChampionshipTradeWindowBody:
+      properties:
+        actorAccountUuid:
+          format: uuid
+          type: string
+        commandUuid:
+          format: uuid
+          type: string
+        expectedRevision:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - minimum: 0
+              type: integer
+          minimum: 0
+        reason:
+          maxLength: 1000
+          minLength: 1
+          type: string
+        state:
+          enum:
+            - open
+            - closed
+          type: string
+      required:
+        - actorAccountUuid
+        - commandUuid
+        - expectedRevision
+        - state
+      type: object
     UpdateClipBody:
       properties:
         endTick:
@@ -26883,6 +26926,62 @@ paths:
                 $ref: "#/components/schemas/InternalServerError"
           description: Response for status 500
       summary: Add a championship thread comment
+      tags:
+        - Championships
+  /api/championships/{id}/trade-window:
+    post:
+      operationId: postApiChampionshipsByIdTrade-window
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateChampionshipTradeWindowBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChampionshipDetail"
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForbiddenError"
+          description: Response for status 403
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictError"
+          description: Response for status 409
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Open or close the championship trade window
       tags:
         - Championships
   /api/championships/{id}/trades:

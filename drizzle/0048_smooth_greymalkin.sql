@@ -1,0 +1,1 @@
+ALTER TABLE `championships` ADD `trade_window_state` text DEFAULT 'open' NOT NULL;
