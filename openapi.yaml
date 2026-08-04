@@ -9173,6 +9173,7 @@ components:
           enum:
             - cumulative
             - per-game
+            - last-round
           type: string
         status:
           enum:
@@ -13045,6 +13046,7 @@ components:
           enum:
             - cumulative
             - per-game
+            - last-round
           type: string
         status:
           enum:
@@ -13180,6 +13182,7 @@ components:
           enum:
             - cumulative
             - per-game
+            - last-round
           type: string
       required:
         - rounds

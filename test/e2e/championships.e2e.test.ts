@@ -3968,7 +3968,7 @@ describe("championship match evidence and settlement", () => {
     }
   });
 
-  it("composes and attaches independent room games in one championship command", async () => {
+  it("composes room games and uses the final selected round score", async () => {
     const firstHalf = await createCompletedPhysicalMatch({ red: 3, blue: 1 });
     const secondHalf = await createCompletedPhysicalMatch({ red: 2, blue: 4 });
     const fixture = await createSettlementFixture(2);
@@ -4016,8 +4016,8 @@ describe("championship match evidence and settlement", () => {
 
     expect(operations.evidence).toMatchObject({
       kind: "composed",
-      scoreMode: "per-game",
-      score: { red: 7, blue: 3 },
+      scoreMode: "last-round",
+      score: { red: 4, blue: 2 },
       claim: {
         consumerKind: "championship-match",
         consumerUuid: fixture.matches[0].uuid
@@ -4046,8 +4046,8 @@ describe("championship match evidence and settlement", () => {
             actorAccountUuid: admin.uuid,
             ...settlementDraft({
               method: "played",
-              sideAPlayedScore: 7,
-              sideBPlayedScore: 3,
+              sideAPlayedScore: 4,
+              sideBPlayedScore: 2,
               sideAOutcome: "win",
               sideBOutcome: "loss"
             }),
@@ -4065,8 +4065,8 @@ describe("championship match evidence and settlement", () => {
             actorAccountUuid: admin.uuid,
             ...settlementDraft({
               method: "played",
-              sideAPlayedScore: 4,
-              sideBPlayedScore: 2,
+              sideAPlayedScore: 7,
+              sideBPlayedScore: 3,
               sideAOutcome: "win",
               sideBOutcome: "loss"
             }),

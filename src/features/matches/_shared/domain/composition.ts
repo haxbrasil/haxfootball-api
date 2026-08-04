@@ -158,7 +158,7 @@ export function resolveRoundTeamOrientations(
 
   for (const round of rounds.slice(1)) {
     const candidates: TeamOrientation[] =
-      scoreMode === "per-game"
+      scoreMode === "per-game" || scoreMode === "last-round"
         ? ["aligned", "swapped"]
         : (["aligned", "swapped"] as const).filter((orientation) => {
             const score = normalizeMatchScore(round.score, orientation);

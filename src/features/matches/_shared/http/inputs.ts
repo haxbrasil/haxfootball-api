@@ -95,7 +95,8 @@ export const matchRoundInputSchema = t.Union([
 
 export const matchCompositionScoreModeSchema = t.Union([
   t.Literal("cumulative"),
-  t.Literal("per-game")
+  t.Literal("per-game"),
+  t.Literal("last-round")
 ]);
 
 export const matchCompositionRoundsBodySchema = t.Object({

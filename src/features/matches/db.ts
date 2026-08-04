@@ -120,7 +120,7 @@ export const composedMatches = sqliteTable(
     id: integer("id").primaryKey({ autoIncrement: true }),
     publicId: text("public_id").notNull().unique(),
     scoreMode: text("score_mode", {
-      enum: ["cumulative", "per-game"]
+      enum: ["cumulative", "per-game", "last-round"]
     })
       .notNull()
       .default("cumulative"),

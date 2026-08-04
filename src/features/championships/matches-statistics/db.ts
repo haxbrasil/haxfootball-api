@@ -38,7 +38,7 @@ export const championshipMatchEvidence = sqliteTable(
     ),
     logicalPublicIdSnapshot: text("logical_public_id_snapshot").notNull(),
     scoreMode: text("score_mode", {
-      enum: ["cumulative", "per-game"]
+      enum: ["cumulative", "per-game", "last-round"]
     })
       .notNull()
       .default("cumulative"),

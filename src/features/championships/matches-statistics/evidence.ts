@@ -291,7 +291,7 @@ export async function attachChampionshipMatchEvidence(
         ? (
             await createMatchCompositionInTransaction(
               {
-                scoreMode: "per-game",
+                scoreMode: "last-round",
                 rounds: input.composition.rounds
               },
               tx

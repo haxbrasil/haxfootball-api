@@ -107,7 +107,11 @@ export const matchRoundResponseSchema = t.Intersect([
 export const composedMatchResponseSchema = t.Object({
   kind: t.Literal("composed"),
   id: composedMatchPublicIdSchema,
-  scoreMode: t.Union([t.Literal("cumulative"), t.Literal("per-game")]),
+  scoreMode: t.Union([
+    t.Literal("cumulative"),
+    t.Literal("per-game"),
+    t.Literal("last-round")
+  ]),
   status: matchStatusSchema,
   initiatedAt: t.Nullable(t.String()),
   endedAt: t.Nullable(t.String()),
@@ -280,7 +284,10 @@ function composedMatchScore(row: ComposedMatchRow): MatchScore | null {
     return null;
   }
 
-  if (row.composition.scoreMode === "cumulative") {
+  if (
+    row.composition.scoreMode === "cumulative" ||
+    row.composition.scoreMode === "last-round"
+  ) {
     return normalizedScores.at(-1) ?? null;
   }
 

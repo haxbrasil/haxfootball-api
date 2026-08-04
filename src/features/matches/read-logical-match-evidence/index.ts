@@ -128,7 +128,11 @@ const logicalMatchEvidenceRoundSchema = t.Object({
 export const logicalMatchEvidenceResponseSchema = t.Object({
   kind: t.Union([t.Literal("single"), t.Literal("composed")]),
   id: logicalMatchPublicIdSchema,
-  scoreMode: t.Union([t.Literal("cumulative"), t.Literal("per-game")]),
+  scoreMode: t.Union([
+    t.Literal("cumulative"),
+    t.Literal("per-game"),
+    t.Literal("last-round")
+  ]),
   status: matchStatusSchema,
   eligible: t.Boolean(),
   score: t.Nullable(matchScoreSchema),
@@ -285,7 +289,8 @@ export async function readLogicalMatchEvidence(
     eligible,
     score:
       logicalMatch.kind === "composed" &&
-      logicalMatch.composition.scoreMode === "cumulative"
+      (logicalMatch.composition.scoreMode === "cumulative" ||
+        logicalMatch.composition.scoreMode === "last-round")
         ? (rounds.at(-1)?.normalizedScore ?? null)
         : sumRoundScores(rounds),
     claim: claimRows[0]

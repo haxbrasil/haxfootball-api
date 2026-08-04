@@ -1111,7 +1111,7 @@ function routeConditionMatches(
 }
 
 function accumulatedEvidenceScore(
-  scoreMode: "cumulative" | "per-game",
+  scoreMode: "cumulative" | "per-game" | "last-round",
   rounds: Array<{
     round: {
       sideAScore: number | null;
@@ -1128,7 +1128,7 @@ function accumulatedEvidenceScore(
     return null;
   }
 
-  if (scoreMode === "cumulative") {
+  if (scoreMode === "cumulative" || scoreMode === "last-round") {
     const final = rounds.at(-1)!.round;
     return {
       sideAScore: final.sideAScore!,

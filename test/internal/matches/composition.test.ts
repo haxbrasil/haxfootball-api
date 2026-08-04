@@ -145,4 +145,24 @@ describe("match composition team orientation", () => {
       )
     ).toEqual(["aligned", "swapped"]);
   });
+
+  it("uses the final round score without requiring cumulative scores", () => {
+    const orientations = resolveRoundTeamOrientations(
+      [
+        {
+          requested: "auto",
+          score: { red: 34, blue: 20 },
+          players: noPlayers
+        },
+        {
+          requested: "swapped",
+          score: { red: 21, blue: 13 },
+          players: noPlayers
+        }
+      ],
+      "last-round"
+    );
+
+    expect(orientations).toEqual(["aligned", "swapped"]);
+  });
 });
