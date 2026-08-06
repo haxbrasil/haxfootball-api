@@ -58,6 +58,7 @@ export async function getChampionshipStatistics(
     return {
       championshipUuid,
       resultRevision: context.championship.revision,
+      featuredMetrics: { points: null },
       teams: { items: [], totalCount: 0, truncated: false },
       players: { items: [], totalCount: 0, truncated: false },
       metricSources: { items: [], totalCount: 0, truncated: false }
@@ -287,6 +288,11 @@ export async function getChampionshipStatistics(
   const programById = new Map(
     programRows.map((program) => [program.id, program])
   );
+  const featuredPointsMetric = resolveFeaturedPointsMetric({
+    sourceMetricRows,
+    schemaById,
+    mappingBySource
+  });
   const metricsByIdentity = new Map<string, typeof metricRows>();
 
   for (const metric of metricRows) {
@@ -414,6 +420,7 @@ export async function getChampionshipStatistics(
   return {
     championshipUuid,
     resultRevision: context.championship.revision,
+    featuredMetrics: { points: featuredPointsMetric },
     teams: {
       items: teamRows.slice(0, limit).map((row) => ({
         team: {
@@ -471,6 +478,58 @@ export async function getChampionshipStatistics(
       truncated: sourceMetricRows.length > 500
     }
   };
+}
+
+function resolveFeaturedPointsMetric({
+  sourceMetricRows,
+  schemaById,
+  mappingBySource
+}: {
+  sourceMetricRows: Array<{
+    sourceEventSchemaVersionId: number | null;
+    metricKey: string;
+  }>;
+  schemaById: Map<
+    number,
+    {
+      version: typeof eventSchemaVersions.$inferSelect;
+      family: typeof eventSchemaFamilies.$inferSelect;
+    }
+  >;
+  mappingBySource: Map<string, typeof championshipMetricMappings.$inferSelect>;
+}) {
+  const candidates = sourceMetricRows.flatMap((source) => {
+    if (!source.sourceEventSchemaVersionId) return [];
+
+    const schema = schemaById.get(source.sourceEventSchemaVersionId);
+    const featuredKey = schema?.version.definition.featuredMetrics?.points;
+
+    if (!schema || featuredKey !== source.metricKey) return [];
+
+    const mapping = mappingBySource.get(
+      `${source.sourceEventSchemaVersionId}:${source.metricKey}`
+    );
+    const canonicalKey = mapping?.canonicalMetricKey ?? source.metricKey;
+    const metadata = schema.version.definition.metrics?.find(
+      (metric) => metric.key === source.metricKey
+    );
+
+    return [
+      {
+        key: canonicalKey,
+        label: mapping?.displayLabel ?? metadata?.label ?? source.metricKey,
+        valueKind: mapping?.valueKind ?? metricValueKind(metadata),
+        precision: metadata?.precision ?? null
+      }
+    ];
+  });
+  const uniqueCandidates = new Map(
+    candidates.map((candidate) => [candidate.key, candidate])
+  );
+
+  return uniqueCandidates.size === 1
+    ? [...uniqueCandidates.values()][0]!
+    : null;
 }
 
 function metricValueKind(

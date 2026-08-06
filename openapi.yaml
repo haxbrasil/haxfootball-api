@@ -8003,6 +8003,41 @@ components:
         championshipUuid:
           format: uuid
           type: string
+        featuredMetrics:
+          properties:
+            points:
+              anyOf:
+                - properties:
+                    key:
+                      type: string
+                    label:
+                      type: string
+                    precision:
+                      anyOf:
+                        - type: number
+                        - type: "null"
+                      nullable: true
+                    valueKind:
+                      anyOf:
+                        - const: integer
+                          type: string
+                        - const: number
+                          type: string
+                        - const: duration
+                          type: string
+                        - const: percentage
+                          type: string
+                  required:
+                    - key
+                    - label
+                    - valueKind
+                    - precision
+                  type: object
+                - type: "null"
+              nullable: true
+          required:
+            - points
+          type: object
         metricSources:
           properties:
             items:
@@ -8269,6 +8304,7 @@ components:
       required:
         - championshipUuid
         - resultRevision
+        - featuredMetrics
         - teams
         - players
         - metricSources

@@ -212,6 +212,21 @@ const playerStatisticSchema = t.Object({
 export const championshipStatisticsResponseSchema = t.Object({
   championshipUuid: t.String({ format: "uuid" }),
   resultRevision: t.Integer({ minimum: 0 }),
+  featuredMetrics: t.Object({
+    points: t.Nullable(
+      t.Object({
+        key: t.String(),
+        label: t.String(),
+        valueKind: t.Union([
+          t.Literal("integer"),
+          t.Literal("number"),
+          t.Literal("duration"),
+          t.Literal("percentage")
+        ]),
+        precision: t.Nullable(t.Number())
+      })
+    )
+  }),
   teams: boundedSchema(teamStandingSchema),
   players: boundedSchema(playerStatisticSchema),
   metricSources: boundedSchema(
