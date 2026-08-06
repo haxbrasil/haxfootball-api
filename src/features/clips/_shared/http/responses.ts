@@ -85,6 +85,7 @@ export const clipExportProfileSchema = t.Object({
     t.Literal("floating-score-time-right"),
     t.Literal("none")
   ]),
+  cameraId: t.Optional(t.String()),
   renderProfileVersionId: t.Optional(t.String())
 });
 export const clipExportResponseSchema = t.Object({
@@ -115,7 +116,14 @@ export const clipExportCapabilitiesResponseSchema = t.Object({
       version: t.Integer(),
       formats: t.Array(t.String()),
       orientations: t.Array(t.String()),
-      scoreboards: t.Array(t.String())
+      scoreboards: t.Array(t.String()),
+      cameras: t.Array(
+        t.Object({
+          id: t.String(),
+          title: t.String(),
+          description: t.Nullable(t.String())
+        })
+      )
     })
   )
 });

@@ -115,7 +115,12 @@ export const clipRoutes = new Elysia({
           version: profile.latestVersion!.version,
           formats: profile.latestVersion!.settings.formats,
           orientations: profile.latestVersion!.settings.orientations,
-          scoreboards: profile.latestVersion!.settings.scoreboards
+          scoreboards: profile.latestVersion!.settings.scoreboards,
+          cameras: profile.latestVersion!.settings.cameras.map((camera) => ({
+            id: camera.id,
+            title: camera.title,
+            description: camera.description ?? null
+          }))
         }))
     }),
     {

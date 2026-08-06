@@ -8976,6 +8976,8 @@ components:
           type: string
         profile:
           properties:
+            cameraId:
+              type: string
             format:
               enum:
                 - mp4
@@ -9069,6 +9071,24 @@ components:
         renderProfiles:
           items:
             properties:
+              cameras:
+                items:
+                  properties:
+                    description:
+                      anyOf:
+                        - type: string
+                        - type: "null"
+                      nullable: true
+                    id:
+                      type: string
+                    title:
+                      type: string
+                  required:
+                    - id
+                    - title
+                    - description
+                  type: object
+                type: array
               description:
                 anyOf:
                   - type: string
@@ -9104,6 +9124,7 @@ components:
               - formats
               - orientations
               - scoreboards
+              - cameras
             type: object
           type: array
         scoreboards:
@@ -10920,6 +10941,10 @@ components:
       type: object
     CreateClipExportBody:
       properties:
+        cameraId:
+          maxLength: 80
+          minLength: 1
+          type: string
         format:
           enum:
             - mp4
@@ -10951,6 +10976,7 @@ components:
         - format
         - orientation
         - scoreboard
+        - cameraId
         - renderProfileVersionId
       type: object
     CreateCompetitionTypeBody:
@@ -32006,57 +32032,75 @@ paths:
                   minimum: 0
                 settings:
                   properties:
-                    camera:
-                      properties:
-                        gameMessageZoom:
-                          type: number
-                        hudZoom:
-                          type: number
-                        locationIndicatorZoom:
-                          type: number
-                        menuZoom:
-                          type: number
-                        parameters:
-                          patternProperties:
-                            ^(.*)$:
-                              type: number
-                          type: object
-                        rules:
-                          items:
-                            properties:
-                              focus:
-                                properties:
-                                  target:
-                                    const: players
-                                    type: string
-                                required:
-                                  - target
-                                type: object
-                              set:
-                                patternProperties:
-                                  ^(.*)$:
-                                    type: number
-                                type: object
-                              when:
+                    cameras:
+                      items:
+                        properties:
+                          description:
+                            anyOf:
+                              - maxLength: 500
                                 type: string
-                            required:
-                              - when
+                              - type: "null"
+                            nullable: true
+                          gameMessageZoom:
+                            type: number
+                          hudZoom:
+                            type: number
+                          id:
+                            maxLength: 80
+                            minLength: 1
+                            type: string
+                          locationIndicatorZoom:
+                            type: number
+                          menuZoom:
+                            type: number
+                          parameters:
+                            patternProperties:
+                              ^(.*)$:
+                                type: number
                             type: object
-                          type: array
-                        scoreboardZoom:
-                          type: number
-                        zoom:
-                          type: number
-                      required:
-                        - zoom
-                        - hudZoom
-                        - scoreboardZoom
-                        - menuZoom
-                        - locationIndicatorZoom
-                        - gameMessageZoom
-                        - parameters
-                        - rules
-                      type: object
+                          rules:
+                            items:
+                              properties:
+                                focus:
+                                  properties:
+                                    target:
+                                      const: players
+                                      type: string
+                                  required:
+                                    - target
+                                  type: object
+                                set:
+                                  patternProperties:
+                                    ^(.*)$:
+                                      type: number
+                                  type: object
+                                when:
+                                  type: string
+                              required:
+                                - when
+                              type: object
+                            type: array
+                          scoreboardZoom:
+                            type: number
+                          title:
+                            maxLength: 120
+                            minLength: 1
+                            type: string
+                          zoom:
+                            type: number
+                        required:
+                          - id
+                          - title
+                          - zoom
+                          - hudZoom
+                          - scoreboardZoom
+                          - menuZoom
+                          - locationIndicatorZoom
+                          - gameMessageZoom
+                          - parameters
+                          - rules
+                        type: object
+                      type: array
                     formats:
                       items:
                         enum:
@@ -32080,7 +32124,7 @@ paths:
                     - formats
                     - orientations
                     - scoreboards
-                    - camera
+                    - cameras
                   type: object
                 title:
                   maxLength: 120
@@ -32143,6 +32187,10 @@ paths:
           application/json:
             schema:
               properties:
+                cameraId:
+                  maxLength: 80
+                  minLength: 1
+                  type: string
                 clipId:
                   format: uuid
                   type: string
@@ -32161,57 +32209,75 @@ paths:
                   type: string
                 settings:
                   properties:
-                    camera:
-                      properties:
-                        gameMessageZoom:
-                          type: number
-                        hudZoom:
-                          type: number
-                        locationIndicatorZoom:
-                          type: number
-                        menuZoom:
-                          type: number
-                        parameters:
-                          patternProperties:
-                            ^(.*)$:
-                              type: number
-                          type: object
-                        rules:
-                          items:
-                            properties:
-                              focus:
-                                properties:
-                                  target:
-                                    const: players
-                                    type: string
-                                required:
-                                  - target
-                                type: object
-                              set:
-                                patternProperties:
-                                  ^(.*)$:
-                                    type: number
-                                type: object
-                              when:
+                    cameras:
+                      items:
+                        properties:
+                          description:
+                            anyOf:
+                              - maxLength: 500
                                 type: string
-                            required:
-                              - when
+                              - type: "null"
+                            nullable: true
+                          gameMessageZoom:
+                            type: number
+                          hudZoom:
+                            type: number
+                          id:
+                            maxLength: 80
+                            minLength: 1
+                            type: string
+                          locationIndicatorZoom:
+                            type: number
+                          menuZoom:
+                            type: number
+                          parameters:
+                            patternProperties:
+                              ^(.*)$:
+                                type: number
                             type: object
-                          type: array
-                        scoreboardZoom:
-                          type: number
-                        zoom:
-                          type: number
-                      required:
-                        - zoom
-                        - hudZoom
-                        - scoreboardZoom
-                        - menuZoom
-                        - locationIndicatorZoom
-                        - gameMessageZoom
-                        - parameters
-                        - rules
-                      type: object
+                          rules:
+                            items:
+                              properties:
+                                focus:
+                                  properties:
+                                    target:
+                                      const: players
+                                      type: string
+                                  required:
+                                    - target
+                                  type: object
+                                set:
+                                  patternProperties:
+                                    ^(.*)$:
+                                      type: number
+                                  type: object
+                                when:
+                                  type: string
+                              required:
+                                - when
+                              type: object
+                            type: array
+                          scoreboardZoom:
+                            type: number
+                          title:
+                            maxLength: 120
+                            minLength: 1
+                            type: string
+                          zoom:
+                            type: number
+                        required:
+                          - id
+                          - title
+                          - zoom
+                          - hudZoom
+                          - scoreboardZoom
+                          - menuZoom
+                          - locationIndicatorZoom
+                          - gameMessageZoom
+                          - parameters
+                          - rules
+                        type: object
+                      type: array
                     formats:
                       items:
                         enum:
@@ -32235,13 +32301,14 @@ paths:
                     - formats
                     - orientations
                     - scoreboards
-                    - camera
+                    - cameras
                   type: object
               required:
                 - clipId
                 - format
                 - orientation
                 - scoreboard
+                - cameraId
               type: object
         required: true
       responses:

@@ -14,22 +14,27 @@ const settings = t.Object({
     t.Union([t.Literal("landscape"), t.Literal("vertical")])
   ),
   scoreboards: t.Array(t.String()),
-  camera: t.Object({
-    zoom: t.Number(),
-    hudZoom: t.Number(),
-    scoreboardZoom: t.Number(),
-    menuZoom: t.Number(),
-    locationIndicatorZoom: t.Number(),
-    gameMessageZoom: t.Number(),
-    parameters: t.Record(t.String(), t.Number()),
-    rules: t.Array(
-      t.Object({
-        when: t.String(),
-        focus: t.Optional(t.Object({ target: t.Literal("players") })),
-        set: t.Optional(t.Record(t.String(), t.Number()))
-      })
-    )
-  })
+  cameras: t.Array(
+    t.Object({
+      id: t.String({ minLength: 1, maxLength: 80 }),
+      title: t.String({ minLength: 1, maxLength: 120 }),
+      description: t.Optional(t.Nullable(t.String({ maxLength: 500 }))),
+      zoom: t.Number(),
+      hudZoom: t.Number(),
+      scoreboardZoom: t.Number(),
+      menuZoom: t.Number(),
+      locationIndicatorZoom: t.Number(),
+      gameMessageZoom: t.Number(),
+      parameters: t.Record(t.String(), t.Number()),
+      rules: t.Array(
+        t.Object({
+          when: t.String(),
+          focus: t.Optional(t.Object({ target: t.Literal("players") })),
+          set: t.Optional(t.Record(t.String(), t.Number()))
+        })
+      )
+    })
+  )
 });
 export const renderProfileRoutes = new Elysia({
   name: "render-profile-routes",
@@ -68,6 +73,7 @@ export const renderProfileRoutes = new Elysia({
         ]),
         orientation: t.Union([t.Literal("landscape"), t.Literal("vertical")]),
         scoreboard: t.String(),
+        cameraId: t.String({ minLength: 1, maxLength: 80 }),
         settings: t.Optional(settings)
       }),
       response: { 200: t.Unknown() }

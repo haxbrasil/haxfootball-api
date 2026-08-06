@@ -37,6 +37,7 @@ export type ClipExportProfile = {
   format: ClipExportFormat;
   orientation: ClipExportOrientation;
   scoreboard: ClipExportScoreboard;
+  cameraId?: string;
   /** Absent only on exports created before render profiles were introduced. */
   renderProfileVersionId?: string;
   renderSettings?: {

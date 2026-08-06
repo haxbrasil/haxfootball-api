@@ -58,6 +58,7 @@ export const createClipExportBodySchema = t.Object({
   format: clipExportFormatSchema,
   orientation: clipExportOrientationSchema,
   scoreboard: clipExportScoreboardSchema,
+  cameraId: t.String({ minLength: 1, maxLength: 80 }),
   renderProfileVersionId: t.String({ format: "uuid" })
 });
 

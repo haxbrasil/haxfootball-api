@@ -28,12 +28,20 @@ export async function createClipExport(
       "A configuração selecionada não está disponível neste perfil de renderização"
     );
   }
+  const camera = settings.cameras.find(
+    (candidate) => candidate.id === input.cameraId
+  );
+  if (!camera) {
+    throw badRequest(
+      "A câmera escolhida não está disponível neste perfil de exportação"
+    );
+  }
   await enqueueClipExport({
     clip: row.clip,
     recording: row.recording,
     profile: {
       ...input,
-      renderSettings: { camera: settings.camera }
+      renderSettings: { camera }
     }
   });
   const refreshed = await getClipRow(publicId);
@@ -44,6 +52,7 @@ export async function createClipExport(
         candidate.exportProfile?.format === input.format &&
         candidate.exportProfile?.orientation === input.orientation &&
         candidate.exportProfile?.scoreboard === input.scoreboard &&
+        candidate.exportProfile?.cameraId === input.cameraId &&
         candidate.exportProfile?.renderProfileVersionId ===
           input.renderProfileVersionId
     )

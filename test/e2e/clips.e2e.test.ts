@@ -51,6 +51,7 @@ describe("clips", () => {
     });
     expect(capabilitiesBody.renderProfiles).toHaveLength(1);
     const renderProfileVersionId = capabilitiesBody.renderProfiles[0].id;
+    const cameraId = capabilitiesBody.renderProfiles[0].cameras[0].id;
 
     const created = await request(`/api/clips/${clip.id}/exports`, {
       method: "POST",
@@ -58,6 +59,7 @@ describe("clips", () => {
         format: "webm",
         orientation: "vertical",
         scoreboard: "floating-compact",
+        cameraId,
         renderProfileVersionId
       }
     });
@@ -67,6 +69,7 @@ describe("clips", () => {
         format: "webm",
         orientation: "vertical",
         scoreboard: "floating-compact",
+        cameraId,
         renderProfileVersionId
       },
       status: "queued",

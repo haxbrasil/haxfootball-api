@@ -9,6 +9,7 @@ import {
   renderProfileDrafts,
   renderProfileFamilies,
   renderProfileVersions,
+  type RenderCameraPreset,
   type RenderProfileSettings
 } from "@/features/render-profiles/db";
 
@@ -30,43 +31,66 @@ export const defaultRenderProfileSettings: RenderProfileSettings = {
   formats: [...formats],
   orientations: [...orientations],
   scoreboards,
-  camera: {
-    zoom: 3.2,
-    hudZoom: 2,
-    scoreboardZoom: 2,
-    menuZoom: 2,
-    locationIndicatorZoom: 2,
-    gameMessageZoom: 1,
-    parameters: {
-      player_weight: 1,
-      ball_weight: 0,
-      ball_speed_min: 0.1,
-      ball_speed_max: 4,
-      ball_lookahead_frames: 14,
-      ball_lookahead_max: 140,
-      outlier_distance: 280,
-      outlier_power: 1,
-      outside_field_penalty: 5,
-      deadzone: 4,
-      deadzone_full: 35,
-      smoothing: 0.955
-    },
-    rules: [
-      {
-        when: 'player_avatar == "🏈" && player_active',
-        focus: { target: "players" }
+  cameras: [
+    {
+      id: "dynamic-action",
+      title: "Ação dinâmica",
+      description: "Acompanha jogadores ativos e valoriza a ação.",
+      zoom: 3.2,
+      hudZoom: 2,
+      scoreboardZoom: 2,
+      menuZoom: 2,
+      locationIndicatorZoom: 2,
+      gameMessageZoom: 1,
+      parameters: {
+        player_weight: 1,
+        ball_weight: 0,
+        ball_speed_min: 0.1,
+        ball_speed_max: 4,
+        ball_lookahead_frames: 14,
+        ball_lookahead_max: 140,
+        outlier_distance: 280,
+        outlier_power: 1,
+        outside_field_penalty: 5,
+        deadzone: 4,
+        deadzone_full: 35,
+        smoothing: 0.955
       },
+      rules: [
+        {
+          when: 'player_avatar == "🏈" && player_active',
+          focus: { target: "players" }
+        },
+        {
+          when: 'player_avatar == "🔥" && player_active',
+          focus: { target: "players" }
+        },
+        {
+          when: "ball_speed > 0 && ball_color == #631515",
+          set: { ball_weight: 10 }
+        }
+      ]
+    }
+  ]
+};
+
+export function normalizeRenderProfileSettings(
+  settings: RenderProfileSettings
+): RenderProfileSettings {
+  const legacy = settings as unknown as { camera?: RenderCameraPreset };
+  if (Array.isArray(settings.cameras) || !legacy.camera) return settings;
+  return {
+    ...settings,
+    cameras: [
       {
-        when: 'player_avatar == "🔥" && player_active',
-        focus: { target: "players" }
-      },
-      {
-        when: "ball_speed > 0 && ball_color == #631515",
-        set: { ball_weight: 10 }
+        ...legacy.camera,
+        id: "dynamic-action",
+        title: "Ação dinâmica",
+        description: "Acompanha jogadores ativos e valoriza a ação."
       }
     ]
-  }
-};
+  };
+}
 
 export async function ensureDefaultRenderProfile() {
   const [existing] = await db
@@ -130,7 +154,13 @@ export async function getRenderProfileVersion(uuid: string) {
       )
     );
   if (!version) throw notFound("Render profile not found");
-  return version;
+  return {
+    ...version,
+    version: {
+      ...version.version,
+      settings: normalizeRenderProfileSettings(version.version.settings)
+    }
+  };
 }
 
 export async function updateRenderProfileDraft(
@@ -200,7 +230,7 @@ export async function publishRenderProfile(
     await tx.insert(renderProfileVersions).values({
       familyId: profile.id,
       version: nextVersion,
-      settings: profile.draft.settings,
+      settings: profile.draft!.settings,
       createdAt: now
     });
   });
@@ -226,11 +256,14 @@ export async function previewRenderProfile(input: {
   format: "mp4" | "webm" | "gif";
   orientation: "landscape" | "vertical";
   scoreboard: string;
+  cameraId: string;
   settings?: RenderProfileSettings;
 }) {
   const profile = await getRenderProfileById(input.profileId);
   if (!profile?.draft) throw notFound("Render profile not found");
-  const settings = input.settings ?? profile.draft.settings;
+  const settings = normalizeRenderProfileSettings(
+    input.settings ?? profile.draft.settings
+  );
   validateSettings(settings);
   if (
     !settings.formats.includes(input.format) ||
@@ -254,8 +287,9 @@ export async function previewRenderProfile(input: {
       format: input.format,
       orientation: input.orientation,
       scoreboard: input.scoreboard as never,
+      cameraId: input.cameraId,
       renderProfileVersionId,
-      renderSettings: { camera: settings.camera }
+      renderSettings: { camera: selectedCamera(settings, input.cameraId) }
     }
   });
   const refreshed = await getClipRow(input.clipId);
@@ -280,7 +314,9 @@ async function getDraft(familyId: number) {
     .select()
     .from(renderProfileDrafts)
     .where(eq(renderProfileDrafts.familyId, familyId));
-  return draft ?? null;
+  return draft
+    ? { ...draft, settings: normalizeRenderProfileSettings(draft.settings) }
+    : null;
 }
 async function getLatestVersion(familyId: number) {
   const [version] = await db
@@ -289,7 +325,9 @@ async function getLatestVersion(familyId: number) {
     .where(eq(renderProfileVersions.familyId, familyId))
     .orderBy(desc(renderProfileVersions.version))
     .limit(1);
-  return version ?? null;
+  return version
+    ? { ...version, settings: normalizeRenderProfileSettings(version.settings) }
+    : null;
 }
 
 export function validateSettings(settings: RenderProfileSettings) {
@@ -310,17 +348,33 @@ export function validateSettings(settings: RenderProfileSettings) {
     settings.scoreboards.some((style) => !scoreboards.includes(style))
   )
     throw badRequest("Selecione ao menos um estilo de placar");
-  const numbers = [
-    settings.camera.zoom,
-    settings.camera.hudZoom,
-    settings.camera.scoreboardZoom,
-    settings.camera.menuZoom,
-    settings.camera.locationIndicatorZoom,
-    settings.camera.gameMessageZoom,
-    ...Object.values(settings.camera.parameters)
-  ];
+  if (!settings.cameras.length)
+    throw badRequest("Adicione ao menos uma câmera");
+  if (
+    new Set(settings.cameras.map((camera) => camera.id)).size !==
+    settings.cameras.length
+  )
+    throw badRequest("Cada câmera precisa ter um identificador único");
+  const numbers = settings.cameras.flatMap((camera) => [
+    camera.zoom,
+    camera.hudZoom,
+    camera.scoreboardZoom,
+    camera.menuZoom,
+    camera.locationIndicatorZoom,
+    camera.gameMessageZoom,
+    ...Object.values(camera.parameters)
+  ]);
   if (
     numbers.some((value) => !Number.isFinite(value) || value <= 0 || value > 20)
   )
     throw badRequest("Os controles de câmera precisam estar entre 0 e 20");
+}
+
+function selectedCamera(settings: RenderProfileSettings, cameraId: string) {
+  const camera = settings.cameras.find(
+    (candidate) => candidate.id === cameraId
+  );
+  if (!camera)
+    throw badRequest("A câmera escolhida não pertence a este perfil");
+  return camera;
 }

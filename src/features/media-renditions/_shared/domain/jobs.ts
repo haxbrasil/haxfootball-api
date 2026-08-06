@@ -138,7 +138,7 @@ async function renditionCacheKey(input: {
     mediaRenditionProfileVersion(input.purpose),
     input.purpose,
     input.exportProfile
-      ? `${input.exportProfile.format}:${input.exportProfile.orientation}:${input.exportProfile.scoreboard}:${input.exportProfile.renderProfileVersionId ?? "legacy"}`
+      ? `${input.exportProfile.format}:${input.exportProfile.orientation}:${input.exportProfile.scoreboard}:${input.exportProfile.cameraId ?? "legacy"}:${input.exportProfile.renderProfileVersionId ?? "legacy"}`
       : "preview-v2",
     sourceFingerprint
   ].join(":");

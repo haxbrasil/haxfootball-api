@@ -6,24 +6,28 @@ import {
 } from "drizzle-orm/sqlite-core";
 
 export type RenderProfileState = "active" | "archived";
+export type RenderCameraPreset = {
+  id: string;
+  title: string;
+  description?: string | null;
+  zoom: number;
+  hudZoom: number;
+  scoreboardZoom: number;
+  menuZoom: number;
+  locationIndicatorZoom: number;
+  gameMessageZoom: number;
+  rules: Array<{
+    when: string;
+    focus?: { target: "players" };
+    set?: Record<string, number>;
+  }>;
+  parameters: Record<string, number>;
+};
 export type RenderProfileSettings = {
   formats: Array<"mp4" | "webm" | "gif">;
   orientations: Array<"landscape" | "vertical">;
   scoreboards: string[];
-  camera: {
-    zoom: number;
-    hudZoom: number;
-    scoreboardZoom: number;
-    menuZoom: number;
-    locationIndicatorZoom: number;
-    gameMessageZoom: number;
-    rules: Array<{
-      when: string;
-      focus?: { target: "players" };
-      set?: Record<string, number>;
-    }>;
-    parameters: Record<string, number>;
-  };
+  cameras: RenderCameraPreset[];
 };
 
 export const renderProfileFamilies = sqliteTable(
