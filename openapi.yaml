@@ -8987,6 +8987,8 @@ components:
                 - landscape
                 - vertical
               type: string
+            renderProfileVersionId:
+              type: string
             scoreboard:
               enum:
                 - default
@@ -9064,6 +9066,46 @@ components:
           items:
             type: string
           type: array
+        renderProfiles:
+          items:
+            properties:
+              description:
+                anyOf:
+                  - type: string
+                  - type: "null"
+                nullable: true
+              formats:
+                items:
+                  type: string
+                type: array
+              id:
+                type: string
+              orientations:
+                items:
+                  type: string
+                type: array
+              scoreboards:
+                items:
+                  type: string
+                type: array
+              title:
+                type: string
+              version:
+                anyOf:
+                  - default: 0
+                    format: integer
+                    type: string
+                  - type: integer
+            required:
+              - id
+              - title
+              - description
+              - version
+              - formats
+              - orientations
+              - scoreboards
+            type: object
+          type: array
         scoreboards:
           items:
             type: string
@@ -9081,6 +9123,7 @@ components:
         - formats
         - orientations
         - scoreboards
+        - renderProfiles
       type: object
     CloseRoomResponse:
       properties:
@@ -10888,6 +10931,9 @@ components:
             - landscape
             - vertical
           type: string
+        renderProfileVersionId:
+          format: uuid
+          type: string
         scoreboard:
           enum:
             - default
@@ -10905,6 +10951,7 @@ components:
         - format
         - orientation
         - scoreboard
+        - renderProfileVersionId
       type: object
     CreateCompetitionTypeBody:
       properties:
@@ -31884,6 +31931,418 @@ paths:
       summary: Validate replay bytes without changing the source object
       tags:
         - Recordings
+  /api/render-profiles:
+    get:
+      operationId: getApiRender-profiles
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items: {}
+                type: array
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForbiddenError"
+          description: Response for status 403
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictError"
+          description: Response for status 409
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: List render profiles
+      tags:
+        - Render profiles
+  /api/render-profiles/{id}/draft:
+    put:
+      operationId: putApiRender-profilesByIdDraft
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                description:
+                  anyOf:
+                    - maxLength: 1000
+                      type: string
+                    - type: "null"
+                  nullable: true
+                expectedRevision:
+                  anyOf:
+                    - default: 0
+                      format: integer
+                      type: string
+                    - minimum: 0
+                      type: integer
+                  minimum: 0
+                settings:
+                  properties:
+                    camera:
+                      properties:
+                        gameMessageZoom:
+                          type: number
+                        hudZoom:
+                          type: number
+                        locationIndicatorZoom:
+                          type: number
+                        menuZoom:
+                          type: number
+                        parameters:
+                          patternProperties:
+                            ^(.*)$:
+                              type: number
+                          type: object
+                        rules:
+                          items:
+                            properties:
+                              focus:
+                                properties:
+                                  target:
+                                    const: players
+                                    type: string
+                                required:
+                                  - target
+                                type: object
+                              set:
+                                patternProperties:
+                                  ^(.*)$:
+                                    type: number
+                                type: object
+                              when:
+                                type: string
+                            required:
+                              - when
+                            type: object
+                          type: array
+                        scoreboardZoom:
+                          type: number
+                        zoom:
+                          type: number
+                      required:
+                        - zoom
+                        - hudZoom
+                        - scoreboardZoom
+                        - menuZoom
+                        - locationIndicatorZoom
+                        - gameMessageZoom
+                        - parameters
+                        - rules
+                      type: object
+                    formats:
+                      items:
+                        enum:
+                          - mp4
+                          - webm
+                          - gif
+                        type: string
+                      type: array
+                    orientations:
+                      items:
+                        enum:
+                          - landscape
+                          - vertical
+                        type: string
+                      type: array
+                    scoreboards:
+                      items:
+                        type: string
+                      type: array
+                  required:
+                    - formats
+                    - orientations
+                    - scoreboards
+                    - camera
+                  type: object
+                title:
+                  maxLength: 120
+                  minLength: 1
+                  type: string
+              required:
+                - title
+                - settings
+                - expectedRevision
+              type: object
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: {}
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForbiddenError"
+          description: Response for status 403
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictError"
+          description: Response for status 409
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+  /api/render-profiles/{id}/preview:
+    post:
+      operationId: postApiRender-profilesByIdPreview
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                clipId:
+                  format: uuid
+                  type: string
+                format:
+                  enum:
+                    - mp4
+                    - webm
+                    - gif
+                  type: string
+                orientation:
+                  enum:
+                    - landscape
+                    - vertical
+                  type: string
+                scoreboard:
+                  type: string
+                settings:
+                  properties:
+                    camera:
+                      properties:
+                        gameMessageZoom:
+                          type: number
+                        hudZoom:
+                          type: number
+                        locationIndicatorZoom:
+                          type: number
+                        menuZoom:
+                          type: number
+                        parameters:
+                          patternProperties:
+                            ^(.*)$:
+                              type: number
+                          type: object
+                        rules:
+                          items:
+                            properties:
+                              focus:
+                                properties:
+                                  target:
+                                    const: players
+                                    type: string
+                                required:
+                                  - target
+                                type: object
+                              set:
+                                patternProperties:
+                                  ^(.*)$:
+                                    type: number
+                                type: object
+                              when:
+                                type: string
+                            required:
+                              - when
+                            type: object
+                          type: array
+                        scoreboardZoom:
+                          type: number
+                        zoom:
+                          type: number
+                      required:
+                        - zoom
+                        - hudZoom
+                        - scoreboardZoom
+                        - menuZoom
+                        - locationIndicatorZoom
+                        - gameMessageZoom
+                        - parameters
+                        - rules
+                      type: object
+                    formats:
+                      items:
+                        enum:
+                          - mp4
+                          - webm
+                          - gif
+                        type: string
+                      type: array
+                    orientations:
+                      items:
+                        enum:
+                          - landscape
+                          - vertical
+                        type: string
+                      type: array
+                    scoreboards:
+                      items:
+                        type: string
+                      type: array
+                  required:
+                    - formats
+                    - orientations
+                    - scoreboards
+                    - camera
+                  type: object
+              required:
+                - clipId
+                - format
+                - orientation
+                - scoreboard
+              type: object
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: {}
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForbiddenError"
+          description: Response for status 403
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictError"
+          description: Response for status 409
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+  /api/render-profiles/{id}/publish:
+    post:
+      operationId: postApiRender-profilesByIdPublish
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                expectedRevision:
+                  anyOf:
+                    - default: 0
+                      format: integer
+                      type: string
+                    - minimum: 0
+                      type: integer
+                  minimum: 0
+              required:
+                - expectedRevision
+              type: object
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: {}
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForbiddenError"
+          description: Response for status 403
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictError"
+          description: Response for status 409
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
   /api/roles:
     get:
       operationId: getApiRoles

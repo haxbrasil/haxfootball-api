@@ -351,6 +351,13 @@
       "when": 1786023693617,
       "tag": "0049_woozy_leper_queen",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "6",
+      "when": 1786034415599,
+      "tag": "0050_rich_hemingway",
+      "breakpoints": true
     }
   ]
 }

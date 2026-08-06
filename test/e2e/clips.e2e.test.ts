@@ -43,18 +43,22 @@ describe("clips", () => {
       `/api/clips/${clip.id}/exports/capabilities`
     );
     expect(capabilities.status).toBe(200);
-    expect(await capabilities.json()).toMatchObject({
+    const capabilitiesBody = await capabilities.json();
+    expect(capabilitiesBody).toMatchObject({
       ttlSeconds: 86_400,
       formats: ["mp4", "webm", "gif"],
       orientations: ["landscape", "vertical"]
     });
+    expect(capabilitiesBody.renderProfiles).toHaveLength(1);
+    const renderProfileVersionId = capabilitiesBody.renderProfiles[0].id;
 
     const created = await request(`/api/clips/${clip.id}/exports`, {
       method: "POST",
       body: {
         format: "webm",
         orientation: "vertical",
-        scoreboard: "floating-compact"
+        scoreboard: "floating-compact",
+        renderProfileVersionId
       }
     });
     expect(created.status).toBe(202);
@@ -62,7 +66,8 @@ describe("clips", () => {
       profile: {
         format: "webm",
         orientation: "vertical",
-        scoreboard: "floating-compact"
+        scoreboard: "floating-compact",
+        renderProfileVersionId
       },
       status: "queued",
       url: null

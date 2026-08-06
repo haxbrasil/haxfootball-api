@@ -57,7 +57,8 @@ const clipExportScoreboardSchema = t.Union([
 export const createClipExportBodySchema = t.Object({
   format: clipExportFormatSchema,
   orientation: clipExportOrientationSchema,
-  scoreboard: clipExportScoreboardSchema
+  scoreboard: clipExportScoreboardSchema,
+  renderProfileVersionId: t.String({ format: "uuid" })
 });
 
 export type CreateClipExportInput = Static<typeof createClipExportBodySchema>;

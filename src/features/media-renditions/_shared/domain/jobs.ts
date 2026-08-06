@@ -35,7 +35,7 @@ export function mediaRenditionProfileVersion(
     case "clip_poster":
       return `${env.mediaRendererVersion}:poster-1280x720`;
     case "clip_export":
-      return `${env.mediaRendererVersion}:clip-export-vertical-action-v1`;
+      return `${env.mediaRendererVersion}:clip-export-profiles-v1`;
     case "clip_preview_video":
       return env.mediaRendererVersion;
   }
@@ -138,7 +138,7 @@ async function renditionCacheKey(input: {
     mediaRenditionProfileVersion(input.purpose),
     input.purpose,
     input.exportProfile
-      ? `${input.exportProfile.format}:${input.exportProfile.orientation}:${input.exportProfile.scoreboard}`
+      ? `${input.exportProfile.format}:${input.exportProfile.orientation}:${input.exportProfile.scoreboard}:${input.exportProfile.renderProfileVersionId ?? "legacy"}`
       : "preview-v2",
     sourceFingerprint
   ].join(":");

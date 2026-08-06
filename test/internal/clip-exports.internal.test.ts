@@ -18,11 +18,11 @@ describe("clip export profiles", () => {
     ).toBe("mp4:vertical:floating-compact");
   });
 
-  it("versions vertical action framing separately from earlier exports", async () => {
+  it("versions profile-driven exports separately from earlier exports", async () => {
     const { mediaRenditionProfileVersion } =
       await import("@/features/media-renditions/_shared/domain/jobs");
     expect(mediaRenditionProfileVersion("clip_export")).toContain(
-      "clip-export-vertical-action-v1"
+      "clip-export-profiles-v1"
     );
   });
 

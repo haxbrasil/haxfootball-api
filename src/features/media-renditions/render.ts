@@ -23,11 +23,6 @@ import {
 import type { ClipExportProfile } from "@/features/media-renditions/db";
 
 export const mediaRenderJobType = "media.render-clip-rendition";
-const haxfootballActionCameraProfilePath = join(
-  import.meta.dir,
-  "camera-profiles",
-  "haxfootball-action.json"
-);
 
 export const mediaJobHandlers = {
   [mediaRenderJobType]: renderMediaRendition
@@ -95,11 +90,24 @@ export async function renderMediaRendition(
       await getR2ObjectBytes(source.recording.objectKey)
     );
 
+    const cameraProfilePath = rendition.exportProfile?.renderSettings
+      ? join(workDir, "camera-profile.json")
+      : null;
+    if (cameraProfilePath && rendition.exportProfile?.renderSettings) {
+      await writeFile(
+        cameraProfilePath,
+        JSON.stringify({
+          base: rendition.exportProfile.renderSettings.camera.parameters,
+          rules: rendition.exportProfile.renderSettings.camera.rules
+        })
+      );
+    }
     const args = rendererArgs({
       inputPath,
       outputPath,
       purpose: rendition.purpose,
       exportProfile: rendition.exportProfile,
+      cameraProfilePath,
       startTick: source.clip.startTick,
       endTick: source.clip.endTick
     });
@@ -167,6 +175,7 @@ function rendererArgs(input: {
   outputPath: string;
   purpose: "clip_poster" | "clip_preview_video" | "clip_export";
   exportProfile: ClipExportProfile | null;
+  cameraProfilePath: string | null;
   startTick: number;
   endTick: number;
 }): string[] {
@@ -204,23 +213,29 @@ function rendererArgs(input: {
     "--no-audio"
   ];
   if (profile?.orientation === "vertical") {
+    args.push("--preset", "vertical");
+  }
+  if (profile?.renderSettings) {
+    if (!input.cameraProfilePath) {
+      throw new Error("Export camera profile is missing");
+    }
     args.push(
-      "--preset",
-      "vertical",
+      "--camera",
+      "custom",
       "--zoom",
-      "3.2",
+      String(profile.renderSettings.camera.zoom),
       "--hud-zoom",
-      "2",
+      String(profile.renderSettings.camera.hudZoom),
       "--scoreboard-zoom",
-      "2",
+      String(profile.renderSettings.camera.scoreboardZoom),
       "--menu-zoom",
-      "2",
+      String(profile.renderSettings.camera.menuZoom),
       "--location-indicator-zoom",
-      "2",
+      String(profile.renderSettings.camera.locationIndicatorZoom),
       "--game-message-zoom",
-      "1",
+      String(profile.renderSettings.camera.gameMessageZoom),
       "--camera-profile",
-      haxfootballActionCameraProfilePath
+      input.cameraProfilePath
     );
   }
   if (profile?.scoreboard === "none") {

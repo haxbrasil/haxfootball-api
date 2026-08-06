@@ -37,6 +37,24 @@ export type ClipExportProfile = {
   format: ClipExportFormat;
   orientation: ClipExportOrientation;
   scoreboard: ClipExportScoreboard;
+  /** Absent only on exports created before render profiles were introduced. */
+  renderProfileVersionId?: string;
+  renderSettings?: {
+    camera: {
+      zoom: number;
+      hudZoom: number;
+      scoreboardZoom: number;
+      menuZoom: number;
+      locationIndicatorZoom: number;
+      gameMessageZoom: number;
+      parameters: Record<string, number>;
+      rules: Array<{
+        when: string;
+        focus?: { target: "players" };
+        set?: Record<string, number>;
+      }>;
+    };
+  };
 };
 
 export const mediaRenditions = sqliteTable(

@@ -32,6 +32,7 @@ import {
   clipExportScoreboards
 } from "@/features/clips/_shared/domain/exports";
 import { createClipExportBodySchema } from "@/features/clips/_shared/http/inputs";
+import { listRenderProfiles } from "@/features/render-profiles/operations";
 import {
   badRequestErrorResponseSchema,
   notFoundErrorResponseSchema
@@ -98,11 +99,24 @@ export const clipRoutes = new Elysia({
   })
   .get(
     "/:id/exports/capabilities",
-    () => ({
+    async () => ({
       ttlSeconds: env.clipExportTtlSeconds,
       formats: [...clipExportFormats],
       orientations: [...clipExportOrientations],
-      scoreboards: [...clipExportScoreboards]
+      scoreboards: [...clipExportScoreboards],
+      renderProfiles: (await listRenderProfiles())
+        .filter(
+          (profile) => profile.state === "active" && profile.latestVersion
+        )
+        .map((profile) => ({
+          id: profile.latestVersion!.uuid,
+          title: profile.title,
+          description: profile.description,
+          version: profile.latestVersion!.version,
+          formats: profile.latestVersion!.settings.formats,
+          orientations: profile.latestVersion!.settings.orientations,
+          scoreboards: profile.latestVersion!.settings.scoreboards
+        }))
     }),
     {
       params: clipPublicIdParamsSchema,

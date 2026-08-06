@@ -11,6 +11,7 @@ export * from "@/features/media-renditions/db";
 export * from "@/features/permissions/db";
 export * from "@/features/players/db";
 export * from "@/features/recordings/db";
+export * from "@/features/render-profiles/db";
 export * from "@/features/roles/db";
 export * from "@/features/rooms/db";
 export * from "@/features/event-schemas/db";
