@@ -91,6 +91,7 @@ jobs:
             echo "Deployment failed; restoring the previous database and source revision" >&2
 
             if [[ "$services_stopped" == "true" ]]; then
+              sudo systemctl stop haxfootball-api-media || true
               sudo systemctl stop haxfootball-api-jobs || true
               sudo systemctl stop haxfootball-api || true
             fi
@@ -103,6 +104,7 @@ jobs:
             bun install --frozen-lockfile
             sudo systemctl start haxfootball-api
             sudo systemctl start haxfootball-api-jobs
+            sudo systemctl start haxfootball-api-media
             exit "$exit_code"
           }
 
@@ -111,6 +113,7 @@ jobs:
           git reset --hard "$DEPLOY_SHA"
           bun install --frozen-lockfile
 
+          sudo systemctl stop haxfootball-api-media
           sudo systemctl stop haxfootball-api-jobs
           sudo systemctl stop haxfootball-api
           services_stopped="true"
@@ -127,8 +130,10 @@ jobs:
 
           sudo systemctl start haxfootball-api
           sudo systemctl start haxfootball-api-jobs
+          sudo systemctl start haxfootball-api-media
           systemctl is-active --quiet haxfootball-api
           systemctl is-active --quiet haxfootball-api-jobs
+          systemctl is-active --quiet haxfootball-api-media
           curl --retry 10 --retry-delay 3 --retry-all-errors -fsS https://api.bfl.haxbrasil.com/health
           services_stopped="false"
           trap - ERR
@@ -147,6 +152,8 @@ jobs:
           ssh -i ~/.ssh/oracle -o BatchMode=yes -o StrictHostKeyChecking=yes "$ORACLE_SSH_USER@$ORACLE_SSH_HOST" <<'REMOTE'
           systemctl status haxfootball-api --no-pager -l || true
           systemctl status haxfootball-api-jobs --no-pager -l || true
+          systemctl status haxfootball-api-media --no-pager -l || true
           journalctl -u haxfootball-api -n 120 --no-pager || true
           journalctl -u haxfootball-api-jobs -n 120 --no-pager || true
+          journalctl -u haxfootball-api-media -n 120 --no-pager || true
           REMOTE
