@@ -26,6 +26,37 @@ describe("clip export profiles", () => {
     );
   });
 
+  it("normalizes legacy camera rules into guided conditions", async () => {
+    const {
+      defaultRenderProfileSettings,
+      normalizeRenderProfileSettings,
+      validateSettings
+    } = await import("@/features/render-profiles/operations");
+    const settings = normalizeRenderProfileSettings({
+      ...defaultRenderProfileSettings,
+      cameras: defaultRenderProfileSettings.cameras.map((camera) => ({
+        ...camera,
+        rules: [
+          {
+            when: 'player_avatar == "🏈" && player_active',
+            focus: { target: "players" as const }
+          }
+        ]
+      }))
+    });
+    expect(settings.cameras[0]?.rules[0]?.condition).toEqual({
+      combination: "all",
+      clauses: [
+        { field: "player_avatar", operator: "eq", value: "🏈" },
+        { field: "player_active", operator: "eq", value: true }
+      ]
+    });
+    expect(settings.cameras[0]?.rules[0]?.when).toBe(
+      'player_avatar == "🏈" && player_active == true'
+    );
+    expect(() => validateSettings(settings)).not.toThrow();
+  });
+
   it("reports expired export artifacts without issuing their stale URL", async () => {
     const { toClipExportResponse } =
       await import("@/features/clips/_shared/http/responses");

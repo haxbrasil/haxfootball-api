@@ -29,6 +29,25 @@ const settings = t.Object({
       rules: t.Array(
         t.Object({
           when: t.String(),
+          condition: t.Optional(
+            t.Object({
+              combination: t.Union([t.Literal("all"), t.Literal("any")]),
+              clauses: t.Array(
+                t.Object({
+                  field: t.String({ minLength: 1, maxLength: 80 }),
+                  operator: t.Union([
+                    t.Literal("eq"),
+                    t.Literal("neq"),
+                    t.Literal("gt"),
+                    t.Literal("gte"),
+                    t.Literal("lt"),
+                    t.Literal("lte")
+                  ]),
+                  value: t.Union([t.String(), t.Number(), t.Boolean()])
+                })
+              )
+            })
+          ),
           focus: t.Optional(t.Object({ target: t.Literal("players") })),
           set: t.Optional(t.Record(t.String(), t.Number()))
         })

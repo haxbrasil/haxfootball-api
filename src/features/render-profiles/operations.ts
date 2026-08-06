@@ -9,6 +9,7 @@ import {
   renderProfileDrafts,
   renderProfileFamilies,
   renderProfileVersions,
+  type RenderCameraCondition,
   type RenderCameraPreset,
   type RenderProfileSettings
 } from "@/features/render-profiles/db";
@@ -58,15 +59,36 @@ export const defaultRenderProfileSettings: RenderProfileSettings = {
       },
       rules: [
         {
-          when: 'player_avatar == "🏈" && player_active',
+          when: 'player_avatar == "🏈" && player_active == true',
+          condition: {
+            combination: "all",
+            clauses: [
+              { field: "player_avatar", operator: "eq", value: "🏈" },
+              { field: "player_active", operator: "eq", value: true }
+            ]
+          },
           focus: { target: "players" }
         },
         {
-          when: 'player_avatar == "🔥" && player_active',
+          when: 'player_avatar == "🔥" && player_active == true',
+          condition: {
+            combination: "all",
+            clauses: [
+              { field: "player_avatar", operator: "eq", value: "🔥" },
+              { field: "player_active", operator: "eq", value: true }
+            ]
+          },
           focus: { target: "players" }
         },
         {
           when: "ball_speed > 0 && ball_color == #631515",
+          condition: {
+            combination: "all",
+            clauses: [
+              { field: "ball_speed", operator: "gt", value: 0 },
+              { field: "ball_color", operator: "eq", value: "#631515" }
+            ]
+          },
           set: { ball_weight: 10 }
         }
       ]
@@ -78,17 +100,32 @@ export function normalizeRenderProfileSettings(
   settings: RenderProfileSettings
 ): RenderProfileSettings {
   const legacy = settings as unknown as { camera?: RenderCameraPreset };
-  if (Array.isArray(settings.cameras) || !legacy.camera) return settings;
+  const normalized = Array.isArray(settings.cameras)
+    ? settings
+    : !legacy.camera
+      ? settings
+      : {
+          ...settings,
+          cameras: [
+            {
+              ...legacy.camera,
+              id: "dynamic-action",
+              title: "Ação dinâmica",
+              description: "Acompanha jogadores ativos e valoriza a ação."
+            }
+          ]
+        };
   return {
-    ...settings,
-    cameras: [
-      {
-        ...legacy.camera,
-        id: "dynamic-action",
-        title: "Ação dinâmica",
-        description: "Acompanha jogadores ativos e valoriza a ação."
-      }
-    ]
+    ...normalized,
+    cameras: normalized.cameras.map((camera) => ({
+      ...camera,
+      rules: camera.rules.map((rule) => {
+        const condition = rule.condition ?? legacyCondition(rule.when);
+        return condition
+          ? { ...rule, condition, when: conditionExpression(condition) }
+          : rule;
+      })
+    }))
   };
 }
 
@@ -97,15 +134,33 @@ export async function ensureDefaultRenderProfile() {
     .select()
     .from(renderProfileFamilies)
     .where(eq(renderProfileFamilies.name, "dynamic-action"));
-  if (existing) return existing;
+  if (existing) {
+    if (
+      existing.title === "Ação dinâmica" &&
+      existing.description ===
+        "Enquadramento aproximado com foco dinâmico para clipes de qualquer proporção."
+    ) {
+      await db
+        .update(renderProfileFamilies)
+        .set({
+          title: "Padrão BFL",
+          description:
+            "Formatos, orientações, placares e câmeras disponíveis para exportação.",
+          updatedAt: new Date().toISOString()
+        })
+        .where(eq(renderProfileFamilies.id, existing.id));
+      return { ...existing, title: "Padrão BFL" };
+    }
+    return existing;
+  }
   const now = new Date().toISOString();
   const [family] = await db
     .insert(renderProfileFamilies)
     .values({
       name: "dynamic-action",
-      title: "Ação dinâmica",
+      title: "Padrão BFL",
       description:
-        "Enquadramento aproximado com foco dinâmico para clipes de qualquer proporção.",
+        "Formatos, orientações, placares e câmeras disponíveis para exportação.",
       createdAt: now,
       updatedAt: now
     })
@@ -179,7 +234,8 @@ export async function updateRenderProfileDraft(
   if (!family) throw notFound("Render profile not found");
   if (family.revision !== input.expectedRevision)
     throw badRequest("Perfil foi alterado por outra pessoa");
-  validateSettings(input.settings);
+  const settings = normalizeRenderProfileSettings(input.settings);
+  validateSettings(settings);
   const now = new Date().toISOString();
   await db.transaction(async (tx) => {
     await tx
@@ -194,7 +250,7 @@ export async function updateRenderProfileDraft(
     await tx
       .update(renderProfileDrafts)
       .set({
-        settings: input.settings,
+        settings,
         revision: family.revision + 1,
         updatedAt: now
       })
@@ -211,7 +267,8 @@ export async function publishRenderProfile(
   if (!profile || !profile.draft) throw notFound("Render profile not found");
   if (profile.revision !== expectedRevision)
     throw badRequest("Perfil foi alterado por outra pessoa");
-  validateSettings(profile.draft.settings);
+  const settings = normalizeRenderProfileSettings(profile.draft.settings);
+  validateSettings(settings);
   const nextVersion = (profile.latestVersion?.version ?? 0) + 1;
   const now = new Date().toISOString();
   await db.transaction(async (tx) => {
@@ -230,7 +287,7 @@ export async function publishRenderProfile(
     await tx.insert(renderProfileVersions).values({
       familyId: profile.id,
       version: nextVersion,
-      settings: profile.draft!.settings,
+      settings,
       createdAt: now
     });
   });
@@ -355,19 +412,87 @@ export function validateSettings(settings: RenderProfileSettings) {
     settings.cameras.length
   )
     throw badRequest("Cada câmera precisa ter um identificador único");
-  const numbers = settings.cameras.flatMap((camera) => [
+  const controls = settings.cameras.flatMap((camera) => [
     camera.zoom,
     camera.hudZoom,
     camera.scoreboardZoom,
     camera.menuZoom,
     camera.locationIndicatorZoom,
-    camera.gameMessageZoom,
-    ...Object.values(camera.parameters)
+    camera.gameMessageZoom
   ]);
   if (
-    numbers.some((value) => !Number.isFinite(value) || value <= 0 || value > 20)
+    controls.some(
+      (value) => !Number.isFinite(value) || value <= 0 || value > 20
+    )
   )
     throw badRequest("Os controles de câmera precisam estar entre 0 e 20");
+  if (
+    settings.cameras
+      .flatMap((camera) => Object.values(camera.parameters))
+      .some((value) => !Number.isFinite(value) || Math.abs(value) > 1_000_000)
+  )
+    throw badRequest(
+      "Os parâmetros da câmera precisam ser valores numéricos válidos"
+    );
+  for (const rule of settings.cameras.flatMap((camera) => camera.rules)) {
+    if (rule.condition) {
+      if (!rule.condition.clauses.length)
+        throw badRequest("Cada regra precisa ter ao menos uma condição");
+      if (!rule.when || rule.when !== conditionExpression(rule.condition))
+        throw badRequest(
+          "A condição da regra precisa usar os campos disponíveis"
+        );
+    }
+  }
+}
+
+function conditionExpression(condition: RenderCameraCondition) {
+  const operator = {
+    eq: "==",
+    neq: "!=",
+    gt: ">",
+    gte: ">=",
+    lt: "<",
+    lte: "<="
+  } as const;
+  return condition.clauses
+    .map((clause) => {
+      const value =
+        typeof clause.value === "string"
+          ? clause.value.startsWith("#")
+            ? clause.value
+            : JSON.stringify(clause.value)
+          : String(clause.value);
+      return `${clause.field} ${operator[clause.operator]} ${value}`;
+    })
+    .join(condition.combination === "all" ? " && " : " || ");
+}
+
+function legacyCondition(when: string): RenderCameraCondition | undefined {
+  const known: Record<string, RenderCameraCondition> = {
+    'player_avatar == "🏈" && player_active': {
+      combination: "all",
+      clauses: [
+        { field: "player_avatar", operator: "eq", value: "🏈" },
+        { field: "player_active", operator: "eq", value: true }
+      ]
+    },
+    'player_avatar == "🔥" && player_active': {
+      combination: "all",
+      clauses: [
+        { field: "player_avatar", operator: "eq", value: "🔥" },
+        { field: "player_active", operator: "eq", value: true }
+      ]
+    },
+    "ball_speed > 0 && ball_color == #631515": {
+      combination: "all",
+      clauses: [
+        { field: "ball_speed", operator: "gt", value: 0 },
+        { field: "ball_color", operator: "eq", value: "#631515" }
+      ]
+    }
+  };
+  return known[when];
 }
 
 function selectedCamera(settings: RenderProfileSettings, cameraId: string) {

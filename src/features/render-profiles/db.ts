@@ -6,6 +6,15 @@ import {
 } from "drizzle-orm/sqlite-core";
 
 export type RenderProfileState = "active" | "archived";
+export type RenderCameraConditionValue = string | number | boolean;
+export type RenderCameraCondition = {
+  combination: "all" | "any";
+  clauses: Array<{
+    field: string;
+    operator: "eq" | "neq" | "gt" | "gte" | "lt" | "lte";
+    value: RenderCameraConditionValue;
+  }>;
+};
 export type RenderCameraPreset = {
   id: string;
   title: string;
@@ -18,6 +27,7 @@ export type RenderCameraPreset = {
   gameMessageZoom: number;
   rules: Array<{
     when: string;
+    condition?: RenderCameraCondition;
     focus?: { target: "players" };
     set?: Record<string, number>;
   }>;
