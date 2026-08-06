@@ -23,6 +23,11 @@ import {
 import type { ClipExportProfile } from "@/features/media-renditions/db";
 
 export const mediaRenderJobType = "media.render-clip-rendition";
+const haxfootballActionCameraProfilePath = join(
+  import.meta.dir,
+  "camera-profiles",
+  "haxfootball-action.json"
+);
 
 export const mediaJobHandlers = {
   [mediaRenderJobType]: renderMediaRendition
@@ -199,7 +204,24 @@ function rendererArgs(input: {
     "--no-audio"
   ];
   if (profile?.orientation === "vertical") {
-    args.push("--preset", "vertical");
+    args.push(
+      "--preset",
+      "vertical",
+      "--zoom",
+      "3.2",
+      "--hud-zoom",
+      "2",
+      "--scoreboard-zoom",
+      "2",
+      "--menu-zoom",
+      "2",
+      "--location-indicator-zoom",
+      "2",
+      "--game-message-zoom",
+      "1",
+      "--camera-profile",
+      haxfootballActionCameraProfilePath
+    );
   }
   if (profile?.scoreboard === "none") {
     args.push("--no-scoreboard");

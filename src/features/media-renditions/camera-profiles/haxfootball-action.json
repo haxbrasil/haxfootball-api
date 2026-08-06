@@ -1,0 +1,30 @@
+{
+  "base": {
+    "player_weight": 1.0,
+    "ball_weight": 0.0,
+    "ball_speed_min": 0.1,
+    "ball_speed_max": 4.0,
+    "ball_lookahead_frames": 14.0,
+    "ball_lookahead_max": 140.0,
+    "outlier_distance": 280.0,
+    "outlier_power": 1.0,
+    "outside_field_penalty": 5.0,
+    "deadzone": 4.0,
+    "deadzone_full": 35.0,
+    "smoothing": 0.955
+  },
+  "rules": [
+    {
+      "when": "player_avatar == \"🏈\" && player_active",
+      "focus": { "target": "players" }
+    },
+    {
+      "when": "player_avatar == \"🔥\" && player_active",
+      "focus": { "target": "players" }
+    },
+    {
+      "when": "ball_speed > 0 && ball_color == #631515",
+      "set": { "ball_weight": 10.0 }
+    }
+  ]
+}

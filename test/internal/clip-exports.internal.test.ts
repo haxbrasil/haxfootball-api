@@ -18,6 +18,14 @@ describe("clip export profiles", () => {
     ).toBe("mp4:vertical:floating-compact");
   });
 
+  it("versions vertical action framing separately from earlier exports", async () => {
+    const { mediaRenditionProfileVersion } =
+      await import("@/features/media-renditions/_shared/domain/jobs");
+    expect(mediaRenditionProfileVersion("clip_export")).toContain(
+      "clip-export-vertical-action-v1"
+    );
+  });
+
   it("reports expired export artifacts without issuing their stale URL", async () => {
     const { toClipExportResponse } =
       await import("@/features/clips/_shared/http/responses");

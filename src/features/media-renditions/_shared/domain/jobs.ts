@@ -31,9 +31,14 @@ export async function enqueueClipRenditions(
 export function mediaRenditionProfileVersion(
   purpose: MediaRenditionPurpose
 ): string {
-  return purpose === "clip_poster"
-    ? `${env.mediaRendererVersion}:poster-1280x720`
-    : env.mediaRendererVersion;
+  switch (purpose) {
+    case "clip_poster":
+      return `${env.mediaRendererVersion}:poster-1280x720`;
+    case "clip_export":
+      return `${env.mediaRendererVersion}:clip-export-vertical-action-v1`;
+    case "clip_preview_video":
+      return env.mediaRendererVersion;
+  }
 }
 
 export async function enqueueClipExport(input: {
@@ -130,7 +135,7 @@ async function renditionCacheKey(input: {
   );
   const source = [
     "clip-rendition-v1",
-    env.mediaRendererVersion,
+    mediaRenditionProfileVersion(input.purpose),
     input.purpose,
     input.exportProfile
       ? `${input.exportProfile.format}:${input.exportProfile.orientation}:${input.exportProfile.scoreboard}`
