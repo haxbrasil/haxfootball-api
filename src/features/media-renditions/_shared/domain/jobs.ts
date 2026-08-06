@@ -3,10 +3,13 @@ import type { Clip } from "@/features/clips/db";
 import type { Recording } from "@/features/recordings/db";
 import { env } from "@/config/env";
 import type { MediaRenditionPurpose } from "@/features/media-renditions/db";
+import type { ClipExportProfile } from "@/features/media-renditions/db";
 import {
+  expireMediaRendition,
   getMediaRenditionByCacheKey,
   insertMediaRenditionIfMissing,
-  resetMediaRenditionForRetry
+  resetMediaRenditionForRetry,
+  renewExpiredMediaRendition
 } from "@/features/media-renditions/_shared/db/queries";
 import {
   mediaRenderJobType,
@@ -25,10 +28,32 @@ export async function enqueueClipRenditions(
   );
 }
 
+export function mediaRenditionProfileVersion(
+  purpose: MediaRenditionPurpose
+): string {
+  return purpose === "clip_poster"
+    ? `${env.mediaRendererVersion}:poster-1280x720`
+    : env.mediaRendererVersion;
+}
+
+export async function enqueueClipExport(input: {
+  clip: Clip;
+  recording: Recording;
+  profile: ClipExportProfile;
+}): Promise<void> {
+  await enqueueClipRendition({
+    clip: input.clip,
+    recording: input.recording,
+    purpose: "clip_export",
+    exportProfile: input.profile
+  });
+}
+
 async function enqueueClipRendition(input: {
   clip: Clip;
   recording: Recording;
   purpose: MediaRenditionPurpose;
+  exportProfile?: ClipExportProfile;
 }): Promise<void> {
   const sourceFingerprint = sourceFingerprintFor(
     input.recording.sha256,
@@ -44,10 +69,31 @@ async function enqueueClipRendition(input: {
       purpose: input.purpose,
       cacheKey,
       sourceFingerprint,
-      profileVersion: env.mediaRendererVersion
+      profileVersion: mediaRenditionProfileVersion(input.purpose),
+      exportProfile: input.exportProfile ?? null,
+      expiresAt:
+        input.purpose === "clip_export"
+          ? new Date(Date.now() + env.clipExportTtlSeconds * 1000).toISOString()
+          : null
     });
     rendition = result.rendition;
     shouldEnqueue = result.created;
+  } else if (
+    rendition.status === "expired" ||
+    (rendition.purpose === "clip_export" &&
+      rendition.expiresAt !== null &&
+      rendition.expiresAt <= new Date().toISOString())
+  ) {
+    if (rendition.status !== "expired") {
+      await expireMediaRendition(rendition);
+      rendition = (await getMediaRenditionByCacheKey(cacheKey)) ?? rendition;
+    }
+    const result = await renewExpiredMediaRendition(
+      rendition,
+      new Date(Date.now() + env.clipExportTtlSeconds * 1000).toISOString()
+    );
+    rendition = result.rendition;
+    shouldEnqueue = result.renewed;
   } else if (
     rendition.status === "ready" ||
     rendition.status === "queued" ||
@@ -76,6 +122,7 @@ async function renditionCacheKey(input: {
   clip: Clip;
   recording: Recording;
   purpose: MediaRenditionPurpose;
+  exportProfile?: ClipExportProfile;
 }): Promise<string> {
   const sourceFingerprint = sourceFingerprintFor(
     input.recording.sha256,
@@ -85,6 +132,9 @@ async function renditionCacheKey(input: {
     "clip-rendition-v1",
     env.mediaRendererVersion,
     input.purpose,
+    input.exportProfile
+      ? `${input.exportProfile.format}:${input.exportProfile.orientation}:${input.exportProfile.scoreboard}`
+      : "preview-v2",
     sourceFingerprint
   ].join(":");
   return `clip-rendition-${await sha256Hex(new TextEncoder().encode(source))}`;

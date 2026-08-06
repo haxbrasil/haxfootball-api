@@ -93,12 +93,17 @@ const envSchema = Type.Object({
     minLength: 1
   }),
   mediaRenderMaxBytes: Type.Integer({
-    default: 24 * 1024 * 1024,
+    default: 64 * 1024 * 1024,
     minimum: 1
   }),
   mediaRenderTimeoutSeconds: Type.Integer({
     default: 180,
     minimum: 1
+  }),
+  clipExportTtlSeconds: Type.Integer({
+    default: 24 * 60 * 60,
+    minimum: 60,
+    maximum: 7 * 24 * 60 * 60
   }),
   mediaRendererProbeBinary: Type.String({ default: "ffprobe", minLength: 1 }),
   mediaWorkerPollIntervalSeconds: Type.Integer({
@@ -145,6 +150,7 @@ const envInput = {
   mediaRenderTempDir: Bun.env.MEDIA_RENDER_TEMP_DIR,
   mediaRenderMaxBytes: Bun.env.MEDIA_RENDER_MAX_BYTES,
   mediaRenderTimeoutSeconds: Bun.env.MEDIA_RENDER_TIMEOUT_SECONDS,
+  clipExportTtlSeconds: Bun.env.CLIP_EXPORT_TTL_SECONDS,
   mediaRendererProbeBinary: Bun.env.MEDIA_RENDERER_PROBE_BINARY,
   mediaWorkerPollIntervalSeconds: Bun.env.MEDIA_WORKER_POLL_INTERVAL_SECONDS
 };

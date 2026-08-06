@@ -8952,6 +8952,136 @@ components:
         - maxDurationSeconds
         - maxDurationFrames
       type: object
+    ClipExport:
+      properties:
+        createdAt:
+          type: string
+        expiresAt:
+          anyOf:
+            - type: string
+            - type: "null"
+          nullable: true
+        height:
+          anyOf:
+            - anyOf:
+                - default: 0
+                  format: integer
+                  type: string
+                - minimum: 1
+                  type: integer
+              minimum: 1
+            - type: "null"
+          nullable: true
+        id:
+          type: string
+        profile:
+          properties:
+            format:
+              enum:
+                - mp4
+                - webm
+                - gif
+              type: string
+            orientation:
+              enum:
+                - landscape
+                - vertical
+              type: string
+            scoreboard:
+              enum:
+                - default
+                - compact
+                - score-only
+                - time-only
+                - floating-default
+                - floating-compact
+                - floating-score-only
+                - floating-time-only
+                - floating-score-time-right
+                - none
+              type: string
+          required:
+            - format
+            - orientation
+            - scoreboard
+          type: object
+        sizeBytes:
+          anyOf:
+            - anyOf:
+                - default: 0
+                  format: integer
+                  type: string
+                - minimum: 1
+                  type: integer
+              minimum: 1
+            - type: "null"
+          nullable: true
+        status:
+          enum:
+            - queued
+            - running
+            - ready
+            - failed
+            - expired
+          type: string
+        updatedAt:
+          type: string
+        url:
+          anyOf:
+            - type: string
+            - type: "null"
+          nullable: true
+        width:
+          anyOf:
+            - anyOf:
+                - default: 0
+                  format: integer
+                  type: string
+                - minimum: 1
+                  type: integer
+              minimum: 1
+            - type: "null"
+          nullable: true
+      required:
+        - id
+        - profile
+        - status
+        - url
+        - expiresAt
+        - width
+        - height
+        - sizeBytes
+        - createdAt
+        - updatedAt
+      type: object
+    ClipExportCapabilities:
+      properties:
+        formats:
+          items:
+            type: string
+          type: array
+        orientations:
+          items:
+            type: string
+          type: array
+        scoreboards:
+          items:
+            type: string
+          type: array
+        ttlSeconds:
+          anyOf:
+            - default: 0
+              format: integer
+              type: string
+            - minimum: 1
+              type: integer
+          minimum: 1
+      required:
+        - ttlSeconds
+        - formats
+        - orientations
+        - scoreboards
+      type: object
     CloseRoomResponse:
       properties:
         closedAt:
@@ -10745,6 +10875,37 @@ components:
         - startTick
         - endTick
       type: object
+    CreateClipExportBody:
+      properties:
+        format:
+          enum:
+            - mp4
+            - webm
+            - gif
+          type: string
+        orientation:
+          enum:
+            - landscape
+            - vertical
+          type: string
+        scoreboard:
+          enum:
+            - default
+            - compact
+            - score-only
+            - time-only
+            - floating-default
+            - floating-compact
+            - floating-score-only
+            - floating-time-only
+            - floating-score-time-right
+            - none
+          type: string
+      required:
+        - format
+        - orientation
+        - scoreboard
+      type: object
     CreateCompetitionTypeBody:
       properties:
         actorAccountUuid:
@@ -12436,6 +12597,15 @@ components:
       required:
         - items
         - page
+      type: object
+    ListClipExports:
+      properties:
+        items:
+          items:
+            $ref: "#/components/schemas/ClipExport"
+          type: array
+      required:
+        - items
       type: object
     ListClips:
       properties:
@@ -27747,6 +27917,173 @@ paths:
                 $ref: "#/components/schemas/InternalServerError"
           description: Response for status 500
       summary: Update a clip
+      tags:
+        - Clips
+  /api/clips/{id}/exports:
+    get:
+      operationId: getApiClipsByIdExports
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListClipExports"
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForbiddenError"
+          description: Response for status 403
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictError"
+          description: Response for status 409
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: List clip exports
+      tags:
+        - Clips
+    post:
+      operationId: postApiClipsByIdExports
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateClipExportBody"
+        required: true
+      responses:
+        "202":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClipExport"
+          description: Response for status 202
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForbiddenError"
+          description: Response for status 403
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+          description: Response for status 404
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictError"
+          description: Response for status 409
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Request a clip export
+      tags:
+        - Clips
+  /api/clips/{id}/exports/capabilities:
+    get:
+      operationId: getApiClipsByIdExportsCapabilities
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClipExportCapabilities"
+          description: Response for status 200
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestOrValidationError"
+          description: Response for status 400
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+          description: Response for status 401
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForbiddenError"
+          description: Response for status 403
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictError"
+          description: Response for status 409
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+          description: Response for status 500
+      summary: Get clip export capabilities
       tags:
         - Clips
   /api/event-schemas:

@@ -1,5 +1,4 @@
 import { type Static, t } from "elysia";
-import { env } from "@/config/env";
 import type { Clip } from "@/features/clips/db";
 import { clipPublicIdSchema } from "@/features/clips/_shared/http/inputs";
 import {
@@ -8,6 +7,7 @@ import {
 } from "@/features/recordings/_shared/http/responses";
 import type { Recording } from "@/features/recordings/db";
 import type { MediaRendition } from "@/features/media-renditions/db";
+import { mediaRenditionProfileVersion } from "@/features/media-renditions/_shared/domain/jobs";
 import { r2PublicUrl } from "@/shared/storage/r2";
 import { paginatedResponseSchema } from "@lib";
 
@@ -62,6 +62,52 @@ export type ClipResponse = Static<typeof clipResponseSchema>;
 export type ClipConfigurationResponse = Static<
   typeof clipConfigurationResponseSchema
 >;
+
+const clipExportStatusSchema = t.Union([
+  t.Literal("queued"),
+  t.Literal("running"),
+  t.Literal("ready"),
+  t.Literal("failed"),
+  t.Literal("expired")
+]);
+export const clipExportProfileSchema = t.Object({
+  format: t.Union([t.Literal("mp4"), t.Literal("webm"), t.Literal("gif")]),
+  orientation: t.Union([t.Literal("landscape"), t.Literal("vertical")]),
+  scoreboard: t.Union([
+    t.Literal("default"),
+    t.Literal("compact"),
+    t.Literal("score-only"),
+    t.Literal("time-only"),
+    t.Literal("floating-default"),
+    t.Literal("floating-compact"),
+    t.Literal("floating-score-only"),
+    t.Literal("floating-time-only"),
+    t.Literal("floating-score-time-right"),
+    t.Literal("none")
+  ])
+});
+export const clipExportResponseSchema = t.Object({
+  id: t.String(),
+  profile: clipExportProfileSchema,
+  status: clipExportStatusSchema,
+  url: t.Nullable(t.String()),
+  expiresAt: t.Nullable(t.String()),
+  width: t.Nullable(t.Integer({ minimum: 1 })),
+  height: t.Nullable(t.Integer({ minimum: 1 })),
+  sizeBytes: t.Nullable(t.Integer({ minimum: 1 })),
+  createdAt: t.String(),
+  updatedAt: t.String()
+});
+export const listClipExportsResponseSchema = t.Object({
+  items: t.Array(clipExportResponseSchema)
+});
+export const clipExportCapabilitiesResponseSchema = t.Object({
+  ttlSeconds: t.Integer({ minimum: 1 }),
+  formats: t.Array(t.String()),
+  orientations: t.Array(t.String()),
+  scoreboards: t.Array(t.String())
+});
+export type ClipExportResponse = Static<typeof clipExportResponseSchema>;
 
 export type ClipWithRecording = {
   clip: Clip;
@@ -122,7 +168,8 @@ function preferredRendition(
     .filter((rendition) => rendition.purpose === purpose)
     .sort(compareRenditions);
   const current = candidates.filter(
-    (rendition) => rendition.profileVersion === env.mediaRendererVersion
+    (rendition) =>
+      rendition.profileVersion === mediaRenditionProfileVersion(purpose)
   );
   const currentReady = current.filter(isReadyRendition).at(-1);
   const anyReady = candidates.filter(isReadyRendition).at(-1);
@@ -151,4 +198,31 @@ function toPreviewStatus(
     return "failed";
   }
   return "pending";
+}
+
+export function toClipExportResponse(
+  rendition: MediaRendition
+): ClipExportResponse {
+  if (rendition.purpose !== "clip_export" || !rendition.exportProfile) {
+    throw new Error("Rendition is not a clip export");
+  }
+  const expired =
+    rendition.status === "expired" ||
+    (rendition.expiresAt !== null &&
+      rendition.expiresAt <= new Date().toISOString());
+  return {
+    id: rendition.uuid,
+    profile: rendition.exportProfile,
+    status: expired ? "expired" : rendition.status,
+    url:
+      !expired && rendition.status === "ready" && rendition.objectKey
+        ? r2PublicUrl(rendition.objectKey)
+        : null,
+    expiresAt: rendition.expiresAt,
+    width: rendition.width,
+    height: rendition.height,
+    sizeBytes: rendition.sizeBytes,
+    createdAt: rendition.createdAt,
+    updatedAt: rendition.updatedAt
+  };
 }

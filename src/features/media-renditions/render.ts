@@ -16,6 +16,11 @@ import {
 import { getR2ObjectBytes, putR2Object } from "@/shared/storage/r2";
 import { sha256Hex } from "@/shared/crypto/sha256";
 import type { JsonValue } from "@lib/json";
+import {
+  clipExportContentType,
+  clipExportExtension
+} from "@/features/clips/_shared/domain/exports";
+import type { ClipExportProfile } from "@/features/media-renditions/db";
 
 export const mediaRenderJobType = "media.render-clip-rendition";
 
@@ -75,7 +80,7 @@ export async function renderMediaRendition(
     workDir,
     `source.${source.recording.format ?? "hbr2"}`
   );
-  const outputExtension = rendition.purpose === "clip_poster" ? "png" : "mp4";
+  const outputExtension = outputExtensionFor(rendition);
   const outputPath = join(workDir, `rendition.${outputExtension}`);
 
   try {
@@ -89,6 +94,7 @@ export async function renderMediaRendition(
       inputPath,
       outputPath,
       purpose: rendition.purpose,
+      exportProfile: rendition.exportProfile,
       startTick: source.clip.startTick,
       endTick: source.clip.endTick
     });
@@ -103,18 +109,24 @@ export async function renderMediaRendition(
     const outputMetadata = await verifyRenderedOutput({
       outputPath,
       purpose: rendition.purpose,
-      expectedWidth: rendition.purpose === "clip_poster" ? 640 : 1280,
-      expectedHeight: rendition.purpose === "clip_poster" ? 360 : 720
+      expectedWidth: expectedDimensions(rendition).width,
+      expectedHeight: expectedDimensions(rendition).height
     });
     const checksumSha256 = await sha256Hex(body);
     const objectKey = `media/clips/${rendition.cacheKey}.${outputExtension}`;
-    const contentType =
-      rendition.purpose === "clip_poster" ? "image/png" : "video/mp4";
+    const contentType = contentTypeFor(rendition);
+    const expiresAt =
+      rendition.purpose === "clip_export"
+        ? new Date(Date.now() + env.clipExportTtlSeconds * 1000).toISOString()
+        : null;
     await putR2Object({
       key: objectKey,
       body,
       contentType,
-      cacheControl: "public, max-age=31536000, immutable"
+      cacheControl:
+        rendition.purpose === "clip_export"
+          ? `public, max-age=${env.clipExportTtlSeconds}`
+          : "public, max-age=31536000, immutable"
     });
 
     await markMediaRenditionReady({
@@ -126,7 +138,8 @@ export async function renderMediaRendition(
       width: outputMetadata.width,
       height: outputMetadata.height,
       durationTicks: source.clip.endTick - source.clip.startTick,
-      rendererVersion: env.mediaRendererVersion
+      rendererVersion: env.mediaRendererVersion,
+      expiresAt
     });
 
     return {
@@ -147,7 +160,8 @@ export async function renderMediaRendition(
 function rendererArgs(input: {
   inputPath: string;
   outputPath: string;
-  purpose: "clip_poster" | "clip_preview_video";
+  purpose: "clip_poster" | "clip_preview_video" | "clip_export";
+  exportProfile: ClipExportProfile | null;
   startTick: number;
   endTick: number;
 }): string[] {
@@ -159,22 +173,23 @@ function rendererArgs(input: {
       "--frame",
       String(input.startTick),
       "--width",
-      "640",
+      "1280",
       "--height",
-      "360"
+      "720"
     ];
   }
 
-  return [
+  const profile = input.exportProfile;
+  const args = [
     "convert",
     input.inputPath,
     input.outputPath,
     "--format",
-    "mp4",
+    profile?.format ?? "mp4",
     "--width",
-    "1280",
+    profile?.orientation === "vertical" ? "1080" : "1280",
     "--height",
-    "720",
+    profile?.orientation === "vertical" ? "1920" : "720",
     "--fps",
     "30",
     "--start-frame",
@@ -183,6 +198,15 @@ function rendererArgs(input: {
     String(input.endTick - 1),
     "--no-audio"
   ];
+  if (profile?.orientation === "vertical") {
+    args.push("--preset", "vertical");
+  }
+  if (profile?.scoreboard === "none") {
+    args.push("--no-scoreboard");
+  } else if (profile?.scoreboard) {
+    args.push("--scoreboard-style", profile.scoreboard);
+  }
+  return args;
 }
 
 async function runRenderer(args: string[]): Promise<void> {
@@ -196,7 +220,7 @@ async function runRenderer(args: string[]): Promise<void> {
 
 async function verifyRenderedOutput(input: {
   outputPath: string;
-  purpose: "clip_poster" | "clip_preview_video";
+  purpose: "clip_poster" | "clip_preview_video" | "clip_export";
   expectedWidth: number;
   expectedHeight: number;
 }): Promise<{ width: number; height: number }> {
@@ -330,6 +354,38 @@ async function markFailed(id: number, errorCode: string, errorMessage: string) {
     errorCode,
     errorMessage: errorMessage.slice(0, 1000)
   });
+}
+
+function outputExtensionFor(rendition: {
+  purpose: "clip_poster" | "clip_preview_video" | "clip_export";
+  exportProfile: ClipExportProfile | null;
+}): string {
+  if (rendition.purpose === "clip_poster") return "png";
+  if (rendition.purpose === "clip_export" && rendition.exportProfile) {
+    return clipExportExtension(rendition.exportProfile.format);
+  }
+  return "mp4";
+}
+
+function contentTypeFor(rendition: {
+  purpose: "clip_poster" | "clip_preview_video" | "clip_export";
+  exportProfile: ClipExportProfile | null;
+}): string {
+  if (rendition.purpose === "clip_poster") return "image/png";
+  if (rendition.purpose === "clip_export" && rendition.exportProfile) {
+    return clipExportContentType(rendition.exportProfile.format);
+  }
+  return "video/mp4";
+}
+
+function expectedDimensions(rendition: {
+  purpose: "clip_poster" | "clip_preview_video" | "clip_export";
+  exportProfile: ClipExportProfile | null;
+}): { width: number; height: number } {
+  if (rendition.purpose === "clip_poster") return { width: 1280, height: 720 };
+  return rendition.exportProfile?.orientation === "vertical"
+    ? { width: 1080, height: 1920 }
+    : { width: 1280, height: 720 };
 }
 
 function readRenditionId(payload: unknown): string {

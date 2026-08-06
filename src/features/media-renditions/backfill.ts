@@ -7,6 +7,7 @@ import { getMediaRenditionsForClips } from "@/features/media-renditions/_shared/
 import type { Clip } from "@/features/clips/db";
 import type { Recording } from "@/features/recordings/db";
 import type { MediaRendition } from "@/features/media-renditions/db";
+import { mediaRenditionProfileVersion } from "@/features/media-renditions/_shared/domain/jobs";
 
 export type ClipRenditionBackfillCandidate = {
   clip: Clip;
@@ -56,7 +57,7 @@ function hasReadyRendition(
   return renditions.some(
     (rendition) =>
       rendition.purpose === purpose &&
-      rendition.profileVersion === env.mediaRendererVersion &&
+      rendition.profileVersion === mediaRenditionProfileVersion(purpose) &&
       rendition.rendererVersion === env.mediaRendererVersion &&
       rendition.status === "ready" &&
       Boolean(rendition.objectKey)

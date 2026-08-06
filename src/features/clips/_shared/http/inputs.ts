@@ -31,3 +31,33 @@ export const updateClipBodySchema = t.Object({
 export type ListClipsQuery = Static<typeof listClipsQuerySchema>;
 export type CreateClipInput = Static<typeof createClipBodySchema>;
 export type UpdateClipInput = Static<typeof updateClipBodySchema>;
+
+const clipExportFormatSchema = t.Union([
+  t.Literal("mp4"),
+  t.Literal("webm"),
+  t.Literal("gif")
+]);
+const clipExportOrientationSchema = t.Union([
+  t.Literal("landscape"),
+  t.Literal("vertical")
+]);
+const clipExportScoreboardSchema = t.Union([
+  t.Literal("default"),
+  t.Literal("compact"),
+  t.Literal("score-only"),
+  t.Literal("time-only"),
+  t.Literal("floating-default"),
+  t.Literal("floating-compact"),
+  t.Literal("floating-score-only"),
+  t.Literal("floating-time-only"),
+  t.Literal("floating-score-time-right"),
+  t.Literal("none")
+]);
+
+export const createClipExportBodySchema = t.Object({
+  format: clipExportFormatSchema,
+  orientation: clipExportOrientationSchema,
+  scoreboard: clipExportScoreboardSchema
+});
+
+export type CreateClipExportInput = Static<typeof createClipExportBodySchema>;

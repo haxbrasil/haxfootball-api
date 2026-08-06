@@ -30,6 +30,49 @@ describe("clips", () => {
     });
   });
 
+  it("accepts a bounded export profile and exposes its queued lifecycle", async () => {
+    const recording = await (await uploadRecording()).json();
+    const clip = await (
+      await request("/api/clips", {
+        method: "POST",
+        body: { recordingId: recording.id, startTick: 0, endTick: 120 }
+      })
+    ).json();
+
+    const capabilities = await request(
+      `/api/clips/${clip.id}/exports/capabilities`
+    );
+    expect(capabilities.status).toBe(200);
+    expect(await capabilities.json()).toMatchObject({
+      ttlSeconds: 86_400,
+      formats: ["mp4", "webm", "gif"],
+      orientations: ["landscape", "vertical"]
+    });
+
+    const created = await request(`/api/clips/${clip.id}/exports`, {
+      method: "POST",
+      body: {
+        format: "webm",
+        orientation: "vertical",
+        scoreboard: "floating-compact"
+      }
+    });
+    expect(created.status).toBe(202);
+    expect(await created.json()).toMatchObject({
+      profile: {
+        format: "webm",
+        orientation: "vertical",
+        scoreboard: "floating-compact"
+      },
+      status: "queued",
+      url: null
+    });
+
+    const exports = await request(`/api/clips/${clip.id}/exports`);
+    expect(exports.status).toBe(200);
+    expect((await exports.json()).items).toHaveLength(1);
+  });
+
   it("creates, reads, lists, updates, and archives a clip", async () => {
     const recordingResponse = await uploadRecording();
     const recording = await recordingResponse.json();

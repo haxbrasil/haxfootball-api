@@ -18,6 +18,20 @@ import {
   clipResponseSchema
 } from "@/features/clips/_shared/http/responses";
 import { updateClip } from "@/features/clips/update-clip";
+import { createClipExport } from "@/features/clips/create-export";
+import { listClipExports } from "@/features/clips/list-exports";
+import { env } from "@/config/env";
+import {
+  clipExportCapabilitiesResponseSchema,
+  clipExportResponseSchema,
+  listClipExportsResponseSchema
+} from "@/features/clips/_shared/http/responses";
+import {
+  clipExportFormats,
+  clipExportOrientations,
+  clipExportScoreboards
+} from "@/features/clips/_shared/domain/exports";
+import { createClipExportBodySchema } from "@/features/clips/_shared/http/inputs";
 import {
   badRequestErrorResponseSchema,
   notFoundErrorResponseSchema
@@ -46,7 +60,11 @@ export const clipRoutes = new Elysia({
     CreateClipBody: createClipBodySchema,
     ListClips: listClipsResponseSchema,
     NotFoundError: notFoundErrorResponseSchema,
-    UpdateClipBody: updateClipBodySchema
+    UpdateClipBody: updateClipBodySchema,
+    CreateClipExportBody: createClipExportBodySchema,
+    ClipExport: clipExportResponseSchema,
+    ListClipExports: listClipExportsResponseSchema,
+    ClipExportCapabilities: clipExportCapabilitiesResponseSchema
   })
   .get("", ({ query }) => listClips(query), {
     query: listClipsQuerySchema,
@@ -78,6 +96,44 @@ export const clipRoutes = new Elysia({
       summary: "Get a clip"
     }
   })
+  .get(
+    "/:id/exports/capabilities",
+    () => ({
+      ttlSeconds: env.clipExportTtlSeconds,
+      formats: [...clipExportFormats],
+      orientations: [...clipExportOrientations],
+      scoreboards: [...clipExportScoreboards]
+    }),
+    {
+      params: clipPublicIdParamsSchema,
+      response: { 200: t.Ref("ClipExportCapabilities") },
+      detail: { tags: ["Clips"], summary: "Get clip export capabilities" }
+    }
+  )
+  .get("/:id/exports", ({ params }) => listClipExports(params.id), {
+    params: clipPublicIdParamsSchema,
+    response: {
+      200: t.Ref("ListClipExports"),
+      404: t.Ref("NotFoundError")
+    },
+    detail: { tags: ["Clips"], summary: "List clip exports" }
+  })
+  .post(
+    "/:id/exports",
+    ({ params, body, set }) => {
+      set.status = 202;
+      return createClipExport(params.id, body);
+    },
+    {
+      params: clipPublicIdParamsSchema,
+      body: t.Ref("CreateClipExportBody"),
+      response: {
+        202: t.Ref("ClipExport"),
+        404: t.Ref("NotFoundError")
+      },
+      detail: { tags: ["Clips"], summary: "Request a clip export" }
+    }
+  )
   .post(
     "",
     async ({ body, set }) => {

@@ -1,5 +1,6 @@
 import { env } from "@/config/env";
 import { mediaJobHandlers } from "@/features/media-renditions/render";
+import { purgeExpiredClipExports } from "@/features/media-renditions/expire-exports";
 import {
   recoverAbandonedJobLocks,
   runNextDueJob
@@ -24,6 +25,7 @@ export async function workMediaJobs(): Promise<void> {
   console.log(JSON.stringify({ event: "media_jobs.started", runnerId: id }));
 
   while (!abortController.signal.aborted) {
+    await purgeExpiredClipExports();
     const job = await runNextDueJob({
       runnerId: id,
       queue: "media",

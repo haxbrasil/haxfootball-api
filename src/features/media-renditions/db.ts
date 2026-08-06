@@ -8,8 +8,36 @@ import {
 import { clips } from "@/features/clips/db";
 
 export type MediaRenditionSourceKind = "clip";
-export type MediaRenditionPurpose = "clip_poster" | "clip_preview_video";
-export type MediaRenditionStatus = "queued" | "running" | "ready" | "failed";
+export type MediaRenditionPurpose =
+  | "clip_poster"
+  | "clip_preview_video"
+  | "clip_export";
+export type MediaRenditionStatus =
+  | "queued"
+  | "running"
+  | "ready"
+  | "failed"
+  | "expired";
+
+export type ClipExportFormat = "mp4" | "webm" | "gif";
+export type ClipExportOrientation = "landscape" | "vertical";
+export type ClipExportScoreboard =
+  | "default"
+  | "compact"
+  | "score-only"
+  | "time-only"
+  | "floating-default"
+  | "floating-compact"
+  | "floating-score-only"
+  | "floating-time-only"
+  | "floating-score-time-right"
+  | "none";
+
+export type ClipExportProfile = {
+  format: ClipExportFormat;
+  orientation: ClipExportOrientation;
+  scoreboard: ClipExportScoreboard;
+};
 
 export const mediaRenditions = sqliteTable(
   "media_renditions",
@@ -24,12 +52,15 @@ export const mediaRenditions = sqliteTable(
       .references(() => clips.id),
     sourceFingerprint: text("source_fingerprint").notNull(),
     purpose: text("purpose", {
-      enum: ["clip_poster", "clip_preview_video"]
+      enum: ["clip_poster", "clip_preview_video", "clip_export"]
     })
       .notNull()
       .$type<MediaRenditionPurpose>(),
     cacheKey: text("cache_key").notNull(),
     profileVersion: text("profile_version").notNull(),
+    exportProfile: text("export_profile", {
+      mode: "json"
+    }).$type<ClipExportProfile | null>(),
     status: text("status", {
       enum: ["queued", "running", "ready", "failed"]
     })
@@ -43,6 +74,7 @@ export const mediaRenditions = sqliteTable(
     height: integer("height"),
     durationTicks: integer("duration_ticks"),
     rendererVersion: text("renderer_version"),
+    expiresAt: text("expires_at"),
     errorCode: text("error_code"),
     errorMessage: text("error_message"),
     createdAt: text("created_at")

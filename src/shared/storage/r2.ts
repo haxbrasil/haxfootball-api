@@ -1,4 +1,5 @@
 import {
+  DeleteObjectCommand,
   GetObjectCommand,
   PutObjectCommand,
   S3Client
@@ -51,6 +52,15 @@ export async function getR2ObjectBytes(key: string): Promise<Uint8Array> {
   }
 
   return new Uint8Array(await response.Body.transformToByteArray());
+}
+
+export async function deleteR2Object(key: string): Promise<void> {
+  await r2Client.send(
+    new DeleteObjectCommand({
+      Bucket: env.r2Bucket,
+      Key: key
+    })
+  );
 }
 
 export function r2PublicUrl(key: string): string {

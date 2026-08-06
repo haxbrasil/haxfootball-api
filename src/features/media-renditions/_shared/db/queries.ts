@@ -1,4 +1,4 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, lte } from "drizzle-orm";
 import { db } from "@/db/client";
 import {
   mediaRenditions,
@@ -56,6 +56,8 @@ export async function insertMediaRendition(input: {
   cacheKey: string;
   sourceFingerprint: string;
   profileVersion: string;
+  exportProfile?: MediaRendition["exportProfile"];
+  expiresAt?: string | null;
 }): Promise<MediaRendition> {
   const now = new Date().toISOString();
   const [rendition] = await db
@@ -68,6 +70,8 @@ export async function insertMediaRendition(input: {
       cacheKey: input.cacheKey,
       sourceFingerprint: input.sourceFingerprint,
       profileVersion: input.profileVersion,
+      exportProfile: input.exportProfile ?? null,
+      expiresAt: input.expiresAt ?? null,
       status: "queued",
       createdAt: now,
       updatedAt: now
@@ -83,6 +87,8 @@ export async function insertMediaRenditionIfMissing(input: {
   cacheKey: string;
   sourceFingerprint: string;
   profileVersion: string;
+  exportProfile?: MediaRendition["exportProfile"];
+  expiresAt?: string | null;
 }): Promise<{ rendition: MediaRendition; created: boolean }> {
   const existing = await getMediaRenditionByCacheKey(input.cacheKey);
   if (existing) {
@@ -154,6 +160,7 @@ export async function markMediaRenditionReady(input: {
   height: number;
   durationTicks: number;
   rendererVersion: string;
+  expiresAt?: string | null;
 }): Promise<MediaRendition> {
   const [rendition] = await db
     .update(mediaRenditions)
@@ -167,6 +174,7 @@ export async function markMediaRenditionReady(input: {
       height: input.height,
       durationTicks: input.durationTicks,
       rendererVersion: input.rendererVersion,
+      expiresAt: input.expiresAt ?? null,
       errorCode: null,
       errorMessage: null,
       updatedAt: new Date().toISOString()
@@ -197,4 +205,72 @@ export async function resetMediaRenditionForRetry(
     .returning();
 
   return { rendition: updated ?? rendition, reset: Boolean(updated) };
+}
+
+export async function renewExpiredMediaRendition(
+  rendition: MediaRendition,
+  expiresAt: string
+): Promise<{ rendition: MediaRendition; renewed: boolean }> {
+  const [updated] = await db
+    .update(mediaRenditions)
+    .set({
+      status: "queued",
+      objectKey: null,
+      contentType: null,
+      sizeBytes: null,
+      checksumSha256: null,
+      width: null,
+      height: null,
+      durationTicks: null,
+      expiresAt,
+      errorCode: null,
+      errorMessage: null,
+      updatedAt: new Date().toISOString()
+    })
+    .where(
+      and(
+        eq(mediaRenditions.id, rendition.id),
+        eq(mediaRenditions.status, "expired")
+      )
+    )
+    .returning();
+
+  return { rendition: updated ?? rendition, renewed: Boolean(updated) };
+}
+
+export async function listExpiredExportRenditions(
+  now = new Date()
+): Promise<MediaRendition[]> {
+  return db
+    .select()
+    .from(mediaRenditions)
+    .where(
+      and(
+        eq(mediaRenditions.purpose, "clip_export"),
+        eq(mediaRenditions.status, "ready"),
+        isNotNull(mediaRenditions.expiresAt),
+        lte(mediaRenditions.expiresAt, now.toISOString())
+      )
+    );
+}
+
+export async function expireMediaRendition(
+  rendition: MediaRendition
+): Promise<boolean> {
+  const [updated] = await db
+    .update(mediaRenditions)
+    .set({
+      status: "expired",
+      objectKey: null,
+      updatedAt: new Date().toISOString()
+    })
+    .where(
+      and(
+        eq(mediaRenditions.id, rendition.id),
+        eq(mediaRenditions.status, "ready")
+      )
+    )
+    .returning();
+
+  return Boolean(updated);
 }

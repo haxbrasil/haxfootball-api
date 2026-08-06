@@ -344,6 +344,13 @@
       "when": 1785860186768,
       "tag": "0048_smooth_greymalkin",
       "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "6",
+      "when": 1786023693617,
+      "tag": "0049_woozy_leper_queen",
+      "breakpoints": true
     }
   ]
 }
